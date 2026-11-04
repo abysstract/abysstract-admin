@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package abysstract.admin.v1;
+
+// 首页仪表盘服务（需求 9.14）：返回系统概览统计，供前端首页卡片渲染。
+
+message OverviewRequest {}
+
+message OverviewResponse {
+  int64 user_count = 1; // 启用用户数（del_flag=0 AND status=1）
+  int64 role_count = 2; // 启用角色数
+  int64 today_login_count = 3; // 今日登录次数（来自 sys_login_log）
+  int64 online_count = 4; // 当前在线数（活跃 token 估算；本期实现可返回 0 占位）
+  repeated RecentLogin recent_logins = 5; // 最近 N 条登录记录
+}
+
+message RecentLogin {
+  string username = 1;
+  string ip = 2;
+  string login_time = 3; // ISO 8601 字符串（前端直接显示）
+  int32 status = 4; // 0 失败 / 1 成功
+}
+
+service DashboardService {
+  rpc Overview(OverviewRequest) returns (OverviewResponse);
+}

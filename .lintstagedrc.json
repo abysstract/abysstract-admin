@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json.schemastore.org/lint-staged",
+  "frontend/src/!(gen)/**/*.{ts,tsx}": [
+    "eslint --fix",
+    "prettier --check"
+  ],
+  "backend/**/*.go": [
+    "sh ./scripts/format-staged-go.sh"
+  ]
+}

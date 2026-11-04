@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package abysstract.admin.v1;
+
+import "abysstract/admin/v1/common.proto";
+
+// 通用导入导出 / 批量删除服务（需求 9.5–9.8）。
+// resource 用「服务名:资源名」格式（如 system:user），由后端维护资源 → 处理器注册表。
+
+message BatchDeleteRequest {
+  string resource = 1; // 资源类型标识，如 "system:user"
+  repeated int64 ids = 2; // 待删除记录 ID 列表（≤1000）
+}
+message BatchDeleteResponse {
+  int32 deleted = 1; // 实际删除条数
+}
+
+// Excel 导出：返回 xlsx 二进制。结果集 ≤100,000 行。
+message ExportExcelRequest {
+  string resource = 1; // 资源类型标识
+  string keyword = 2; // 与列表查询同源的过滤条件
+  optional Status status = 3;
+}
+message ExportExcelResponse {
+  bytes content = 1; // xlsx 二进制（application/vnd.openxmlformats-officedocument.spreadsheetml.sheet）
+  string filename = 2; // 建议保存名（如 users-20260719.xlsx）
+  int32 row_count = 3; // 数据行数（不含表头）
+}
+
+// Excel 导入：逐行校验，写入有效行，返回成功行数与失败行号/原因（需求 9.6）。
+message ImportExcelRequest {
+  string resource = 1; // 资源类型标识
+  bytes content = 2; // xlsx 二进制
+}
+message ImportExcelResponse {
+  int32 total = 1; // 数据行总数（不含表头）
+  int32 success_count = 2; // 成功写入行数
+  repeated ImportFailure failures = 3; // 失败行明细（与成功集合互不相交，构成对输入行的划分）
+}
+message ImportFailure {
+  int32 row = 1; // 行号（数据起始行为 1，不含表头）
+  string reason = 2; // 失败原因（如「用户名不能为空」「邮箱格式不正确」）
+}
+
+service CommonExportService {
+  rpc BatchDelete(BatchDeleteRequest) returns (BatchDeleteResponse);
+  rpc ExportExcel(ExportExcelRequest) returns (ExportExcelResponse);
+  rpc ImportExcel(ImportExcelRequest) returns (ImportExcelResponse);
+}

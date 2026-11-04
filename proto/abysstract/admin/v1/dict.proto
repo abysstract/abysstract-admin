@@ -1,0 +1,139 @@
+syntax = "proto3";
+
+package abysstract.admin.v1;
+
+import "abysstract/admin/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+// 字典类型
+message DictType {
+  int64 id = 1;
+  string dict_name = 2;
+  string dict_type = 3;
+  Status status = 4;
+  string remark = 5;
+  google.protobuf.Timestamp create_time = 6;
+  google.protobuf.Timestamp update_time = 7;
+}
+
+// 字典数据
+message DictData {
+  int64 id = 1;
+  int32 dict_sort = 2;
+  string dict_label = 3;
+  string dict_value = 4;
+  string dict_type = 5;
+  string css_class = 6;
+  string list_class = 7;
+  int32 is_default = 8;
+  Status status = 9;
+  string remark = 10;
+  google.protobuf.Timestamp create_time = 11;
+  google.protobuf.Timestamp update_time = 12;
+}
+
+message ListDictTypesRequest {
+  PageRequest page = 1;
+  string keyword = 2;
+  optional string dict_type = 3;
+  repeated OrderBy orders = 4;
+}
+message ListDictTypesResponse {
+  repeated DictType items = 1;
+  PageInfo page = 2;
+}
+message CreateDictTypeRequest {
+  string dict_name = 1;
+  string dict_type = 2;
+  string remark = 3;
+}
+message CreateDictTypeResponse {
+  DictType item = 1;
+}
+message GetDictTypeRequest {
+  int64 id = 1;
+}
+message GetDictTypeResponse {
+  DictType item = 1;
+}
+message UpdateDictTypeRequest {
+  int64 id = 1;
+  optional string dict_name = 2;
+  optional string dict_type = 3;
+  optional string remark = 4;
+}
+message UpdateDictTypeResponse {
+  DictType item = 1;
+}
+message DeleteDictTypeRequest {
+  int64 id = 1;
+}
+message DeleteDictTypeResponse {}
+message BatchDeleteDictTypesRequest {
+  repeated int64 ids = 1;
+}
+message BatchDeleteDictTypesResponse {}
+
+message ListDictDataRequest {
+  optional string dict_type = 1;
+  PageRequest page = 2;
+  string keyword = 3;
+  repeated OrderBy orders = 4;
+}
+message ListDictDataResponse {
+  repeated DictData items = 1;
+  PageInfo page = 2;
+}
+message CreateDictDataRequest {
+  string dict_type = 1;
+  int32 dict_sort = 2;
+  string dict_label = 3;
+  string dict_value = 4;
+  int32 is_default = 5;
+  string remark = 6;
+}
+message CreateDictDataResponse {
+  DictData item = 1;
+}
+message GetDictDataRequest {
+  int64 id = 1;
+}
+message GetDictDataResponse {
+  DictData item = 1;
+}
+message UpdateDictDataRequest {
+  int64 id = 1;
+  optional int32 dict_sort = 2;
+  optional string dict_label = 3;
+  optional string dict_value = 4;
+  optional int32 is_default = 5;
+  optional string remark = 6;
+}
+message UpdateDictDataResponse {
+  DictData item = 1;
+}
+message DeleteDictDataRequest {
+  int64 id = 1;
+}
+message DeleteDictDataResponse {}
+message BatchDeleteDictDataRequest {
+  repeated int64 ids = 1;
+}
+message BatchDeleteDictDataResponse {}
+
+// 字典管理服务（类型 + 数据）
+service DictService {
+  rpc ListDictTypes(ListDictTypesRequest) returns (ListDictTypesResponse);
+  rpc CreateDictType(CreateDictTypeRequest) returns (CreateDictTypeResponse);
+  rpc GetDictType(GetDictTypeRequest) returns (GetDictTypeResponse);
+  rpc UpdateDictType(UpdateDictTypeRequest) returns (UpdateDictTypeResponse);
+  rpc DeleteDictType(DeleteDictTypeRequest) returns (DeleteDictTypeResponse);
+  rpc BatchDeleteDictTypes(BatchDeleteDictTypesRequest) returns (BatchDeleteDictTypesResponse);
+
+  rpc ListDictData(ListDictDataRequest) returns (ListDictDataResponse);
+  rpc CreateDictData(CreateDictDataRequest) returns (CreateDictDataResponse);
+  rpc GetDictData(GetDictDataRequest) returns (GetDictDataResponse);
+  rpc UpdateDictData(UpdateDictDataRequest) returns (UpdateDictDataResponse);
+  rpc DeleteDictData(DeleteDictDataRequest) returns (DeleteDictDataResponse);
+  rpc BatchDeleteDictData(BatchDeleteDictDataRequest) returns (BatchDeleteDictDataResponse);
+}

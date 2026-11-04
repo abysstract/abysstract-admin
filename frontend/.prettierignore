@@ -1,0 +1,12 @@
+node_modules/
+dist/
+packages/*/dist/
+packages/admin-core/src/gen/
+packages/admin-proto/src/
+apps/*/dist/
+apps/*/src/modules/*/gen/
+package-lock.json
+.eslintrc.*
+husky/
+
+tools/fixtures/gen/

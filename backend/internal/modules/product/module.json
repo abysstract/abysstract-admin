@@ -1,0 +1,29 @@
+{
+  "name": "product",
+  "requires": [
+    "system"
+  ],
+  "backend": {
+    "package": "backend/internal/modules/product",
+    "constructor": "NewModule"
+  },
+  "frontend": {
+    "entry": "frontend/apps/reference/src/modules/product/index.tsx",
+    "export": "productModule"
+  },
+  "generation": {
+    "name": "product",
+    "tablePrefix": "product_",
+    "modelOutput": "backend/internal/modules/product",
+    "prefix": "company/product/v1/",
+    "goOutput": "backend/internal/modules/product/gen/proto",
+    "tsOutput": "frontend/apps/reference/src/modules/product/gen/proto",
+    "protoSource": "backend/internal/modules/product/proto"
+  },
+  "resource": {
+    "package": "backend/internal/modules/product/definition",
+    "config": "GeneratorConfig",
+    "resources": "Resources"
+  },
+  "seed": "backend/internal/modules/product/seed.json"
+}

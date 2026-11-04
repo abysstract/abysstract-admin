@@ -1,0 +1,6 @@
+.resource-form__error {
+  margin: 0 0 16px;
+  color: var(--ant-color-error, #ff4d4f);
+  font-size: 14px;
+  line-height: 1.5714285714;
+}

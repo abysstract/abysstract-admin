@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package abysstract.admin.v1;
+
+// 通用状态：启用 / 停用（对标 RuoYi 的 status 字段）
+enum Status {
+  STATUS_UNSPECIFIED = 0;
+  STATUS_ENABLED = 1; // 正常
+  STATUS_DISABLED = 2; // 停用
+}
+
+// 分页请求参数
+message PageRequest {
+  int32 page_num = 1; // 页码，从 1 开始
+  int32 page_size = 2; // 每页条数
+}
+
+// 排序字段与方向。field 使用 protobuf JSON 字段名。
+message OrderBy {
+  string field = 1;
+  bool desc = 2;
+}
+
+// 分页元信息
+message PageInfo {
+  int64 total = 1; // 总条数
+  int32 page_num = 2;
+  int32 page_size = 3;
+}

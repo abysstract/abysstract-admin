@@ -1,0 +1,23 @@
+/* Keep Resource pages visually consistent with the existing ProTable pages.
+ * The search controls and result table are intentionally separate surfaces:
+ * migrated pages should not look like one unbounded block on the layout gray. */
+.resource-table {
+  width: 100%;
+}
+
+.resource-table__search,
+.resource-table__content {
+  background: #fff;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 3%);
+}
+
+.resource-table__search {
+  margin-bottom: 16px;
+  padding: 24px;
+}
+
+.resource-table__content {
+  overflow: hidden;
+}

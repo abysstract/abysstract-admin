@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "types": ["vitest/globals"],
+    "paths": {
+      "@abysstract/admin-core/resource/schema": ["./src/resource/schema.ts"],
+      "@abysstract/admin-core/resource/operations": ["./src/resource/operations.ts"],
+      "@abysstract/admin-core/resource/relation": ["./src/resource/relation.ts"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"]
+}

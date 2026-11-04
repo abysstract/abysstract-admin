@@ -1,0 +1,18 @@
+[
+  {
+    "name": "system",
+    "tablePrefix": "sys_",
+    "modelOutput": "backend/internal/dal",
+    "prefix": "abysstract/admin/v1/",
+    "goOutput": "backend/gen",
+    "tsOutput": "frontend/packages/admin-proto/src"
+  },
+  {
+    "name": "product",
+    "tablePrefix": "product_",
+    "modelOutput": "backend/internal/modules/product",
+    "prefix": "company/product/v1/",
+    "goOutput": "backend/internal/modules/product/gen/proto",
+    "tsOutput": "frontend/apps/reference/src/modules/product/gen/proto"
+  }
+]

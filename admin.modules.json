@@ -1,0 +1,6 @@
+{
+  "modules": [
+    "backend/system/module.json",
+    "backend/internal/modules/product/module.json"
+  ]
+}

@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package abysstract.admin.v1;
+
+import "abysstract/admin/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+// 操作日志
+message OperLog {
+  int64 id = 1;
+  string title = 2;
+  string method = 3;
+  string oper_name = 4;
+  int64 oper_id = 5;
+  string oper_ip = 6;
+  int32 status = 7; // 1 成功 2 失败
+  string error_msg = 8;
+  int64 cost_time = 9; // 毫秒
+  google.protobuf.Timestamp oper_time = 10;
+  string oper_param = 11; // 请求参数摘要（敏感字段已脱敏，超长截断）
+}
+
+// 登录日志
+message LoginLog {
+  int64 id = 1;
+  string username = 2;
+  int32 status = 3; // 1 成功 2 失败
+  string ip = 4;
+  string msg = 5;
+  google.protobuf.Timestamp login_time = 6;
+}
+
+message ListOperLogsRequest {
+  PageRequest page = 1;
+  string keyword = 2; // 按操作人/标题
+}
+message ListOperLogsResponse {
+  repeated OperLog items = 1;
+  PageInfo page = 2;
+}
+message CleanOperLogsRequest {}
+message CleanOperLogsResponse {}
+
+message ListLoginLogsRequest {
+  PageRequest page = 1;
+  string keyword = 2; // 按用户名
+}
+message ListLoginLogsResponse {
+  repeated LoginLog items = 1;
+  PageInfo page = 2;
+}
+message CleanLoginLogsRequest {}
+message CleanLoginLogsResponse {}
+
+// 日志服务
+service LogService {
+  rpc ListOperLogs(ListOperLogsRequest) returns (ListOperLogsResponse);
+  rpc CleanOperLogs(CleanOperLogsRequest) returns (CleanOperLogsResponse);
+  rpc ListLoginLogs(ListLoginLogsRequest) returns (ListLoginLogsResponse);
+  rpc CleanLoginLogs(CleanLoginLogsRequest) returns (CleanLoginLogsResponse);
+}

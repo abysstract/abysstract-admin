@@ -1,0 +1,50 @@
+# Go
+backend/bin/
+backend/adminresource-gen
+*.test
+*.out
+
+# 前端
+frontend/node_modules/
+frontend/dist/
+
+# husky 自动生成的内部目录（由 husky install 生成；手写钩子如 .husky/pre-commit 仍纳入版本管理）
+**/.husky/_/
+
+# TypeScript 增量构建缓存（任意层级）
+**/*.tsbuildinfo
+
+# IDE / 编辑器 local-history 插件产物
+.history/
+
+# 环境
+.env
+.DS_Store
+
+# 本地构建缓存（go build cache / module cache，可由 go 自动重建）
+.cache/
+backend/.cache/
+
+# 运行时上传目录（默认 ADMIN_UPLOAD_DIR=./uploads）
+backend/uploads/
+
+# Public frontend packages and application builds
+node_modules/
+frontend/packages/*/dist/
+frontend/packages/*/node_modules/
+frontend/apps/*/dist/
+frontend/apps/*/node_modules/
+apps/*/frontend/node_modules/
+apps/*/frontend/dist/
+apps/*/backend/uploads/
+*.tgz
+
+# Playwright local artifacts (credentials must not be archived)
+frontend/apps/*/test-results/
+frontend/playwright-report/
+apps/*/frontend/test-results/
+apps/*/frontend/playwright-report/
+
+# Python 本地字节码缓存
+__pycache__/
+*.py[cod]

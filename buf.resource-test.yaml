@@ -1,0 +1,11 @@
+version: v2
+modules:
+  - path: backend/internal/resource/schema
+  - path: proto
+# Test-only packages intentionally mirror their Go fixture directories and omit API versions.
+lint:
+  use:
+    - STANDARD
+  except:
+    - PACKAGE_DIRECTORY_MATCH
+    - PACKAGE_VERSION_SUFFIX

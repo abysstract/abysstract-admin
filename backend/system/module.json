@@ -1,0 +1,27 @@
+{
+  "name": "system",
+  "requires": [],
+  "backend": {
+    "package": "backend/system",
+    "constructor": "NewModule"
+  },
+  "frontend": {
+    "entry": "frontend/packages/admin-core/src/system/module.tsx",
+    "export": "coreSystemModule",
+    "import": "@abysstract/admin-core/system"
+  },
+  "generation": {
+    "name": "system",
+    "tablePrefix": "sys_",
+    "modelOutput": "backend/internal/dal",
+    "prefix": "abysstract/admin/v1/",
+    "goOutput": "backend/gen",
+    "tsOutput": "frontend/packages/admin-proto/src",
+    "protoSource": "proto"
+  },
+  "resource": {
+    "package": "backend/internal/codegen/systemtask",
+    "config": "GeneratorConfig",
+    "resources": "Resources"
+  }
+}

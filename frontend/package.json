@@ -1,0 +1,45 @@
+{
+  "name": "abysstract-admin-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run build -w @abysstract/admin-proto -w @abysstract/admin-core && npm run dev -w @abysstract/admin-reference",
+    "build": "npm run build -w @abysstract/admin-proto -w @abysstract/admin-core && npm run build -w @abysstract/admin-reference",
+    "preview": "npm run preview -w @abysstract/admin-reference",
+    "test": "npm run test -w @abysstract/admin-core -w @abysstract/admin-reference",
+    "lint": "eslint .",
+    "format": "prettier --write \"packages/admin-core/src/**/*.{ts,tsx,json,css,md}\" \"apps/reference/src/**/*.{ts,tsx,json,css,md}\" \"tools/**/*.{mjs,js,json,md}\"",
+    "format:check": "prettier --check \"packages/admin-core/src/**/*.{ts,tsx,json,css,md}\" \"apps/reference/src/**/*.{ts,tsx,json,css,md}\" \"tools/**/*.{mjs,js,json,md}\"",
+    "typecheck": "npm run build -w @abysstract/admin-proto -w @abysstract/admin-core && npm run typecheck -w @abysstract/admin-core && npm run typecheck -w @abysstract/admin-reference",
+    "prepare": "cd .. && husky frontend/.husky",
+    "generate:proto": "node tools/generate-proto.mjs",
+    "test:proto": "node --test tools/*.test.mjs",
+    "verify:packages": "node tools/verify-admin-packages.mjs",
+    "predev": "npm run build -w @abysstract/admin-proto -w @abysstract/admin-core",
+    "prebuild": "npm run build -w @abysstract/admin-proto -w @abysstract/admin-core",
+    "test:e2e": "npm run test:e2e -w @abysstract/admin-reference"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "eslint": "^9.18.0",
+    "eslint-config-prettier": "^10.0.1",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.3.0",
+    "prettier": "^3.4.2",
+    "typescript": "^5.6.3",
+    "typescript-eslint": "^8.20.0",
+    "@playwright/test": "^1.48.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --check"
+    ]
+  }
+}

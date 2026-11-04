@@ -1,0 +1,6 @@
+format.gen.go
+product_controller.gen.go
+product_conv.gen.go
+product_permissions.gen.go
+product_repo.gen.go
+product_service_adapter.gen.go

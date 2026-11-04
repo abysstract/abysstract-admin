@@ -1,0 +1,7 @@
+syntax = "proto3";
+package resource.schema.enumb;
+option go_package = "github.com/abysstract/abysstract-admin/backend/internal/resource/schema/testenum/b";
+enum Status {
+  STATUS_UNSPECIFIED = 0;
+  STATUS_ENABLED = 1;
+}

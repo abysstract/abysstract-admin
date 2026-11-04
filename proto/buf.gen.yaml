@@ -1,0 +1,21 @@
+version: v2
+managed:
+  enabled: true
+  override:
+    # 生成的 Go 包导入前缀 = 后端 module 路径 + gen 目录
+    - file_option: go_package_prefix
+      value: github.com/abysstract/abysstract-admin/backend/gen
+plugins:
+  # --- 后端 Go：消息类型 ---
+  - remote: buf.build/protocolbuffers/go:v1.36.12
+    out: ../backend/gen
+    opt: paths=source_relative
+  # --- 后端 Go：connect-go 服务桩 ---
+  - remote: buf.build/connectrpc/go:v2.0.2
+    out: ../backend/gen
+    opt: paths=source_relative
+  # --- 前端 TS：Protobuf-ES / Connect-ES v2（protoc-gen-es 同时生成消息与服务客户端）---
+  - remote: buf.build/bufbuild/es:v2.14.0
+    out: ../frontend/packages/admin-proto/src
+    opt:
+      - target=ts

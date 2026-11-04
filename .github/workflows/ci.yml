@@ -1,0 +1,669 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      database:
+        description: Database tests to run
+        type: choice
+        required: true
+        default: all
+        options:
+          - all
+          - postgres
+          - sqlite
+          - mysql
+          - mariadb
+
+# Public CI never publishes, tags, or pushes. Fork pull requests only receive
+# read-only contents access; private distribution credentials are not defined.
+permissions:
+  contents: read
+  pull-requests: read
+
+# 固定工具版本，保证 clone 后可复现。
+env:
+  GOWORK: "off"
+  GO_VERSION: "1.26.4"
+  CGO_ENABLED: "1"
+  NODE_VERSION: "20"
+  BUF_VERSION: "1.71.0"
+
+jobs:
+  changes:
+    name: Select database tests
+    runs-on: ubuntu-latest
+    outputs:
+      checks: ${{ steps.scope.outputs.checks }}
+      postgres: ${{ steps.scope.outputs.postgres }}
+      sqlite: ${{ steps.scope.outputs.sqlite }}
+      mysql: ${{ steps.scope.outputs.mysql }}
+      mariadb: ${{ steps.scope.outputs.mariadb }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Test database selection rules
+        run: node --test .github/scripts/ci-scope.test.mjs
+      - uses: actions/github-script@v7
+        id: scope
+        with:
+          script: |
+            const { execFileSync } = require("node:child_process");
+            const { pathToFileURL } = require("node:url");
+            const { ciScope } = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/.github/scripts/ci-scope.mjs`).href);
+            let files = [];
+            if (context.eventName === "pull_request") {
+              const changed = await github.paginate(github.rest.pulls.listFiles, {
+                ...context.repo,
+                pull_number: context.payload.pull_request.number,
+                per_page: 100,
+              });
+              files = changed.flatMap((file) => [file.filename, ...(file.previous_filename ? [file.previous_filename] : [])]);
+            } else if (context.eventName === "push") {
+              const before = context.payload.before;
+              const args = /^0+$/.test(before)
+                ? ["ls-files", "-z"]
+                : ["diff", "--name-only", "--no-renames", "-z", before, context.sha];
+              files = execFileSync("git", args, { encoding: "utf8" }).split("\0").filter(Boolean);
+            }
+            const scope = ciScope(files, {
+              event: context.eventName,
+              database: context.payload.inputs?.database,
+            });
+            for (const [name, enabled] of Object.entries(scope)) core.setOutput(name, String(enabled));
+            await core.summary.addTable([
+              [{ data: "Database", header: true }, { data: "Run", header: true }],
+              ...Object.entries(scope).filter(([name]) => name !== "checks").map(([name, enabled]) => [name, String(enabled)]),
+            ]).write();
+
+  proto:
+    name: Proto lint / breaking / generate
+    needs: changes
+    if: needs.changes.outputs.checks == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # buf breaking 需要对比 main 基线：fetch-depth=0 保证 PR 与 push 都能访问到 main。
+          fetch-depth: 0
+      - uses: bufbuild/buf-setup-action@v1
+        with:
+          version: ${{ env.BUF_VERSION }}
+      - name: buf lint
+        working-directory: .
+        run: buf lint
+      - name: buf breaking (against main)
+        # 仅在 main 可达时执行（push 到 main 或来源为 main 的 PR）。
+        # buf 会对比 WIRE_JSON 层的破坏性变更：删字段、改字段编号、改字段类型、删 RPC 等。
+        # 从 main 的实际 workspace 位置选择对比根，覆盖目录迁移前后的历史。
+        # 使用 fetch-depth=0 提供的 origin/main ref 让 buf 稳定定位基线模块。
+        working-directory: .
+        run: |
+          if git cat-file -e refs/remotes/origin/main:buf.yaml; then
+            buf breaking --against ".git#ref=refs/remotes/origin/main"
+          else
+            buf breaking --against ".git#ref=refs/remotes/origin/main,subdir=proto"
+          fi
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - run: npm ci --ignore-scripts
+        working-directory: frontend
+      - name: buf generate and normalize ESM imports
+        run: node frontend/tools/generate-proto.mjs
+
+  # Generated outputs are committed (including Resource and Buf test fixtures).
+  # Regeneration therefore detects both hand edits and omitted generated diffs
+  # before any backend or frontend work begins.
+  generated-code-integrity:
+    name: Generated code integrity
+    needs: proto
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - uses: bufbuild/buf-setup-action@v1
+        with:
+          version: ${{ env.BUF_VERSION }}
+      - name: Download Go modules
+        working-directory: backend
+        run: go mod download
+      - run: npm ci --ignore-scripts
+        working-directory: frontend
+      - name: Check module registration
+        working-directory: backend
+        run: go run ./cmd/admin module check
+      - name: Regenerate system wire clients
+        run: node frontend/tools/generate-proto.mjs
+      - name: Regenerate application resources and test fixtures
+        working-directory: backend
+        env:
+          GOWORK: "off"
+        run: go generate ./...
+      - name: Fail on generated-code drift
+        run: |
+          git diff --exit-code -- backend frontend/packages/admin-core/src/gen frontend/packages/admin-proto/src frontend/apps/reference/src/modules frontend/tools/fixtures/gen
+      - name: Fail on untracked generated outputs
+        run: |
+          untracked="$(git ls-files --others --exclude-standard -- backend frontend/packages/admin-core/src/gen frontend/packages/admin-proto/src frontend/apps/reference/src/modules frontend/tools/fixtures/gen)"
+          if [ -n "$untracked" ]; then
+            echo "::error::受管生成物未纳入版本管理；请提交重新生成后的文件："
+            echo "$untracked"
+            exit 1
+          fi
+      - name: Check generated manifests and system/business scope
+        run: python3 scripts/check_admin_generated.py --scope all
+
+  public-packages:
+    name: Public Go packages and types
+    needs: generated-code-integrity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: backend/go.sum
+      - name: Probe public Go packages
+        run: python3 scripts/check_admin_public_packages.py --repo-root . --stage k2 --timeout 300
+
+  frontend-packages:
+    name: Public frontend package contents
+    needs: generated-code-integrity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci --ignore-scripts
+        working-directory: frontend
+        env:
+          HUSKY: "0"
+      - name: Verify package exports and private tarball contents
+        working-directory: frontend
+        run: npm run verify:packages
+
+  consumer-install:
+    name: Independent package install
+    needs: [public-packages, frontend-packages]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci --ignore-scripts
+        working-directory: frontend
+        env:
+          HUSKY: "0"
+      - name: Pack private artifacts and verify checksums
+        run: |
+          dest="$RUNNER_TEMP/admin-private-artifacts"
+          python3 scripts/admin_artifacts.py pack --repo-root . --dest "$dest"
+          python3 scripts/admin_artifacts.py verify --manifest "$dest/admin-private-artifacts.json"
+
+  # Build and vet run in the PostgreSQL backend job.
+  # Additional database jobs run for relevant changes or an explicit manual request.
+  mysql-database:
+    needs: changes
+    if: needs.changes.outputs.mysql == 'true'
+    name: MySQL 8.4 / backend
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      mysql:
+        image: mysql:8.4.2
+        env:
+          MYSQL_ROOT_PASSWORD: admin-test
+          MYSQL_ROOT_HOST: "%"
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h localhost -padmin-test"
+          --health-interval 3s
+          --health-timeout 3s
+          --health-retries 30
+    env:
+      GOWORK: "off"
+      CGO_ENABLED: "1"
+      ADMIN_TEST_DRIVER: mysql
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Provision owned MySQL target
+        working-directory: backend
+        env:
+          ADMIN_TEST_BASE_DSN: root:admin-test@tcp(127.0.0.1:3306)/
+        run: |
+          run_id="$(openssl rand -hex 16)"
+          dsn_file="$RUNNER_TEMP/mysql-test-dsn"
+          go run ./cmd/admin-testdb -action create -run-id "$run_id" -dsn-file "$dsn_file"
+          test_dsn="$(cat "$dsn_file")"
+          echo "::add-mask::$test_dsn"
+          {
+            echo "ADMIN_TEST_RUN_ID=$run_id"
+            echo "ADMIN_TEST_DATABASE=admin_core_k2_$run_id"
+            echo "ADMIN_TEST_DSN=$test_dsn"
+          } >> "$GITHUB_ENV"
+          rm "$dsn_file"
+      - name: Run all MySQL tests
+        working-directory: backend
+        run: go test -tags=integration -count=1 -p 1 ./...
+      - name: Verify and remove owned MySQL target
+        if: always() && env.ADMIN_TEST_DATABASE != ''
+        working-directory: backend
+        run: |
+          go run ./cmd/admin-testdb -action verify
+          go run ./cmd/admin-testdb -action drop
+
+  mariadb-database:
+    needs: changes
+    if: needs.changes.outputs.mariadb == 'true'
+    name: MariaDB 11.4.13 / backend
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      mariadb:
+        image: mariadb:11.4.13
+        env:
+          MARIADB_ROOT_PASSWORD: admin-test
+          MARIADB_ROOT_HOST: "%"
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "healthcheck.sh --connect --innodb_initialized"
+          --health-interval 3s
+          --health-timeout 3s
+          --health-retries 30
+    env:
+      GOWORK: "off"
+      CGO_ENABLED: "1"
+      CC: gcc-13
+      ADMIN_TEST_DRIVER: mariadb
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Provision owned MariaDB target
+        working-directory: backend
+        env:
+          ADMIN_TEST_BASE_DSN: root:admin-test@tcp(127.0.0.1:3306)/
+        run: |
+          run_id="$(openssl rand -hex 16)"
+          dsn_file="$RUNNER_TEMP/mariadb-test-dsn"
+          go run ./cmd/admin-testdb -action create -run-id "$run_id" -dsn-file "$dsn_file"
+          test_dsn="$(cat "$dsn_file")"
+          echo "::add-mask::$test_dsn"
+          {
+            echo "ADMIN_TEST_RUN_ID=$run_id"
+            echo "ADMIN_TEST_DATABASE=admin_core_k2_$run_id"
+            echo "ADMIN_TEST_DSN=$test_dsn"
+          } >> "$GITHUB_ENV"
+          rm "$dsn_file"
+      - name: Run all MariaDB tests
+        working-directory: backend
+        run: go test -tags=integration -count=1 -p 1 ./...
+      - name: Verify and remove owned MariaDB target
+        if: always() && env.ADMIN_TEST_DATABASE != ''
+        working-directory: backend
+        run: |
+          go run ./cmd/admin-testdb -action verify
+          go run ./cmd/admin-testdb -action drop
+
+  sqlite-database:
+    needs: changes
+    if: needs.changes.outputs.sqlite == 'true'
+    name: SQLite / backend
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      ADMIN_TEST_DRIVER: sqlite
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Provision owned SQLite file
+        working-directory: backend
+        run: |
+          run_id="$(openssl rand -hex 16)"
+          dsn_file="$RUNNER_TEMP/sqlite-test-dsn"
+          go run ./cmd/admin-testdb -action create -run-id "$run_id" -dsn-file "$dsn_file"
+          test_dsn="$(cat "$dsn_file")"
+          test_database="$(python3 -c 'import sys,urllib.parse; print(urllib.parse.unquote(urllib.parse.urlparse(sys.argv[1]).path))' "$test_dsn")"
+          {
+            echo "ADMIN_TEST_RUN_ID=$run_id"
+            echo "ADMIN_TEST_DATABASE=$test_database"
+            echo "ADMIN_TEST_DSN=$test_dsn"
+          } >> "$GITHUB_ENV"
+          rm "$dsn_file"
+      - name: Run all SQLite tests
+        working-directory: backend
+        run: go test -tags=integration -count=1 -p 1 ./...
+      - name: Verify and remove owned SQLite file
+        if: always() && env.ADMIN_TEST_DATABASE != ''
+        working-directory: backend
+        run: |
+          go run ./cmd/admin-testdb -action verify
+          go run ./cmd/admin-testdb -action drop
+
+  delivery-policy:
+    needs: changes
+    if: needs.changes.outputs.checks == 'true'
+    name: Delivery docs and CI policy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: CI publish/tag/push policy
+        run: python3 scripts/check_admin_ci_policy.py
+
+  backend:
+    name: Backend build & test
+    needs: [changes, generated-code-integrity]
+    if: needs.changes.outputs.postgres == 'true'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16.15-alpine
+        env:
+          POSTGRES_USER: admin
+          POSTGRES_PASSWORD: admin
+          POSTGRES_DB: abysstract_admin
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 3s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      ADMIN_DB_DRIVER: postgres
+      ADMIN_DB_DSN: host=localhost port=5433 user=admin password=admin dbname=abysstract_admin sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: go build
+        working-directory: backend
+        run: go build ./...
+      - name: go vet
+        working-directory: backend
+        run: go vet -tags=integration ./...
+      - name: gofmt check
+        working-directory: backend
+        run: |
+          # gofmt -l -s 输出非空即失败：未格式化的文件会列在 stdout。
+          diff="$(gofmt -l -s .)"
+          if [ -n "$diff" ]; then
+            echo "::error::以下文件未通过 gofmt -s 检查（本地执行 make fmt 修复）："
+            echo "$diff"
+            exit 1
+          fi
+      - name: goimports check
+        working-directory: backend
+        run: |
+          # goimports 不在 Go 工具链中，需单独安装。
+          # fixed version 保证可复现。
+          go install golang.org/x/tools/cmd/goimports@v0.46.0
+          # 生成文件必须保持生成器原始输出，不能在这里用 goimports 重排；
+          # 只扫描手写 Go 文件，排除 Buf/protoc/Connect、DAL、Resource 与固定 protobuf fixture；
+          # 生成物格式一致性由重新生成 + generated-code-integrity drift guard 负责。
+          go_files="$(find . -type f -name '*.go' \
+            ! -name '*.pb.go' \
+            ! -name '*.connect.go' \
+            ! -name '*.gen.go' \
+            ! -path './gen/*' \
+            ! -path './internal/dal/*' \
+            ! -path './internal/modules/*/model/*' \
+            ! -path './internal/modules/*/query/*' \
+            ! -path './internal/resource/gen/*' \
+            ! -path './internal/resource/schema/testpb/*' \
+            ! -path './internal/resource/schema/testenum/*' \
+            ! -path './internal/resource/widgetcompileinspect/*')"
+          # goimports -l 输出非空即失败：import 分组不符合预期的手写文件会列在 stdout。
+          diff="$(printf '%s\n' "$go_files" | xargs goimports -l)"
+          if [ -n "$diff" ]; then
+            echo "::error::以下文件未通过 goimports 检查（本地执行 make fmt 修复）："
+            echo "$diff"
+            exit 1
+          fi
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.13.1
+          working-directory: backend
+          args: --timeout=5m --build-tags=integration
+      - name: Unit tests without database configuration
+        working-directory: backend
+        run: go test ./...
+      - name: Provision disposable test database
+        working-directory: backend
+        env:
+          ADMIN_TEST_BASE_DSN: host=localhost port=5433 user=admin password=admin dbname=postgres sslmode=disable
+        run: |
+          run_id="$(openssl rand -hex 16)"
+          dsn_file="$RUNNER_TEMP/admin-test-dsn"
+          go run ./cmd/admin-testdb -action create -run-id "$run_id" -dsn-file "$dsn_file"
+          {
+            echo "ADMIN_TEST_RUN_ID=$run_id"
+            echo "ADMIN_TEST_DATABASE=admin_core_k2_$run_id"
+            echo "ADMIN_TEST_DSN=$(cat "$dsn_file")"
+          } >> "$GITHUB_ENV"
+          rm "$dsn_file"
+      - name: Verify PostgreSQL model and query generation
+        working-directory: backend
+        env:
+          ADMIN_DB_DRIVER: postgres
+        run: |
+          export ADMIN_DB_DSN="$ADMIN_TEST_DSN"
+          go run ./cmd/admin-testdb -action verify
+          go run ./cmd/migrate
+          go run ./cmd/modelgen
+          python3 ../scripts/check_admin_generated.py --scope all
+      - name: go test
+        working-directory: backend
+        # -p 1: 测试包串行执行。集成测试（migrate/service/repo）共享 public schema，
+        # 并行 DROP/CREATE 会互相覆盖。属性/单元测试无 DB 依赖，串行也极快。
+        run: go test -tags=integration -p 1 ./...
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: PostgreSQL browser acceptance
+        env:
+          ADMIN_TEST_DRIVER: postgres
+        run: bash scripts/check_admin_browser.sh
+      - name: Remove disposable test database
+        if: always() && env.ADMIN_TEST_DATABASE != ''
+        working-directory: backend
+        run: go run ./cmd/admin-testdb -action drop
+
+  frontend:
+    name: Frontend build & test
+    needs: generated-code-integrity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: npm ci
+        working-directory: frontend
+        env:
+          HUSKY: "0"
+        run: npm ci
+      - name: Build public frontend packages
+        working-directory: frontend
+        run: npm run build -w @abysstract/admin-proto -w @abysstract/admin-core
+      - name: Public Proto AST and package tests
+        working-directory: frontend
+        run: |
+          npm run test:proto
+          node tools/verify-proto-package.mjs
+      - name: npm run lint
+        working-directory: frontend
+        run: npm run lint
+      - name: npm run typecheck
+        working-directory: frontend
+        run: npm run typecheck
+      - name: npm test
+        working-directory: frontend
+        run: npm run test
+      - name: npm run build
+        working-directory: frontend
+        run: npm run build
+
+  compose-smoke:
+    needs: changes
+    if: needs.changes.outputs.postgres == 'true'
+    # 需求 2.3/2.4/2.6/2.9：端到端校验 docker-compose 编排、init_pg.sql 幂等、
+    # reset_db.sh 可重置、reset 后可重新 migrate。
+    # 在 GitHub-hosted runner（自带 docker compose v2）上跑，本地无需 docker。
+    name: Compose / init / reset integration
+    runs-on: ubuntu-latest
+    # 防止容器/步骤异常挂起占满 6 小时默认超时；正常完成约 2 分钟。
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      # 1) docker compose up -d --wait：等待 healthcheck（pg_isready ×20，约 60s 上限）通过
+      - name: Bring up compose stack
+        run: docker compose up -d --wait
+
+      # 2) SELECT 1 冒烟：容器内部 psql 校验实例可连接
+      - name: SELECT 1 health check
+        run: |
+          docker compose exec -T admin-postgres \
+            psql -U admin -d abysstract_admin -c 'SELECT 1;'
+
+      # 3) init_pg.sql 连续执行两次：断言幂等（CREATE EXTENSION IF NOT EXISTS 不报错）
+      - name: init_pg.sql idempotent re-run
+        run: |
+          echo "--- 第二次执行 init_pg.sql ---"
+          docker compose exec -T admin-postgres \
+            psql -U admin -d abysstract_admin \
+            -f /docker-entrypoint-initdb.d/10_init.sql
+          echo "--- 第三次执行 init_pg.sql ---"
+          docker compose exec -T admin-postgres \
+            psql -U admin -d abysstract_admin \
+            -f /docker-entrypoint-initdb.d/10_init.sql
+
+      # 4) 从空库执行后端迁移
+      - name: Run migrate
+        working-directory: backend
+        env:
+          ADMIN_DB_DRIVER: postgres
+          ADMIN_DB_DSN: host=localhost port=5433 user=admin password=admin dbname=abysstract_admin sslmode=disable
+        run: go run ./cmd/migrate
+
+      # 5) reset_db.sh：在 postgres 容器内执行（镜像自带 psql）。
+      #    runner 上避免 apt-get install postgresql-client——曾在 CI 中挂起数小时。
+      - name: Reset database via reset_db.sh (in container)
+        run: |
+          docker compose cp scripts/reset_db.sh admin-postgres:/tmp/reset_db.sh
+          docker compose cp scripts/init_pg.sql admin-postgres:/tmp/init_pg.sql
+          docker compose exec -T \
+            -e PG_HOST=localhost -e PG_PORT=5432 -e PG_USER=admin -e PG_PASSWORD=admin -e PG_DB=abysstract_admin \
+            admin-postgres bash /tmp/reset_db.sh
+
+      # 6) reset 后再次 migrate：断言 reset_db.sh 把库还原到可从零重跑的状态
+      - name: Re-migrate after reset
+        working-directory: backend
+        env:
+          ADMIN_DB_DRIVER: postgres
+          ADMIN_DB_DSN: host=localhost port=5433 user=admin password=admin dbname=abysstract_admin sslmode=disable
+        run: go run ./cmd/migrate
+
+      # 7) 清理：always() 保证前面步骤失败也会销毁容器与数据卷
+      - name: Tear down compose stack
+        if: always()
+        run: docker compose down -v
+
+  release-readiness:
+    needs: changes
+    if: needs.changes.outputs.checks == 'true'
+    name: Release readiness (materials / hygiene / clean build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # 干净检出：后续 build 后 git status 必须保持干净。
+          fetch-depth: 1
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - uses: bufbuild/buf-setup-action@v1
+        with:
+          version: ${{ env.BUF_VERSION }}
+
+      - name: Check release materials
+        run: ./scripts/check_release_materials.sh
+      - name: Check repo hygiene
+        run: ./scripts/check_repo_hygiene.sh
+      - name: Check CI publish policy
+        run: python3 scripts/check_admin_ci_policy.py
+
+      # 需求 11.4：干净检出上依次执行前端 build + 后端 build，
+      # 之后 git status 必须干净（所有产物落在 .gitignore 规则内）。
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - run: npm ci --ignore-scripts
+        working-directory: frontend
+      - name: buf generate and normalize ESM imports
+        run: node frontend/tools/generate-proto.mjs
+      - name: Frontend build
+        working-directory: frontend
+        env:
+          HUSKY: "0"
+        run: |
+          npm ci
+          npm run build --prefix packages/admin-proto
+          npm run build
+      - name: Backend build
+        working-directory: backend
+        run: |
+          go mod download
+          go build ./...
+      - name: git status must be clean
+        run: |
+          # --porcelain 输出非空 = 有未被忽略的新增/修改文件 → 失败
+          status="$(git status --porcelain)"
+          if [ -n "$status" ]; then
+            echo "::error::干净检出 build 后 git status 非干净，存在未被 .gitignore 覆盖的产物："
+            echo "$status"
+            exit 1
+          fi
+          echo "✓ 干净检出 build 后 git status 干净"

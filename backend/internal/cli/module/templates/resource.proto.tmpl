@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package company.{{.Module}}.v1;
+
+import "abysstract/admin/v1/common.proto";
+{{if .Timestamp}}import "google/protobuf/timestamp.proto";
+{{end}}
+{{range .CustomImports}}import {{printf "%q" .}};
+{{end}}
+service {{.Name}}Service {
+{{range .Operations}}  rpc {{.Method}}({{.Request}}) returns ({{.Response}});
+{{end}}
+  rpc List{{.Plural}}(List{{.Plural}}Request) returns (List{{.Plural}}Response);
+  rpc Get{{.Name}}(Get{{.Name}}Request) returns (Get{{.Name}}Response);
+  rpc Create{{.Name}}(Create{{.Name}}Request) returns (Create{{.Name}}Response);
+  rpc Update{{.Name}}(Update{{.Name}}Request) returns (Update{{.Name}}Response);
+  rpc Delete{{.Name}}(Delete{{.Name}}Request) returns (Delete{{.Name}}Response);
+  rpc BatchDelete{{.Plural}}(BatchDelete{{.Plural}}Request) returns (BatchDelete{{.Plural}}Response);
+}
+
+message {{.Name}} {
+{{range .Reserved}}  reserved {{.Entity}};
+  reserved {{printf "%q" .Name}};
+{{end}}
+  int64 id = 1;
+{{range .Fields}}  {{if .Nullable}}{{if ne .ProtoType "google.protobuf.Timestamp"}}optional {{end}}{{end}}{{.ProtoType}} {{.Column}} = {{.EntityNumber}};
+{{end}}}
+
+message List{{.Plural}}Request {
+  abysstract.admin.v1.PageRequest page = 1;
+  string keyword = 2;
+  repeated abysstract.admin.v1.OrderBy orders = 3;
+}
+message List{{.Plural}}Response {
+  repeated {{.Name}} items = 1;
+  abysstract.admin.v1.PageInfo page = 2;
+}
+message Get{{.Name}}Request { int64 id = 1; }
+message Get{{.Name}}Response { {{.Name}} item = 1; }
+message Create{{.Name}}Request {
+{{range .Reserved}}{{if not .Managed}}  reserved {{.Create}};
+  reserved {{printf "%q" .Name}};
+{{end}}{{end}}
+{{range .Fields}}{{if not .Managed}}  {{if .Nullable}}{{if ne .ProtoType "google.protobuf.Timestamp"}}optional {{end}}{{end}}{{.ProtoType}} {{.Column}} = {{.CreateNumber}};
+{{end}}{{end}}}
+message Create{{.Name}}Response { {{.Name}} item = 1; }
+message Update{{.Name}}Request {
+{{range .Reserved}}{{if not .Managed}}  reserved {{.Entity}};
+  reserved {{printf "%q" .Name}};
+{{end}}{{end}}
+  int64 id = 1;
+{{range .Fields}}{{if not .Managed}}  {{if ne .ProtoType "google.protobuf.Timestamp"}}optional {{end}}{{.ProtoType}} {{.Column}} = {{.EntityNumber}};
+{{end}}{{end}}}
+message Update{{.Name}}Response { {{.Name}} item = 1; }
+message Delete{{.Name}}Request { int64 id = 1; }
+message Delete{{.Name}}Response {}
+message BatchDelete{{.Plural}}Request { repeated int64 ids = 1; }
+message BatchDelete{{.Plural}}Response {}

@@ -1,0 +1,82 @@
+syntax = "proto3";
+
+package company.product.v1;
+
+import "abysstract/admin/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+service ProductService {
+  rpc ListProducts(ListProductsRequest) returns (ListProductsResponse);
+  rpc GetProduct(GetProductRequest) returns (GetProductResponse);
+  rpc CreateProduct(CreateProductRequest) returns (CreateProductResponse);
+  rpc UpdateProduct(UpdateProductRequest) returns (UpdateProductResponse);
+  rpc DeleteProduct(DeleteProductRequest) returns (DeleteProductResponse);
+  rpc BatchDeleteProducts(BatchDeleteProductsRequest) returns (BatchDeleteProductsResponse);
+}
+
+message Product {
+  int64 id = 1;
+  string product_no = 2;
+  string name = 3;
+  int64 price_cents = 4;
+  int64 dept_id = 5;
+  int64 create_by = 6;
+  string remark = 7;
+  google.protobuf.Timestamp create_time = 8;
+  google.protobuf.Timestamp update_time = 9;
+}
+
+message ListProductsRequest {
+  abysstract.admin.v1.PageRequest page = 1;
+  string keyword = 2;
+  repeated abysstract.admin.v1.OrderBy orders = 3;
+  optional int64 dept_id = 4;
+}
+
+message ListProductsResponse {
+  repeated Product items = 1;
+  abysstract.admin.v1.PageInfo page = 2;
+}
+
+message GetProductRequest {
+  int64 id = 1;
+}
+
+message GetProductResponse {
+  Product item = 1;
+}
+
+message CreateProductRequest {
+  string product_no = 1;
+  string name = 2;
+  int64 price_cents = 3;
+  int64 dept_id = 4;
+  string remark = 5;
+}
+
+message CreateProductResponse {
+  Product item = 1;
+}
+
+message UpdateProductRequest {
+  int64 id = 1;
+  optional string name = 2;
+  optional int64 price_cents = 3;
+  optional string remark = 4;
+}
+
+message UpdateProductResponse {
+  Product item = 1;
+}
+
+message DeleteProductRequest {
+  int64 id = 1;
+}
+
+message DeleteProductResponse {}
+
+message BatchDeleteProductsRequest {
+  repeated int64 ids = 1;
+}
+
+message BatchDeleteProductsResponse {}

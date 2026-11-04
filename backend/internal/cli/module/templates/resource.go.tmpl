@@ -1,0 +1,37 @@
+package definition
+
+import (
+ api "{{.Import}}/gen/proto/company/{{.Module}}/v1"
+ apiconnect "{{.Import}}/gen/proto/company/{{.Module}}/v1/{{.Module}}v1connect"
+ "{{.Import}}/model"
+ "github.com/abysstract/abysstract-admin/backend/resource/schema"
+)
+
+var {{.Name}}Resource = &schema.Resource{
+ Name: "{{.Name}}", PermPrefix: "biz:{{.Module}}:{{.File}}", Mode: {{if .Operations}}schema.Partial{{else}}schema.Generated{{end}},
+ Table: model.TableName{{.Model}}, Model: (*model.{{.Model}})(nil),
+ Entity: (*api.{{.Name}})(nil), CreateReq: (*api.Create{{.Name}}Request)(nil), UpdateReq: (*api.Update{{.Name}}Request)(nil),
+ Fields: []schema.Field{
+  schema.F("ID", schema.ServerManaged()),
+{{range .Fields}}  schema.F({{printf "%q" .GoName}}{{range .Options}}, {{.}}{{end}}),
+{{end}} },
+ Service: schema.ServiceConfig{
+  Descriptor: api.File_company_{{.Module}}_v1_{{.File}}_proto.Services().ByName("{{.Name}}Service"),
+  Handler: (*apiconnect.{{.Name}}ServiceHandler)(nil),
+ },
+ Operations: append(schema.StandardOperations(schema.StandardOperationsConfig{
+  List: schema.StandardOperation{
+   Method: "List{{.Plural}}", Request: (*api.List{{.Plural}}Request)(nil), Response: (*api.List{{.Plural}}Response)(nil),
+   Binding: schema.OperationBinding{List: schema.ListBinding{Page: "Page", Keyword: "Keyword", Sort: "Orders", DefaultOrders: []schema.ListDefaultOrder{{"{"}}{Field: "ID"}{{"}"}}}},
+  },
+  Get: schema.StandardOperation{Method: "Get{{.Name}}", Request: (*api.Get{{.Name}}Request)(nil), Response: (*api.Get{{.Name}}Response)(nil)},
+  Create: schema.StandardOperation{Method: "Create{{.Name}}", Request: (*api.Create{{.Name}}Request)(nil), Response: (*api.Create{{.Name}}Response)(nil)},
+  Update: schema.StandardOperation{Method: "Update{{.Name}}", Request: (*api.Update{{.Name}}Request)(nil), Response: (*api.Update{{.Name}}Response)(nil), Binding: schema.OperationBinding{Identifier:"Id"}},
+  Delete: schema.StandardOperation{Method: "Delete{{.Name}}", Request: (*api.Delete{{.Name}}Request)(nil), Response: (*api.Delete{{.Name}}Response)(nil)},
+  BatchDelete: schema.StandardOperation{Method: "BatchDelete{{.Plural}}", Request: (*api.BatchDelete{{.Plural}}Request)(nil), Response: (*api.BatchDelete{{.Plural}}Response)(nil)},
+ }),
+{{range .Operations}} schema.Operation{Kind:schema.OperationCustom, Method:{{printf "%q" .Method}}, Request:(*api.{{.Request}})(nil),Response:(*api.{{.Response}})(nil), Implementation:schema.OperationOverride, Action:{{printf "%q" .Action}},ScopePolicy:schema.ScopePolicyExempt},
+{{end}} ),
+ Key: schema.KeyConfig{ModelField: "ID"},
+ Audit: schema.AuditConfig{UpdatedAtField: "{{.AuditGo}}"},
+}

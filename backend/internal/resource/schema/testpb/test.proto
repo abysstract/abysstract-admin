@@ -1,0 +1,169 @@
+syntax = "proto3";
+
+package resource.schema.testpb;
+
+import "abysstract/admin/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/abysstract/abysstract-admin/backend/internal/resource/schema/testpb";
+
+message BoolEntity {
+  int64 id = 1;
+  bool enabled = 2;
+  google.protobuf.Timestamp updated_at = 3;
+  int32 narrow_value = 4;
+  BatchStatus status = 5;
+}
+
+message CreateBoolRequest {
+  bool enabled = 1;
+}
+
+message UpdateBoolRequest {
+  int64 id = 1;
+  optional bool enabled = 2;
+}
+
+message ListBoolsRequest {
+  abysstract.admin.v1.PageRequest page = 1;
+  optional bool enabled = 2;
+  string keyword = 3;
+  repeated abysstract.admin.v1.OrderBy orders = 4;
+  optional int32 narrow_value = 5;
+  optional BatchStatus status = 6;
+}
+
+message ListBoolsResponse {
+  repeated BoolEntity items = 1;
+  abysstract.admin.v1.PageInfo page = 2;
+}
+
+enum BatchStatus {
+  BATCH_STATUS_UNSPECIFIED = 0;
+  BATCH_STATUS_ACTIVE = 1;
+}
+
+message BatchDeleteBoolsRequest {
+  repeated int64 ids = 1;
+  repeated int64 archive_ids = 2;
+  repeated BatchStatus statuses = 3;
+}
+
+message BatchDeleteBoolsResponse {}
+
+message GetBoolRequest {
+  int64 id = 1;
+}
+
+message GetBoolResponse {
+  BoolEntity item = 1;
+}
+
+message CreateBoolResponse {
+  BoolEntity item = 1;
+}
+
+message UpdateBoolResponse {
+  BoolEntity item = 1;
+}
+
+message DeleteBoolRequest {
+  int64 id = 1;
+}
+
+message DeleteBoolResponse {}
+
+service BoolService {
+  rpc ListBools(ListBoolsRequest) returns (ListBoolsResponse);
+  rpc CreateBool(CreateBoolRequest) returns (CreateBoolResponse);
+  rpc GetBool(GetBoolRequest) returns (GetBoolResponse);
+  rpc UpdateBool(UpdateBoolRequest) returns (UpdateBoolResponse);
+  rpc DeleteBool(DeleteBoolRequest) returns (DeleteBoolResponse);
+  rpc BatchDeleteBools(BatchDeleteBoolsRequest) returns (BatchDeleteBoolsResponse);
+}
+
+// Widget 是 8.x Controller 生成/TDD 的六操作 fixture（独立于正式 proto）。
+message WidgetEntity {
+  int64 id = 1;
+  string name = 2;
+  bool enabled = 3;
+  google.protobuf.Timestamp updated_at = 4;
+}
+
+message GetWidgetRequest {
+  int64 id = 1;
+}
+
+message GetWidgetResponse {
+  WidgetEntity item = 1;
+}
+
+message CreateWidgetRequest {
+  string name = 1;
+  bool enabled = 2;
+}
+
+message CreateWidgetResponse {
+  WidgetEntity item = 1;
+}
+
+message UpdateWidgetRequest {
+  int64 id = 1;
+  optional string name = 2;
+  optional bool enabled = 3;
+}
+
+message UpdateWidgetResponse {
+  WidgetEntity item = 1;
+}
+
+message DeleteWidgetRequest {
+  int64 id = 1;
+}
+
+message DeleteWidgetResponse {}
+
+message BatchDeleteWidgetsRequest {
+  repeated int64 ids = 1;
+}
+
+message BatchDeleteWidgetsResponse {}
+
+message ListWidgetsRequest {
+  abysstract.admin.v1.PageRequest page = 1;
+  string keyword = 2;
+  optional bool enabled = 3;
+  repeated abysstract.admin.v1.OrderBy orders = 4;
+}
+
+message ListWidgetsResponse {
+  repeated WidgetEntity items = 1;
+  abysstract.admin.v1.PageInfo page = 2;
+}
+
+message WidgetRefreshEntity {
+  int64 id = 1;
+  string name = 2;
+  bool enabled = 3;
+  google.protobuf.Timestamp updated_at = 4;
+}
+
+message RefreshWidgetRequest {
+  int64 id = 1;
+}
+
+message RefreshWidgetResponse {}
+
+service WidgetService {
+  rpc ListWidgets(ListWidgetsRequest) returns (ListWidgetsResponse);
+  rpc CreateWidget(CreateWidgetRequest) returns (CreateWidgetResponse);
+  rpc GetWidget(GetWidgetRequest) returns (GetWidgetResponse);
+  rpc UpdateWidget(UpdateWidgetRequest) returns (UpdateWidgetResponse);
+  rpc DeleteWidget(DeleteWidgetRequest) returns (DeleteWidgetResponse);
+  rpc BatchDeleteWidgets(BatchDeleteWidgetsRequest) returns (BatchDeleteWidgetsResponse);
+  rpc RefreshWidget(RefreshWidgetRequest) returns (RefreshWidgetResponse);
+}
+
+message RenamedColumnsEntity { int64 id = 1; string display_name = 2; google.protobuf.Timestamp updated_at = 3; }
+message CreateRenamedColumnsRequest { string display_name = 1; }
+message UpdateRenamedColumnsRequest { int64 id = 1; optional string display_name = 2; }

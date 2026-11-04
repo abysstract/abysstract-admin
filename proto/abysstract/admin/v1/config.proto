@@ -1,0 +1,73 @@
+syntax = "proto3";
+
+package abysstract.admin.v1;
+
+import "abysstract/admin/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+// 参数配置
+message Config {
+  int64 id = 1;
+  string config_name = 2;
+  string config_key = 3;
+  string config_value = 4;
+  int32 config_type = 5; // 1 系统内置 0 普通
+  string remark = 6;
+  google.protobuf.Timestamp create_time = 7;
+  google.protobuf.Timestamp update_time = 8;
+}
+
+// Config v1 only exposes keyword search. The formal Resource schema must not
+// declare filter/sort capabilities until matching optional/repeated wire input
+// is intentionally added here.
+message ListConfigsRequest {
+  PageRequest page = 1;
+  string keyword = 2;
+}
+message ListConfigsResponse {
+  repeated Config items = 1;
+  PageInfo page = 2;
+}
+message CreateConfigRequest {
+  string config_name = 1;
+  string config_key = 2;
+  string config_value = 3;
+  int32 config_type = 4;
+  string remark = 5;
+}
+message CreateConfigResponse {
+  Config item = 1;
+}
+message GetConfigRequest {
+  int64 id = 1;
+}
+message GetConfigResponse {
+  Config item = 1;
+}
+message UpdateConfigRequest {
+  int64 id = 1;
+  optional string config_name = 2;
+  optional string config_value = 3;
+  optional string remark = 4;
+}
+message UpdateConfigResponse {
+  Config item = 1;
+}
+message DeleteConfigRequest {
+  int64 id = 1;
+}
+message DeleteConfigResponse {}
+message BatchDeleteConfigsRequest {
+  repeated int64 ids = 1;
+}
+message BatchDeleteConfigsResponse {}
+
+// 参数设置服务
+service ConfigService {
+  rpc ListConfigs(ListConfigsRequest) returns (ListConfigsResponse);
+  rpc CreateConfig(CreateConfigRequest) returns (CreateConfigResponse);
+  rpc GetConfig(GetConfigRequest) returns (GetConfigResponse);
+  rpc UpdateConfig(UpdateConfigRequest) returns (UpdateConfigResponse);
+  rpc DeleteConfig(DeleteConfigRequest) returns (DeleteConfigResponse);
+  rpc BatchDeleteConfigs(BatchDeleteConfigsRequest) returns (BatchDeleteConfigsResponse);
+}

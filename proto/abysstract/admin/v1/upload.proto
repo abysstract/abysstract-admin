@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package abysstract.admin.v1;
+
+// 文件 / 头像上传服务（需求 9.1–9.4）。
+// 文件内容以 bytes 内联在请求中：脚手架场景 ≤50MB，ConnectRPC 配合 MaxReceiveBytes 足够。
+// 真正大文件场景请二次开发接入对象存储 + 分片上传。
+
+message UploadFileRequest {
+  string filename = 1; // 原始文件名（仅用于扩展名推断 + 保存名）
+  string mime_type = 2; // 客户端声明 MIME；服务端以扩展名白名单为准
+  bytes content = 3; // 文件二进制内容
+}
+message UploadFileResponse {
+  string url = 1; // 可访问引用标识（相对路径或完整 URL）
+  int64 size = 2; // 实际写入字节数
+}
+
+// 头像上传：≤5MB 且类型在图片白名单内则更新当前用户 sys_user.avatar。
+// 失败时保留原引用，仅返回描述性错误（需求 9.4）。
+message UploadAvatarRequest {
+  string filename = 1;
+  string mime_type = 2;
+  bytes content = 3;
+}
+message UploadAvatarResponse {
+  string url = 1; // 新头像引用（成功后等于 sys_user.avatar）
+}
+
+service UploadService {
+  rpc UploadFile(UploadFileRequest) returns (UploadFileResponse);
+  rpc UploadAvatar(UploadAvatarRequest) returns (UploadAvatarResponse);
+}

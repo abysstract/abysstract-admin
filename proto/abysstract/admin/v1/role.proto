@@ -1,0 +1,105 @@
+syntax = "proto3";
+
+package abysstract.admin.v1;
+
+import "abysstract/admin/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+// 角色。menu_ids 是授权关系，由专用授权 RPC 维护，不属于普通字段 CRUD。
+message Role {
+  int64 id = 1;
+  string role_name = 2;
+  string role_key = 3;
+  int32 role_sort = 4;
+  int32 data_scope = 5; // 1全部 2自定义 3本部门 4本部门及以下 5仅本人
+  Status status = 6;
+  string remark = 7;
+  repeated int64 menu_ids = 8; // 角色拥有的菜单/权限 ID；GetRole 标准投影不填充
+  google.protobuf.Timestamp create_time = 9;
+  google.protobuf.Timestamp update_time = 10;
+}
+
+message ListRolesRequest {
+  PageRequest page = 1;
+  string keyword = 2; // 按角色名/标识模糊查询
+  optional Status status = 3;
+}
+
+message ListRolesResponse {
+  repeated Role items = 1;
+  PageInfo page = 2;
+}
+
+message GetRoleRequest {
+  int64 id = 1;
+}
+message GetRoleResponse {
+  Role role = 1;
+}
+
+message CreateRoleRequest {
+  string role_name = 1;
+  string role_key = 2;
+  int32 role_sort = 3;
+  int32 data_scope = 4;
+  string remark = 5;
+  reserved 6;
+  reserved "menu_ids";
+}
+message CreateRoleResponse {
+  Role role = 1;
+}
+
+message UpdateRoleRequest {
+  int64 id = 1;
+  optional string role_name = 2;
+  optional int32 role_sort = 3;
+  optional int32 data_scope = 4;
+  optional string remark = 5;
+  reserved 6;
+  reserved "menu_ids";
+}
+message UpdateRoleResponse {
+  Role role = 1;
+}
+
+message DeleteRoleRequest {
+  int64 id = 1;
+}
+message DeleteRoleResponse {}
+message BatchDeleteRolesRequest {
+  repeated int64 ids = 1;
+}
+message BatchDeleteRolesResponse {}
+
+message ChangeRoleStatusRequest {
+  int64 id = 1;
+  Status status = 2;
+}
+message ChangeRoleStatusResponse {}
+
+// 专用授权关系读取/写入，不进入普通 Role Update 的 scalar path。
+message GetRoleMenusRequest {
+  int64 role_id = 1;
+}
+message GetRoleMenusResponse {
+  repeated int64 menu_ids = 1;
+}
+message UpdateRoleMenusRequest {
+  int64 role_id = 1;
+  repeated int64 menu_ids = 2;
+}
+message UpdateRoleMenusResponse {}
+
+// 角色管理服务
+service RoleService {
+  rpc ListRoles(ListRolesRequest) returns (ListRolesResponse);
+  rpc GetRole(GetRoleRequest) returns (GetRoleResponse);
+  rpc CreateRole(CreateRoleRequest) returns (CreateRoleResponse);
+  rpc UpdateRole(UpdateRoleRequest) returns (UpdateRoleResponse);
+  rpc DeleteRole(DeleteRoleRequest) returns (DeleteRoleResponse);
+  rpc BatchDeleteRoles(BatchDeleteRolesRequest) returns (BatchDeleteRolesResponse);
+  rpc ChangeRoleStatus(ChangeRoleStatusRequest) returns (ChangeRoleStatusResponse);
+  rpc GetRoleMenus(GetRoleMenusRequest) returns (GetRoleMenusResponse);
+  rpc UpdateRoleMenus(UpdateRoleMenusRequest) returns (UpdateRoleMenusResponse);
+}

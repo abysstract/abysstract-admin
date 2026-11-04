@@ -1,0 +1,54 @@
+version: "2"
+
+run:
+  timeout: 5m
+  go: "1.26"
+
+linters:
+  default: standard
+  enable:
+    - errcheck      # 检查未处理的错误返回值
+    - gocyclo       # 函数圈复杂度
+    - ineffassign   # 检测无效赋值
+    - misspell      # 拼写检查
+    - unparam       # 检测未使用的函数参数
+    - unused        # 检测未使用的代码
+  settings:
+    gocyclo:
+      min-complexity: 20  # 超过 20 视为过于复杂
+  exclusions:
+    presets:
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - "^gen/"                # buf 生成代码，勿改
+      - "internal/modules/[^/]+/(model|query|gen)/"
+      - "internal/dal"        # gentool 生成代码，勿改
+      - "internal/testutil"   # 测试夹具，可放宽
+      - "_test\\.go"
+      - ".*\\.gen\\.go$"  # Resource/compile-inspect 生成代码
+      - ".*\\.pb\\.go$"   # protobuf 生成代码
+    rules:
+      # Resource schema 与 adminresource-gen 是声明式规划/代码生成核心，
+      # 单个构建函数的分支数由字段与 RPC 组合决定，保留现有实现不拆散。
+      - path: "^(cmd/adminresource-gen|cmd/modelgen|resource/schema|resourcegen)/"
+        linters:
+          - gocyclo
+
+formatters:
+  enable:
+    - goimports
+  exclusions:
+    paths:
+      - "internal/modules/[^/]+/(model|query|gen)/"
+      - ".*\\.gen\\.go$"  # 生成器原始输出，不在 lint 中重排
+      - ".*\\.pb\\.go$"   # protobuf 生成器原始输出
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/abysstract/abysstract-admin/backend
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0

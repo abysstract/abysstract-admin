@@ -1,0 +1,41 @@
+# abysstract-admin 本地开发依赖编排
+#
+# 目标：一条命令拉起 admin 专用的独立 PostgreSQL 实例，
+# 让贡献者无需依赖 RAG 服务端的 gridrag 库即可完成首次启动。
+#
+# 用法：
+#   docker compose up -d --wait    # 等待容器进入 healthy（约 60s 上限）
+#   docker compose down            # 停止并移除容器（保留数据卷）
+#   docker compose down -v         # 停止并移除容器与数据卷（彻底重置）
+#
+# 说明：
+#   - 端口映射 5433:5432 刻意避开 RAG 的 5432/25432，防止误连 gridrag。
+#   - 初始化脚本 scripts/init_pg.sql 由官方镜像 entrypoint 在首次创建数据卷时执行，
+#     仅作用于本 admin 实例，不会连接或写入 gridrag。
+services:
+  admin-postgres:
+    image: postgres:16-alpine
+    container_name: abysstract-admin-postgres
+    environment:
+      # admin 自有数据库账号与库名（与 .env.example 的 ADMIN_DB_DSN 对齐）
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: abysstract_admin
+    ports:
+      # 宿主机 5433 → 容器 5432，避开 RAG 端口
+      - "5433:5432"
+    volumes:
+      # 独立命名卷，持久化 admin 数据，与 RAG 数据完全隔离
+      - admin_pg_data:/var/lib/postgresql/data
+      # 幂等初始化脚本：仅在首次创建数据卷时由 entrypoint 执行
+      - ./scripts/init_pg.sql:/docker-entrypoint-initdb.d/10_init.sql:ro
+    healthcheck:
+      # pg_isready 探测实例可连接性；3s × 20 ≈ 60s 上限内进入 healthy
+      test: ["CMD-SHELL", "pg_isready -U admin -d abysstract_admin"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  # admin 专用数据卷，与 RAG 的 gridrag 数据物理隔离
+  admin_pg_data:

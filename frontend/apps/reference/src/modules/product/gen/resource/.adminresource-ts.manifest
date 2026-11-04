@@ -1,0 +1,5 @@
+generator-format.gen.ts
+product.operations.gen.ts
+product.raw.gen.ts
+product.schema.gen.ts
+resource-operations.gen.ts

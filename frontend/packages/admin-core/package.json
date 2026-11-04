@@ -1,0 +1,81 @@
+{
+  "name": "@abysstract/admin-core",
+  "version": "0.0.0-dev.0",
+  "private": true,
+  "type": "module",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./resource": {
+      "types": "./dist/resource/index.d.ts",
+      "import": "./dist/resource/index.js"
+    },
+    "./resource/schema": {
+      "types": "./dist/resource/schema.d.ts",
+      "import": "./dist/resource/schema.js"
+    },
+    "./resource/operations": {
+      "types": "./dist/resource/operations.d.ts",
+      "import": "./dist/resource/operations.js"
+    },
+    "./resource/relation": {
+      "types": "./dist/resource/relation.d.ts",
+      "import": "./dist/resource/relation.js"
+    },
+    "./system": {
+      "types": "./dist/system/index.d.ts",
+      "import": "./dist/system/index.js"
+    },
+    "./styles.css": "./dist/styles.css"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && node ../../tools/copy-admin-core-css.mjs",
+    "prepack": "npm run build",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@abysstract/admin-proto": "0.0.0-dev.0"
+  },
+  "peerDependencies": {
+    "@ant-design/icons": "^5.4.0",
+    "@ant-design/pro-components": "^2.7.0",
+    "@bufbuild/protobuf": "^2.2.0",
+    "@connectrpc/connect": "^2.0.0",
+    "@connectrpc/connect-web": "^2.0.0",
+    "antd": "^5.21.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "react-router-dom": "^6.27.0"
+  },
+  "devDependencies": {
+    "@ant-design/icons": "^5.4.0",
+    "@ant-design/pro-components": "^2.7.19",
+    "@bufbuild/protobuf": "^2.2.0",
+    "@connectrpc/connect": "^2.0.0",
+    "@connectrpc/connect-web": "^2.0.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "antd": "^5.21.6",
+    "jsdom": "^29.1.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.27.0",
+    "typescript": "^5.6.3",
+    "vitest": "^4.1.10",
+    "vite": "^5.4.10",
+    "fast-check": "^4.9.0"
+  }
+}

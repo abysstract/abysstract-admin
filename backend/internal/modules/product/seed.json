@@ -1,0 +1,81 @@
+{
+  "module": "product",
+  "menus": [
+    {
+      "key": "menu.product.directory",
+      "name": "商品管理",
+      "path": "biz",
+      "type": "M",
+      "icon": "product",
+      "order": 50
+    },
+    {
+      "key": "menu.product.page",
+      "parent": "menu.product.directory",
+      "name": "商品列表",
+      "path": "product",
+      "component": "biz/product/index",
+      "type": "C",
+      "permission": "biz:product:list",
+      "icon": "product",
+      "order": 1
+    },
+    {
+      "key": "menu.product.button.list",
+      "parent": "menu.product.page",
+      "name": "商品查询",
+      "type": "F",
+      "permission": "biz:product:list",
+      "order": 1
+    },
+    {
+      "key": "menu.product.button.add",
+      "parent": "menu.product.page",
+      "name": "商品新增",
+      "type": "F",
+      "permission": "biz:product:add",
+      "order": 2
+    },
+    {
+      "key": "menu.product.button.edit",
+      "parent": "menu.product.page",
+      "name": "商品修改",
+      "type": "F",
+      "permission": "biz:product:edit",
+      "order": 3
+    },
+    {
+      "key": "menu.product.button.remove",
+      "parent": "menu.product.page",
+      "name": "商品删除",
+      "type": "F",
+      "permission": "biz:product:remove",
+      "order": 4
+    }
+  ],
+  "roles": [
+    {
+      "key": "biz_product_reader",
+      "name": "商品只读",
+      "dataScope": 3,
+      "menus": [
+        "menu.product.directory",
+        "menu.product.page",
+        "menu.product.button.list"
+      ]
+    },
+    {
+      "key": "biz_product_editor",
+      "name": "商品编辑",
+      "dataScope": 3,
+      "menus": [
+        "menu.product.directory",
+        "menu.product.page",
+        "menu.product.button.list",
+        "menu.product.button.add",
+        "menu.product.button.edit",
+        "menu.product.button.remove"
+      ]
+    }
+  ]
+}

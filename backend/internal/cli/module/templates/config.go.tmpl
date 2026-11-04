@@ -1,0 +1,32 @@
+package definition
+
+import (
+ "github.com/abysstract/abysstract-admin/backend/resource"
+ "github.com/abysstract/abysstract-admin/backend/resourcegen"
+)
+
+func GeneratorConfig(root string) resourcegen.Config {
+ return resourcegen.Config{
+  FormatVersion: resource.GeneratorFormatV1,
+  GenQueryImport: "{{.Import}}/query",
+  RootDir: root,
+  GoOutputDir: "{{.Backend}}/gen/resource",
+  GoPackage: "gen",
+  TSOutputDir: "{{.Frontend}}/gen/resource",
+  GoImports: resourcegen.GoImports{
+   Resource: "github.com/abysstract/abysstract-admin/backend/resource",
+   Permission: "github.com/abysstract/abysstract-admin/backend/permission",
+  },
+  TSImports: resourcegen.TSImports{
+   Schema: "@abysstract/admin-core/resource/schema",
+   Operations: "@abysstract/admin-core/resource/operations",
+   Relation: "@abysstract/admin-core/resource/relation",
+   ProtoModules: map[string]string{
+{{range .Resources}}    "company/{{.Module}}/v1/{{.File}}.proto": "../proto/company/{{.Module}}/v1/{{.File}}_pb",
+{{end}}
+{{range .CustomProtoMappings}}    {{printf "%q" .Source}}: {{printf "%q" .Target}},
+{{end}}    "abysstract/admin/v1/common.proto": "@abysstract/admin-proto/abysstract/admin/v1/common_pb",
+   },
+  },
+ }
+}

@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+package abysstract.admin.v1;
+
+import "abysstract/admin/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+// 通知公告
+message Notice {
+  int64 id = 1;
+  string notice_title = 2;
+  int32 notice_type = 3; // 1 通知 2 公告
+  string notice_content = 4;
+  Status status = 5;
+  string remark = 6;
+  google.protobuf.Timestamp create_time = 7;
+  google.protobuf.Timestamp update_time = 8;
+}
+
+message ListNoticesRequest {
+  PageRequest page = 1;
+  string keyword = 2;
+}
+message ListNoticesResponse {
+  repeated Notice items = 1;
+  PageInfo page = 2;
+}
+message GetNoticeRequest {
+  int64 id = 1;
+}
+message GetNoticeResponse {
+  Notice item = 1;
+}
+message CreateNoticeRequest {
+  string notice_title = 1;
+  int32 notice_type = 2;
+  string notice_content = 3;
+  string remark = 4;
+}
+message CreateNoticeResponse {
+  Notice item = 1;
+}
+message UpdateNoticeRequest {
+  int64 id = 1;
+  optional string notice_title = 2;
+  optional int32 notice_type = 3;
+  optional string notice_content = 4;
+  optional string remark = 5;
+}
+message UpdateNoticeResponse {
+  Notice item = 1;
+}
+message DeleteNoticeRequest {
+  int64 id = 1;
+}
+message DeleteNoticeResponse {}
+message BatchDeleteNoticesRequest {
+  repeated int64 ids = 1;
+}
+message BatchDeleteNoticesResponse {}
+
+// 通知公告服务
+service NoticeService {
+  rpc ListNotices(ListNoticesRequest) returns (ListNoticesResponse);
+  rpc GetNotice(GetNoticeRequest) returns (GetNoticeResponse);
+  rpc CreateNotice(CreateNoticeRequest) returns (CreateNoticeResponse);
+  rpc UpdateNotice(UpdateNoticeRequest) returns (UpdateNoticeResponse);
+  rpc DeleteNotice(DeleteNoticeRequest) returns (DeleteNoticeResponse);
+  rpc BatchDeleteNotices(BatchDeleteNoticesRequest) returns (BatchDeleteNoticesResponse);
+}

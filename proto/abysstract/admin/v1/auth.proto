@@ -1,0 +1,57 @@
+syntax = "proto3";
+
+package abysstract.admin.v1;
+
+import "abysstract/admin/v1/menu.proto";
+import "abysstract/admin/v1/user.proto";
+
+message LoginRequest {
+  string username = 1;
+  string password = 2;
+}
+
+message LoginResponse {
+  string token = 1; // JWT
+  int64 expires_in = 2; // 有效期（秒）
+  string refresh_token = 3; // 刷新令牌（仅启用刷新令牌时返回；否则为空）
+}
+
+message LogoutRequest {}
+message LogoutResponse {}
+
+// 改密请求：旧密码 + 新密码。服务端校验旧密码 + 复杂度策略，成功后递增 token_version。
+message ChangePasswordRequest {
+  string old_password = 1;
+  string new_password = 2;
+}
+message ChangePasswordResponse {}
+
+// 刷新令牌：用未过期且未吊销的 refresh_token 换取新的访问令牌。
+// 仅在服务端启用刷新令牌特性时可用，否则返回 Unimplemented。
+message RefreshTokenRequest {
+  string refresh_token = 1;
+}
+message RefreshTokenResponse {
+  string token = 1; // 新的访问令牌（JWT）
+  int64 expires_in = 2; // 有效期（秒）
+  string refresh_token = 3; // 轮转后的新刷新令牌（若启用轮转）
+}
+
+message GetUserInfoRequest {}
+
+message GetUserInfoResponse {
+  User user = 1;
+  repeated string roles = 2; // 角色标识，如 ["admin"]
+  repeated string permissions = 3; // 按钮/操作权限标识，如 ["system:user:add"]
+  repeated Menu menus = 4; // 用户可见菜单树（目录 M + 菜单 C），驱动前端动态菜单与路由
+  bool pwd_reset_required = 5; // true 表示首次登录/被重置后需改密，前端应弹出改密对话框
+}
+
+// 认证服务（Login / RefreshToken 无需鉴权，其余需要 Bearer token）
+service AuthService {
+  rpc Login(LoginRequest) returns (LoginResponse);
+  rpc Logout(LogoutRequest) returns (LogoutResponse);
+  rpc GetUserInfo(GetUserInfoRequest) returns (GetUserInfoResponse);
+  rpc ChangePassword(ChangePasswordRequest) returns (ChangePasswordResponse);
+  rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse);
+}

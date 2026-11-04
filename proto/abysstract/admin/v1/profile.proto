@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package abysstract.admin.v1;
+
+// 个人中心服务（需求 9.13）：当前用户读写自己的资料。
+// username 为只读字段（不允许自行修改登录名）；其余字段可写。
+
+message GetProfileRequest {}
+
+message GetProfileResponse {
+  string username = 1; // 只读
+  string nickname = 2;
+  string email = 3;
+  string phone = 4;
+  string avatar = 5; // 头像引用（空字符串表示未设置）
+}
+
+message UpdateProfileRequest {
+  string nickname = 1;
+  string email = 2;
+  string phone = 3;
+  // username 与 avatar 不在更新字段：username 不可改；avatar 通过 UploadAvatar 维护。
+}
+message UpdateProfileResponse {
+  GetProfileResponse profile = 1; // 回写最新资料，便于前端直接刷新
+}
+
+service ProfileService {
+  rpc GetProfile(GetProfileRequest) returns (GetProfileResponse);
+  rpc UpdateProfile(UpdateProfileRequest) returns (UpdateProfileResponse);
+}
