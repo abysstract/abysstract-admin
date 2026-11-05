@@ -64,6 +64,9 @@ func widgetRepositoryError(err error) error {
 	if errors.Is(err, resource.ErrCycle) {
 		return connect.NewError(connect.CodeInvalidArgument, resource.ErrCycle.Error()).WithCause(resource.ErrCycle)
 	}
+	if errors.Is(err, resource.ErrOutOfRange) {
+		return connect.NewError(connect.CodeInvalidArgument, resource.ErrOutOfRange.Error()).WithCause(resource.ErrOutOfRange)
+	}
 	if errors.Is(err, resource.ErrHasChildren) {
 		return connect.NewError(connect.CodeFailedPrecondition, resource.ErrHasChildren.Error()).WithCause(resource.ErrHasChildren)
 	}

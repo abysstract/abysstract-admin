@@ -250,7 +250,7 @@ func validateCRUDModel(spec crudSpec, driver string, meta crudModel) error {
 			auto, _ := c.AutoIncrement()
 			sqliteIdentity := driver == "sqlite" && strings.EqualFold(c.DatabaseTypeName(), "integer")
 			if c.Name() != "id" || (!auto && !sqliteIdentity) {
-				return fmt.Errorf("%s: CRUD requires an auto-increment int64 id primary key", spec.Table)
+				return fmt.Errorf("%s: CRUD requires an auto-increment id primary key (BIGINT, BIGSERIAL, MySQL/MariaDB BIGINT UNSIGNED or INT UNSIGNED, SQLite INTEGER)", spec.Table)
 			}
 		}
 		nullable, _ := c.Nullable()
@@ -260,7 +260,7 @@ func validateCRUDModel(spec crudSpec, driver string, meta crudModel) error {
 		}
 	}
 	if primaryCount != 1 {
-		return fmt.Errorf("%s: CRUD requires one auto-increment int64 id primary key", spec.Table)
+		return fmt.Errorf("%s: CRUD requires exactly one auto-increment id primary key", spec.Table)
 	}
 	idValid := false
 	for _, f := range meta.Fields {
@@ -269,7 +269,7 @@ func validateCRUDModel(spec crudSpec, driver string, meta crudModel) error {
 		}
 	}
 	if !idValid {
-		return fmt.Errorf("%s.id must generate an int64 ID model field", spec.Table)
+		return fmt.Errorf("%s.id must generate an int64 ID model field; use a 64-bit integer column or an UNSIGNED MySQL/MariaDB integer", spec.Table)
 	}
 
 	return nil
