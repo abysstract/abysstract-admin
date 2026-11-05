@@ -33,6 +33,9 @@ func scaffold(root, name string) (map[string][]byte, []string, error) {
 	if err != nil {
 		return nil, nil, err
 	}
+	if err := checkModuleTablePrefix(root, descriptor{Name: name, Generation: &generation{Name: name, TablePrefix: name + "_"}}); err != nil {
+		return nil, nil, err
+	}
 	return files, []string{
 		"Created module conventions and resources/. Apply business table migrations, then run module resource " + name + " <table>.",
 		"Generate: cd backend && go run ./cmd/admin module generate " + name,

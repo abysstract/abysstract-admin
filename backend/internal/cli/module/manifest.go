@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/abysstract/abysstract-admin/backend/internal/codegen/tableprefix"
 )
 
 const backendImport = "github.com/abysstract/abysstract-admin/backend/"
@@ -181,6 +183,9 @@ func orderModules(defs []descriptor, names map[string]bool) ([]descriptor, error
 			return nil, fmt.Errorf("module dependency cycle")
 		}
 	}
+	if err := checkTablePrefixes(ordered); err != nil {
+		return nil, err
+	}
 	owners := map[string]string{}
 	for _, d := range ordered {
 		if d.Generation == nil {
@@ -219,10 +224,76 @@ func validateGeneration(root, path, name string, g generation) error {
 	if g.Name != name || g.TablePrefix == "" || !strings.HasSuffix(g.Prefix, "/") {
 		return fmt.Errorf("%s: generation requires matching name, tablePrefix and protocol prefix", path)
 	}
+	if err := tableprefix.Validate(g.TablePrefix); err != nil {
+		return fmt.Errorf("%s: %w", path, err)
+	}
 	for _, output := range []string{g.ModelOutput, g.GoOutput, g.TSOutput} {
 		if _, err := localPath(root, output); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// checkTablePrefixes rejects modules whose table namespaces select each
+// other's tables, for example tablePrefix "shop_" and "shop_order_".
+func checkTablePrefixes(defs []descriptor) error {
+	var owners []tableprefix.Owner
+	for _, d := range defs {
+		if d.Generation != nil {
+			owners = append(owners, tableprefix.Owner{Module: d.Name, Prefix: d.Generation.TablePrefix})
+		}
+	}
+	return tableprefix.CheckOverlap(owners)
+}
+
+// knownModules returns installed modules and module declarations present under
+// backend/internal/modules, so checks also cover modules not yet installed.
+func knownModules(root string) ([]descriptor, error) {
+	var selected selection
+	if err := readJSON(filepath.Join(root, "admin.modules.json"), &selected); err != nil {
+		return nil, err
+	}
+	paths := append([]string(nil), selected.Modules...)
+	found, err := filepath.Glob(filepath.Join(root, "backend/internal/modules/*/module.json"))
+	if err != nil {
+		return nil, err
+	}
+	for _, path := range found {
+		rel, err := filepath.Rel(root, path)
+		if err != nil {
+			return nil, err
+		}
+		paths = append(paths, filepath.ToSlash(rel))
+	}
+	var defs []descriptor
+	seen := map[string]bool{}
+	for _, path := range paths {
+		if seen[path] {
+			continue
+		}
+		seen[path] = true
+		d, err := readDescriptor(root, path)
+		if err != nil {
+			return nil, err
+		}
+		defs = append(defs, d)
+	}
+	return defs, nil
+}
+
+// checkModuleTablePrefix checks one module's table namespace against every
+// other known module.
+func checkModuleTablePrefix(root string, target descriptor) error {
+	known, err := knownModules(root)
+	if err != nil {
+		return err
+	}
+	defs := []descriptor{target}
+	for _, d := range known {
+		if d.Name != target.Name {
+			defs = append(defs, d)
+		}
+	}
+	return checkTablePrefixes(defs)
 }

@@ -10,11 +10,11 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strings"
 
 	"github.com/abysstract/abysstract-admin/backend/adminconfig"
 	"github.com/abysstract/abysstract-admin/backend/database"
 	"github.com/abysstract/abysstract-admin/backend/internal/codegen/modelcfg"
+	"github.com/abysstract/abysstract-admin/backend/internal/codegen/tableprefix"
 )
 
 func main() {
@@ -38,6 +38,16 @@ func run() error {
 		ModelOutput string `json:"modelOutput"`
 	}
 	if err := json.Unmarshal(raw, &modules); err != nil {
+		return err
+	}
+	var owners []tableprefix.Owner
+	for _, module := range modules {
+		if err := tableprefix.Validate(module.TablePrefix); err != nil {
+			return fmt.Errorf("module %q: %w", module.Name, err)
+		}
+		owners = append(owners, tableprefix.Owner{Module: module.Name, Prefix: module.TablePrefix})
+	}
+	if err := tableprefix.CheckOverlap(owners); err != nil {
 		return err
 	}
 	if *selected != "" {
@@ -72,14 +82,9 @@ func run() error {
 	}
 	sort.Strings(tables)
 	for _, module := range modules {
-		var moduleTables []string
-		for _, table := range tables {
-			if strings.HasPrefix(table, module.TablePrefix) {
-				moduleTables = append(moduleTables, table)
-			}
-		}
+		moduleTables := selectTables(tables, module.TablePrefix)
 		if len(moduleTables) == 0 {
-			return fmt.Errorf("module %q has no tables with prefix %q", module.Name, module.TablePrefix)
+			return fmt.Errorf("module %q has no tables with prefix %q", module.Name, tableprefix.Normalize(module.TablePrefix))
 		}
 		output := filepath.Join("..", module.ModelOutput)
 		// Inventory only GORM-owned files; handwritten files remain outside cleanup.
@@ -130,4 +135,15 @@ func run() error {
 		}
 	}
 	return nil
+}
+
+// selectTables picks a module's tables at the "<prefix>_" boundary.
+func selectTables(tables []string, prefix string) []string {
+	var selected []string
+	for _, table := range tables {
+		if tableprefix.Match(prefix, table) {
+			selected = append(selected, table)
+		}
+	}
+	return selected
 }
