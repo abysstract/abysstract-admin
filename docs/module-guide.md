@@ -47,11 +47,32 @@
 
 生成会追加新资源页面及菜单。已有菜单声明修改得到保留；生成器只更新仍与上一生成默认值一致的菜单。每个资源的权限前缀为 `biz:<module>:<resource>`，页面标识为 `biz/<module>/<resource>`。
 
-字段编号按资源持久化；重排字段保持编号，删除字段保留编号与名称。类型、可空性或服务器管理归属变化返回兼容性错误；通过显式的新版本 API 迁移处理。恢复已退役字段名和删除整项公共服务同样需要显式 API 版本设计。标准字段类型为 string、bool、int16、int32、int64 和 time.Time；string/bool/int32/int64 支持可空存储。可空 int16/time.Time 及其他类型使用专用转换。当前标准 CRUD 要求自增 int64 主键 `id` 和非空时间更新审计列，其他结构采用手写 Proto/Resource。
+字段编号按资源持久化；重排字段保持编号，删除字段保留编号与名称。类型、可空性或服务器管理归属变化返回兼容性错误；通过显式的新版本 API 迁移处理。恢复已退役字段名和删除整项公共服务同样需要显式 API 版本设计。标准字段类型为 string、bool、int16、int32、int64 和 time.Time；string/bool/int32/int64 支持可空存储。可空 int16/time.Time 及其他类型使用专用转换。当前标准 CRUD 要求自增主键 `id` 生成 int64 模型字段（PostgreSQL `BIGSERIAL`/`BIGINT`、MySQL/MariaDB `BIGINT`、`BIGINT UNSIGNED` 或 `INT UNSIGNED`、SQLite `INTEGER PRIMARY KEY`），以及非空时间更新审计列，其他结构采用手写 Proto/Resource。无符号整数的映射见下节。
 
 资源的 `operations` 数组可配置同包手写 Proto 中的专用请求/响应，工具生成 Partial Resource、强类型 Overrides、权限和菜单。每项包含 `method`、`request`、`response`、`action`、`title`、`proto` 和显式的 `scope: "exempt"`。exempt 表示业务实现负责该操作的数据范围检查；通用认证和动作权限仍由框架执行。生成的列表页工具栏仍是标准新增、编辑和删除，新方法要在页面中调用 `operations.custom.<方法名>`。手写消息的字段编号与兼容性由其 Proto 作者维护，生成器检查专用方法签名变更及移除。示例见教程第 6 节。
 
 已有商品模块保持手写 Proto、Resource、Hook 和页面，`generate product` 执行现有生成链路。已有一次性 scaffold 模块也可保持手写模式；改用 JSON 配置时，将业务扩展移到上述手写文件，并审查现有协议编号。工具对生成目标冲突直接报错。
+
+## MySQL/MariaDB 无符号整数
+
+`BIGINT UNSIGNED AUTO_INCREMENT` 主键和无符号外键列可以直接走 `module resource` → `module generate` 链路。生成器把无符号列映射为能容纳其取值范围的**有符号**类型，Model、Proto、Resource 和前端使用同一种类型：
+
+| 数据库列 | Go Model | Proto | TypeScript |
+| --- | --- | --- | --- |
+| `BIGINT UNSIGNED` | `int64` | `int64` | `bigint` |
+| `INT UNSIGNED` | `int64` | `int64` | `bigint` |
+| `MEDIUMINT UNSIGNED`、`SMALLINT UNSIGNED` | `int32` | `int32` | `number` |
+| `TINYINT UNSIGNED` | `int32` | `int32` | `number` |
+
+可空列生成 `*int64`/`*int32` 和 Proto `optional`，presence 语义与有符号列相同。PostgreSQL 和 SQLite 没有无符号整数，映射保持不变。
+
+选择 `int64` 而不是 Proto `uint64` 的原因：
+
+- 框架的主键契约只有一种类型。`resource.Repository`、生成的 Controller/Adapter、批量删除和 AccessScope 数据范围都按 `int64` 主键工作，系统表的用户、部门 ID 同样是 `int64`；业务表引用系统表或彼此引用时，Go 代码可以直接比较和赋值，无需转换。
+- 前端精度不受影响。Protobuf-ES 把 `int64` 和 `uint64` 都映射为 `bigint`，Connect JSON 把两者都编码为字符串，admin-core 表格和表单全程保留 `bigint`。
+- 线上兼容。非负值在 `int64` 和 `uint64` 下的二进制编码与 JSON 文本相同，确有需要时可以通过显式的新版本 API 改为 `uint64`。
+
+取舍是取值上限：`BIGINT UNSIGNED` 列只能存取不超过 `9223372036854775807`（2^63−1）的值。读取更大的值时驱动返回范围错误，请求失败，不会静默截断；自增主键在实际使用中不会达到这个上限。写入负数或超出列范围的值时，MySQL/MariaDB 严格模式（默认 `sql_mode` 含 `STRICT_TRANS_TABLES`）拒绝写入，生成的服务返回 `invalid_argument`。需要完整 64 位无符号范围的列，在模块 `codegen/modelcfg` 中用 `gen.FieldType` 覆盖模型类型，并为它编写专用 Proto/Resource。
 
 ## 菜单升级与卸载
 
@@ -69,7 +90,7 @@
 | `requires` | 模块依赖，默认 `["system"]`；依赖其他模块时在此填写模块名 |
 | `backend.package` / `constructor` | `backend/internal/modules/notes` / `NewModule` |
 | `frontend.entry` / `export` | `frontend/apps/reference/src/modules/notes/index.tsx` / `notesModule` |
-| `generation.name` / `tablePrefix` | `notes` / `notes_`，选择模型生成范围 |
+| `generation.name` / `tablePrefix` | `notes` / `notes_`，选择模型生成范围。按 `<前缀>_` 边界匹配：`notes` 与 `notes_` 都只选择 `notes_*` 表，不会选中 `notesx_*`。模块之间的前缀不能相同或互为前缀（如 `shop_` 与 `shop_order_`），`new`、`check`、`sync`、`update`、`generate` 和 `modelgen` 遇到这种情况会报错并指出冲突的模块 |
 | `generation.modelOutput` | `backend/internal/modules/notes`，其下生成 model/query |
 | `generation.prefix` / `protoSource` | `company/notes/v1/` / `backend/internal/modules/notes/proto` |
 | `generation.goOutput` / `tsOutput` | 后端模块的 `gen/proto` / 前端模块的 `gen/proto` |
@@ -122,6 +143,6 @@
 
 当前 SQL 迁移由开发者创建；初始资源 JSON 使用 `module resource` 从已有表创建。迁移创建命令和已有手写模块迁入 JSON 配置属于后续工作。商品模块仍需手写 Proto 和 Go Resource。
 
-`resources/*.json` 填写暴露列和必填、搜索、排序、长度规则。数据范围、关联和枚举通过手写 Resource 扩展配置，接入方式见 [Resource 手册](ai-cookbook.md)。标准 JSON CRUD 要求自增 int64 主键 `id`；其他主键结构使用手写 Proto 和 Go Resource。
+`resources/*.json` 填写暴露列和必填、搜索、排序、长度规则。数据范围、关联和枚举通过手写 Resource 扩展配置，接入方式见 [Resource 手册](ai-cookbook.md)。标准 JSON CRUD 要求生成 int64 模型字段的自增主键 `id`，MySQL/MariaDB 的 `BIGINT UNSIGNED` 主键也在其中（见[无符号整数](#mysqlmariadb-无符号整数)）；其他主键结构使用手写 Proto 和 Go Resource。
 
 通过 `operations` 配置的自定义操作，工具生成服务方法、客户端、权限和菜单；业务实现和页面按钮由开发者编写。`scope` 固定为 `exempt`，涉及业务记录时由业务实现检查数据范围。独立服务的 Proto、业务实现、服务接入、权限、菜单和页面由开发者维护，协议类型和客户端通过生成命令更新。步骤见[自定义请求与多表列表](custom-module-api.md)。
