@@ -54,7 +54,8 @@ func ResetSchema(t *testing.T, gdb *gorm.DB) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	// MySQL/MariaDB drop tables one by one; slow CI runners need more than a few seconds.
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	if err := testdb.Verify(ctx, gdb, config); err != nil {
 		t.Fatal(err)

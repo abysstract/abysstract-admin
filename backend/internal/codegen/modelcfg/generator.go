@@ -14,7 +14,7 @@ func NewGenerator(db *gorm.DB, output string) *gen.Generator {
 	g := gen.NewGenerator(gen.Config{OutPath: filepath.Join(output, "query"), ModelPkgPath: filepath.Join(output, "model"), FieldNullable: true, FieldWithDefaultTag: true})
 	g.UseDB(db)
 
-	g.WithDataTypeMap(IntegerTypes(db.Dialector.Name()))
+	g.WithDataTypeMap(IntegerTypes(db.Name()))
 	return g
 }
 
