@@ -291,9 +291,13 @@ jobs:
             echo "ADMIN_TEST_DSN=$test_dsn"
           } >> "$GITHUB_ENV"
           rm "$dsn_file"
-      - name: Run all MySQL tests
+      - name: Run MySQL integration tests
         working-directory: backend
-        run: go test -tags=integration -count=1 -p 1 ./...
+        # 单元测试由 "Backend build & test" 负责，这里只测试含 integration 测试的包。
+        run: |
+          pkgs="$(../.github/scripts/integration-packages.sh)"
+          # shellcheck disable=SC2086
+          go test -tags=integration -count=1 -p 1 $pkgs
       - name: Verify and remove owned MySQL target
         if: always() && env.ADMIN_TEST_DATABASE != ''
         working-directory: backend
@@ -347,9 +351,13 @@ jobs:
             echo "ADMIN_TEST_DSN=$test_dsn"
           } >> "$GITHUB_ENV"
           rm "$dsn_file"
-      - name: Run all MariaDB tests
+      - name: Run MariaDB integration tests
         working-directory: backend
-        run: go test -tags=integration -count=1 -p 1 ./...
+        # 单元测试由 "Backend build & test" 负责，这里只测试含 integration 测试的包。
+        run: |
+          pkgs="$(../.github/scripts/integration-packages.sh)"
+          # shellcheck disable=SC2086
+          go test -tags=integration -count=1 -p 1 $pkgs
       - name: Verify and remove owned MariaDB target
         if: always() && env.ADMIN_TEST_DATABASE != ''
         working-directory: backend
@@ -385,9 +393,13 @@ jobs:
             echo "ADMIN_TEST_DSN=$test_dsn"
           } >> "$GITHUB_ENV"
           rm "$dsn_file"
-      - name: Run all SQLite tests
+      - name: Run SQLite integration tests
         working-directory: backend
-        run: go test -tags=integration -count=1 -p 1 ./...
+        # 单元测试由 "Backend build & test" 负责，这里只测试含 integration 测试的包。
+        run: |
+          pkgs="$(../.github/scripts/integration-packages.sh)"
+          # shellcheck disable=SC2086
+          go test -tags=integration -count=1 -p 1 $pkgs
       - name: Verify and remove owned SQLite file
         if: always() && env.ADMIN_TEST_DATABASE != ''
         working-directory: backend
@@ -405,28 +417,12 @@ jobs:
       - name: CI publish/tag/push policy
         run: python3 scripts/check_admin_ci_policy.py
 
+  # 构建、静态检查和不连数据库的单元测试。与集成测试并行运行。
   backend:
     name: Backend build & test
     needs: changes
     if: needs.changes.outputs.postgres == 'true'
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16.15-alpine
-        env:
-          POSTGRES_USER: admin
-          POSTGRES_PASSWORD: admin
-          POSTGRES_DB: abysstract_admin
-        ports:
-          - 5433:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 3s
-          --health-timeout 3s
-          --health-retries 20
-    env:
-      ADMIN_DB_DRIVER: postgres
-      ADMIN_DB_DSN: host=localhost port=5433 user=admin password=admin dbname=abysstract_admin sslmode=disable
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -486,6 +482,37 @@ jobs:
       - name: Unit tests without database configuration
         working-directory: backend
         run: go test ./...
+
+  # 需要 PostgreSQL 的集成测试与浏览器验收。单元测试已在 backend 任务中跑过，
+  # 这里只测试含 integration 构建标签测试文件的包。
+  backend-integration:
+    name: Backend integration (PostgreSQL)
+    needs: changes
+    if: needs.changes.outputs.postgres == 'true'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16.15-alpine
+        env:
+          POSTGRES_USER: admin
+          POSTGRES_PASSWORD: admin
+          POSTGRES_DB: abysstract_admin
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 3s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      ADMIN_DB_DRIVER: postgres
+      ADMIN_DB_DSN: host=localhost port=5433 user=admin password=admin dbname=abysstract_admin sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: backend/go.sum
       - name: Provision disposable test database
         working-directory: backend
         env:
@@ -510,11 +537,15 @@ jobs:
           go run ./cmd/migrate
           go run ./cmd/modelgen
           python3 ../scripts/check_admin_generated.py --scope all
-      - name: go test
+      - name: go test (integration packages)
         working-directory: backend
         # -p 1: 测试包串行执行。集成测试（migrate/service/repo）共享 public schema，
-        # 并行 DROP/CREATE 会互相覆盖。属性/单元测试无 DB 依赖，串行也极快。
-        run: go test -tags=integration -p 1 ./...
+        # 并行 DROP/CREATE 会互相覆盖。
+        run: |
+          pkgs="$(../.github/scripts/integration-packages.sh)"
+          echo "$pkgs"
+          # shellcheck disable=SC2086
+          go test -tags=integration -p 1 $pkgs
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
