@@ -24,6 +24,11 @@ permissions:
   contents: read
   pull-requests: read
 
+# 同一 PR 有新提交时取消旧运行；main 的每次 push 都完整跑完。
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}-${{ github.event_name }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 # 固定工具版本，保证 clone 后可复现。
 env:
   GOWORK: "off"
@@ -65,7 +70,16 @@ jobs:
               files = changed.flatMap((file) => [file.filename, ...(file.previous_filename ? [file.previous_filename] : [])]);
             } else if (context.eventName === "push") {
               const before = context.payload.before;
-              const args = /^0+$/.test(before)
+              // 新分支（全 0）或强推后旧提交已不存在时，退回到全部文件。
+              const hasBefore = !/^0+$/.test(before) && (() => {
+                try {
+                  execFileSync("git", ["cat-file", "-e", `${before}^{commit}`]);
+                  return true;
+                } catch {
+                  return false;
+                }
+              })();
+              const args = !hasBefore
                 ? ["ls-files", "-z"]
                 : ["diff", "--name-only", "--no-renames", "-z", before, context.sha];
               files = execFileSync("git", args, { encoding: "utf8" }).split("\0").filter(Boolean);
@@ -111,17 +125,20 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
       - run: npm ci --ignore-scripts
         working-directory: frontend
       - name: buf generate and normalize ESM imports
         run: node frontend/tools/generate-proto.mjs
 
   # Generated outputs are committed (including Resource and Buf test fixtures).
-  # Regeneration therefore detects both hand edits and omitted generated diffs
-  # before any backend or frontend work begins.
+  # Regeneration detects both hand edits and omitted generated diffs. It runs in
+  # parallel with build/test jobs and is a required check, so drift still blocks merging.
   generated-code-integrity:
     name: Generated code integrity
-    needs: proto
+    needs: changes
+    if: needs.changes.outputs.checks == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -130,9 +147,12 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: backend/go.sum
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
       - uses: bufbuild/buf-setup-action@v1
         with:
           version: ${{ env.BUF_VERSION }}
@@ -167,7 +187,8 @@ jobs:
 
   public-packages:
     name: Public Go packages and types
-    needs: generated-code-integrity
+    needs: changes
+    if: needs.changes.outputs.checks == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -180,7 +201,8 @@ jobs:
 
   frontend-packages:
     name: Public frontend package contents
-    needs: generated-code-integrity
+    needs: changes
+    if: needs.changes.outputs.checks == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -206,6 +228,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: backend/go.sum
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -251,6 +274,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: backend/go.sum
       - name: Provision owned MySQL target
         working-directory: backend
         env:
@@ -306,6 +330,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: backend/go.sum
       - name: Provision owned MariaDB target
         working-directory: backend
         env:
@@ -345,6 +370,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: backend/go.sum
       - name: Provision owned SQLite file
         working-directory: backend
         run: |
@@ -381,7 +407,7 @@ jobs:
 
   backend:
     name: Backend build & test
-    needs: [changes, generated-code-integrity]
+    needs: changes
     if: needs.changes.outputs.postgres == 'true'
     runs-on: ubuntu-latest
     services:
@@ -406,6 +432,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: backend/go.sum
       - name: go build
         working-directory: backend
         run: go build ./...
@@ -491,6 +518,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
       - name: PostgreSQL browser acceptance
         env:
           ADMIN_TEST_DRIVER: postgres
@@ -502,7 +531,8 @@ jobs:
 
   frontend:
     name: Frontend build & test
-    needs: generated-code-integrity
+    needs: changes
+    if: needs.changes.outputs.checks == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -552,6 +582,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: backend/go.sum
 
       # 1) docker compose up -d --wait：等待 healthcheck（pg_isready ×20，约 60s 上限）通过
       - name: Bring up compose stack
@@ -619,6 +650,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: backend/go.sum
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -640,6 +672,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
       - run: npm ci --ignore-scripts
         working-directory: frontend
       - name: buf generate and normalize ESM imports
