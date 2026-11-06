@@ -39,7 +39,7 @@ class ArtifactTests(unittest.TestCase):
         tarball = self.make_tarball(
             root,
             "abysstract-admin-core-0.0.0-dev.0.tgz",
-            {"name": "@abysstract/admin-core", "version": "0.0.0-dev.0", "private": True},
+            {"name": "@abysstract/admin-core", "version": "0.0.0-dev.0", "publishConfig": {"access": "public"}},
         )
         with self.assertRaises(MODULE.CheckFailure):
             MODULE.verify_checksum_only(tarball, "0" * 64)
@@ -51,7 +51,7 @@ class ArtifactTests(unittest.TestCase):
         tarball = self.make_tarball(
             root,
             "abysstract-admin-core-0.0.0-dev.0.tgz",
-            {"name": "@abysstract/admin-core", "version": "0.0.0-dev.0", "private": True},
+            {"name": "@abysstract/admin-core", "version": "0.0.0-dev.0", "publishConfig": {"access": "public"}},
         )
         MODULE.verify_checksum_only(tarball, MODULE.sha256_file(tarball))
 
@@ -62,20 +62,20 @@ class ArtifactTests(unittest.TestCase):
         tarball = self.make_tarball(
             root,
             "abysstract-admin-core-0.0.0-dev.0.tgz",
-            {"name": "@abysstract/admin-core", "version": "0.0.0-dev.0", "private": True},
+            {"name": "@abysstract/admin-core", "version": "0.0.0-dev.0", "publishConfig": {"access": "public"}},
             extra={".env": b"ADMIN_DB_DSN=host=localhost password=secret\n"},
         )
         with self.assertRaises(MODULE.CheckFailure):
             MODULE.inspect_tarball(tarball)
 
-    def test_private_flag_must_remain(self) -> None:
+    def test_private_tarball_is_rejected(self) -> None:
         temp = tempfile.TemporaryDirectory()
         self.addCleanup(temp.cleanup)
         root = Path(temp.name)
         tarball = self.make_tarball(
             root,
             "abysstract-admin-core-0.0.0-dev.0.tgz",
-            {"name": "@abysstract/admin-core", "version": "0.0.0-dev.0", "private": False},
+            {"name": "@abysstract/admin-core", "version": "0.0.0-dev.0", "private": True},
         )
         manifest = {
             "schema": "abysstract.admin.private-artifacts/v1",
@@ -108,7 +108,7 @@ class ArtifactTests(unittest.TestCase):
         tarball = self.make_tarball(
             root,
             "abysstract-admin-proto-0.0.0-dev.0.tgz",
-            {"name": "@abysstract/admin-proto", "version": "0.0.0-dev.0", "private": True},
+            {"name": "@abysstract/admin-proto", "version": "0.0.0-dev.0", "publishConfig": {"access": "public"}},
         )
         self.assertEqual(MODULE.main(["check-file", "--file", str(tarball), "--sha256", MODULE.sha256_file(tarball)]), 0)
         self.assertEqual(MODULE.main(["check-file", "--file", str(tarball), "--sha256", "abcd"]), 1)
@@ -128,8 +128,8 @@ class ArtifactTests(unittest.TestCase):
         proto = root / "frontend/packages/admin-proto"
         core.mkdir(parents=True)
         proto.mkdir(parents=True)
-        (core / "package.json").write_text(json.dumps({"name": "@abysstract/admin-core", "version": "0.0.0-dev.0", "private": True}), encoding="utf-8")
-        (proto / "package.json").write_text(json.dumps({"name": "@abysstract/admin-proto", "version": "0.0.0-dev.0", "private": True}), encoding="utf-8")
+        (core / "package.json").write_text(json.dumps({"name": "@abysstract/admin-core", "version": "0.0.0-dev.0", "publishConfig": {"access": "public"}}), encoding="utf-8")
+        (proto / "package.json").write_text(json.dumps({"name": "@abysstract/admin-proto", "version": "0.0.0-dev.0", "publishConfig": {"access": "public"}}), encoding="utf-8")
         dest = root / "out"
         identity = MODULE.build_source_identity(root, dest)
         self.assertEqual(identity["kind"], "workspace-source-manifest")
@@ -162,7 +162,7 @@ class ArtifactTests(unittest.TestCase):
             pkg = root / "frontend/packages" / name
             pkg.mkdir(parents=True)
             (pkg / "package.json").write_text(
-                json.dumps({"name": f"@abysstract/{name}", "version": "0.0.0-dev.0", "private": True}),
+                json.dumps({"name": f"@abysstract/{name}", "version": "0.0.0-dev.0", "publishConfig": {"access": "public"}}),
                 encoding="utf-8",
             )
         self._git(root, "add", "frontend/packages")
@@ -177,7 +177,7 @@ class ArtifactTests(unittest.TestCase):
         tarball = self.make_tarball(
             root,
             "abysstract-admin-core-0.0.0-dev.0.tgz",
-            {"name": "@abysstract/admin-core", "version": "0.0.0-dev.0", "private": True},
+            {"name": "@abysstract/admin-core", "version": "0.0.0-dev.0", "publishConfig": {"access": "public"}},
         )
         manifest = {
             "schema": "abysstract.admin.private-artifacts/v1",
@@ -207,19 +207,19 @@ class ArtifactTests(unittest.TestCase):
         proto = root / "frontend/packages/admin-proto"
         core.mkdir(parents=True)
         proto.mkdir(parents=True)
-        (core / "package.json").write_text(json.dumps({"name": "@abysstract/admin-core", "version": "0.0.0-dev.0", "private": True}), encoding="utf-8")
-        (proto / "package.json").write_text(json.dumps({"name": "@abysstract/admin-proto", "version": "0.0.0-dev.0", "private": True}), encoding="utf-8")
+        (core / "package.json").write_text(json.dumps({"name": "@abysstract/admin-core", "version": "0.0.0-dev.0", "publishConfig": {"access": "public"}}), encoding="utf-8")
+        (proto / "package.json").write_text(json.dumps({"name": "@abysstract/admin-proto", "version": "0.0.0-dev.0", "publishConfig": {"access": "public"}}), encoding="utf-8")
         dest = root / "out"
         identity = MODULE.build_source_identity(root, dest)
         tarball = self.make_tarball(
             dest,
             "abysstract-admin-core-0.0.0-dev.0.tgz",
-            {"name": "@abysstract/admin-core", "version": "0.0.0-dev.0", "private": True},
+            {"name": "@abysstract/admin-core", "version": "0.0.0-dev.0", "publishConfig": {"access": "public"}},
         )
         proto_tar = self.make_tarball(
             dest,
             "abysstract-admin-proto-0.0.0-dev.0.tgz",
-            {"name": "@abysstract/admin-proto", "version": "0.0.0-dev.0", "private": True},
+            {"name": "@abysstract/admin-proto", "version": "0.0.0-dev.0", "publishConfig": {"access": "public"}},
         )
         manifest = {
             "schema": "abysstract.admin.private-artifacts/v1",
@@ -259,20 +259,20 @@ class ArtifactTests(unittest.TestCase):
         proto = root / "frontend/packages/admin-proto"
         core.mkdir(parents=True)
         proto.mkdir(parents=True)
-        (core / "package.json").write_text(json.dumps({"name": "@abysstract/admin-core", "version": "0.0.0-dev.0", "private": True}), encoding="utf-8")
-        (proto / "package.json").write_text(json.dumps({"name": "@abysstract/admin-proto", "version": "0.0.0-dev.0", "private": True}), encoding="utf-8")
+        (core / "package.json").write_text(json.dumps({"name": "@abysstract/admin-core", "version": "0.0.0-dev.0", "publishConfig": {"access": "public"}}), encoding="utf-8")
+        (proto / "package.json").write_text(json.dumps({"name": "@abysstract/admin-proto", "version": "0.0.0-dev.0", "publishConfig": {"access": "public"}}), encoding="utf-8")
         dest = root / "out"
         identity = MODULE.build_source_identity(root, dest)
         (dest / "admin-private-source.tar.gz").unlink()
         tarball = self.make_tarball(
             dest,
             "abysstract-admin-core-0.0.0-dev.0.tgz",
-            {"name": "@abysstract/admin-core", "version": "0.0.0-dev.0", "private": True},
+            {"name": "@abysstract/admin-core", "version": "0.0.0-dev.0", "publishConfig": {"access": "public"}},
         )
         proto_tar = self.make_tarball(
             dest,
             "abysstract-admin-proto-0.0.0-dev.0.tgz",
-            {"name": "@abysstract/admin-proto", "version": "0.0.0-dev.0", "private": True},
+            {"name": "@abysstract/admin-proto", "version": "0.0.0-dev.0", "publishConfig": {"access": "public"}},
         )
         manifest = {
             "schema": "abysstract.admin.private-artifacts/v1",
@@ -303,8 +303,8 @@ class ArtifactTests(unittest.TestCase):
         proto = root / "frontend/packages/admin-proto"
         core.mkdir(parents=True)
         proto.mkdir(parents=True)
-        (core / "package.json").write_text(json.dumps({"name": "@abysstract/admin-core", "version": "0.0.0-dev.0", "private": True}), encoding="utf-8")
-        (proto / "package.json").write_text(json.dumps({"name": "@abysstract/admin-proto", "version": "0.0.0-dev.0", "private": True}), encoding="utf-8")
+        (core / "package.json").write_text(json.dumps({"name": "@abysstract/admin-core", "version": "0.0.0-dev.0", "publishConfig": {"access": "public"}}), encoding="utf-8")
+        (proto / "package.json").write_text(json.dumps({"name": "@abysstract/admin-proto", "version": "0.0.0-dev.0", "publishConfig": {"access": "public"}}), encoding="utf-8")
         (core / ".env").write_text("ADMIN_JWT_SECRET=review_dummy_secret\n", encoding="utf-8")
         dest = root / "artifacts"
         with self.assertRaises(MODULE.CheckFailure) as raised:
@@ -327,8 +327,8 @@ class ArtifactTests(unittest.TestCase):
         proto = root / "frontend/packages/admin-proto"
         core.mkdir(parents=True)
         proto.mkdir(parents=True)
-        (core / "package.json").write_text(json.dumps({"name": "@abysstract/admin-core", "version": "0.0.0-dev.0", "private": True}), encoding="utf-8")
-        (proto / "package.json").write_text(json.dumps({"name": "@abysstract/admin-proto", "version": "0.0.0-dev.0", "private": True}), encoding="utf-8")
+        (core / "package.json").write_text(json.dumps({"name": "@abysstract/admin-core", "version": "0.0.0-dev.0", "publishConfig": {"access": "public"}}), encoding="utf-8")
+        (proto / "package.json").write_text(json.dumps({"name": "@abysstract/admin-proto", "version": "0.0.0-dev.0", "publishConfig": {"access": "public"}}), encoding="utf-8")
         (core / "notes.txt").write_text("ADMIN_JWT_SECRET=review_dummy_secret\n", encoding="utf-8")
         dest = root / "artifacts"
         with self.assertRaises(MODULE.CheckFailure) as raised:
@@ -341,6 +341,13 @@ class ArtifactTests(unittest.TestCase):
         proc = subprocess.run(["git", *args], cwd=root, check=False, capture_output=True, text=True)
         if proc.returncode != 0:
             self.fail(proc.stderr or proc.stdout or "git failed")
+
+    def test_publish_config_must_be_public(self) -> None:
+        with self.assertRaises(MODULE.CheckFailure):
+            MODULE.check_publish_config({"name": "@abysstract/admin-core"}, "admin-core")
+        with self.assertRaises(MODULE.CheckFailure):
+            MODULE.check_publish_config({"private": True, "publishConfig": {"access": "public"}}, "admin-core")
+        MODULE.check_publish_config({"publishConfig": {"access": "public"}}, "admin-core")
 
     def test_missing_tool_is_recorded_unavailable(self) -> None:
         proc = MODULE._run(["definitely-missing-admin-core-tool"], Path.cwd())

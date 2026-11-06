@@ -74,8 +74,18 @@ const coreFiles = packList(coreDir);
 assertPackContents("@abysstract/admin-proto", protoFiles);
 assertPackContents("@abysstract/admin-core", coreFiles);
 
+const protoPkg = JSON.parse(readFileSync(path.join(protoDir, "package.json"), "utf8"));
 const corePkg = JSON.parse(readFileSync(path.join(coreDir, "package.json"), "utf8"));
-if (corePkg.private !== true) throw new Error("admin-core must remain private");
+for (const pkg of [protoPkg, corePkg]) {
+  if (pkg.private === true) throw new Error(`${pkg.name} must be publishable (remove private)`);
+  if (pkg.publishConfig?.access !== "public") {
+    throw new Error(`${pkg.name} must set publishConfig.access to "public"`);
+  }
+  if (pkg.license !== "Apache-2.0") throw new Error(`${pkg.name} must declare license Apache-2.0`);
+}
+if (corePkg.dependencies?.["@abysstract/admin-proto"] !== protoPkg.version) {
+  throw new Error("admin-core must depend on the same admin-proto version");
+}
 if (corePkg.scripts?.prepare || corePkg.scripts?.postinstall) {
   throw new Error("admin-core install scripts must not run repository maintenance");
 }

@@ -94,16 +94,22 @@ import { coreSystemModule } from "@abysstract/admin-core/system";
 
 ## 安装前端包
 
-在本仓库根目录打包公共前端包：
+两个包发布在 npm 上。在业务前端目录安装公共包和它们要求的 peer 依赖：
+
+```bash
+npm install @abysstract/admin-core @abysstract/admin-proto \
+  @bufbuild/protobuf @connectrpc/connect @connectrpc/connect-web \
+  antd @ant-design/icons @ant-design/pro-components \
+  react react-dom react-router-dom
+```
+
+`@abysstract/admin-core` 固定依赖同版本的 `@abysstract/admin-proto`，升级时两个包一起升级。peer 依赖的版本范围以包的 `package.json` 为准。
+
+需要试用尚未发布的改动时，可以在本仓库根目录打包，再安装生成的文件：
 
 ```bash
 ( cd frontend && npm ci && npm run build -w @abysstract/admin-proto -w @abysstract/admin-core )
 ( cd frontend && npm pack --workspace @abysstract/admin-proto && npm pack --workspace @abysstract/admin-core )
-```
-
-命令在 `frontend/` 下生成两个 `.tgz` 文件。在业务前端目录安装这两个文件，将下方路径和 `VERSION` 替换为实际文件名：
-
-```bash
 npm install /absolute/path/to/abysstract-admin-proto-VERSION.tgz /absolute/path/to/abysstract-admin-core-VERSION.tgz
 ```
 

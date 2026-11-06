@@ -1,7 +1,15 @@
 {
   "name": "@abysstract/admin-proto",
-  "version": "0.0.0-dev.0",
-  "private": true,
+  "version": "0.1.0",
+  "description": "System Protobuf-ES messages and Connect service descriptors for abysstract-admin.",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/abysstract/abysstract-admin.git",
+    "directory": "frontend/packages/admin-proto"
+  },
+  "homepage": "https://github.com/abysstract/abysstract-admin#readme",
+  "bugs": "https://github.com/abysstract/abysstract-admin/issues",
   "type": "module",
   "files": [
     "dist",
@@ -23,5 +31,8 @@
   },
   "devDependencies": {
     "typescript": "^5.6.3"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

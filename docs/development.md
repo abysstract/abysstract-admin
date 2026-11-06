@@ -128,3 +128,27 @@ CI 根据本次修改的文件选择数据库任务：
 ```sh
 gh workflow run CI --ref "$(git branch --show-current)" -f database=mysql
 ```
+
+## 发布前端包
+
+`@abysstract/admin-proto` 与 `@abysstract/admin-core` 由维护者在本地发布到 npm，CI 不发布。两个包使用同一版本号，`admin-core` 固定依赖同版本的 `admin-proto`。
+
+1. 在 PR 中同步修改两个包和 `frontend/apps/reference/package.json` 中的版本号，执行 `cd frontend && npm install --package-lock-only` 更新锁文件，并在 `CHANGELOG.md` 记录版本。
+2. PR 合并后，在最新的 `main` 上打包并检查：
+
+   ```bash
+   python3 scripts/admin_artifacts.py pack --dest /tmp/admin-artifacts
+   python3 scripts/admin_artifacts.py verify --manifest /tmp/admin-artifacts/admin-private-artifacts.json
+   ```
+
+3. 先发布 `admin-proto`，再发布 `admin-core`：
+
+   ```bash
+   cd frontend
+   npm publish --dry-run -w @abysstract/admin-proto
+   npm publish -w @abysstract/admin-proto
+   npm publish --dry-run -w @abysstract/admin-core
+   npm publish -w @abysstract/admin-core
+   ```
+
+4. 用 `npm view @abysstract/admin-core version` 确认版本，并在 GitHub 上为该提交创建 `vX.Y.Z` 版本发布。

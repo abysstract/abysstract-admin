@@ -18,7 +18,7 @@ This repository contains a Go ConnectRPC backend, public frontend packages, an a
 - `cd backend && go run ./cmd/migrate`: apply system and product migrations before starting the server.
 - `cd backend && go run ./cmd/server`: run the bundled backend on `:8080`.
 - `cd frontend && npm ci && npm run dev`: build public packages and run the reference app.
-- `cd frontend && npm run build -w @abysstract/admin-proto -w @abysstract/admin-core && npm pack --workspace @abysstract/admin-core && npm pack --workspace @abysstract/admin-proto`: local private tarballs.
+- `cd frontend && npm run build -w @abysstract/admin-proto -w @abysstract/admin-core && npm pack --workspace @abysstract/admin-core && npm pack --workspace @abysstract/admin-proto`: local tarballs with the same contents as the npm release (`docs/development.md#发布前端包`).
 - `cd proto && buf lint && buf generate` is not the unified entry; use `node frontend/tools/generate-proto.mjs`.
 - Module lifecycle: `cd backend && go run ./cmd/admin module new|resource|generate|update|uninstall|status|sync|check`. Public generation uses only modules selected in `admin.modules.json`; `module generate NAME` reads the explicit target declaration and supports generation before installation. After table migration, `module resource MODULE TABLE` creates the initial JSON; `generate` reads those files and runs Model/query, protocol and Resource generators. Lifecycle commands execute application migrations; status reports database history. See `docs/module-guide.md`. Tables use `<module>_<table>`.
 - `sh scripts/generate.sh`: after database migration, regenerate system and business Model/query, Go/TS protocol and Resource outputs. Run build, typecheck and tests separately. For partial generation commands, see `docs/development.md`.
@@ -26,7 +26,7 @@ This repository contains a Go ConnectRPC backend, public frontend packages, an a
 - `cd frontend && npm run typecheck && npm test && npm run build`: frontend verification.
 - `python3 scripts/check_admin_public_packages.py --repo-root . --stage k2`
 - `python3 scripts/check_admin_generated.py --scope all`
-- `python3 scripts/admin_artifacts.py pack --dest /tmp/admin-private-artifacts`
+- `python3 scripts/admin_artifacts.py pack --dest /tmp/admin-artifacts`: pack and verify the tarballs before npm publish.
 
 ## Coding Style & Naming Conventions
 

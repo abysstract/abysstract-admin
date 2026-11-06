@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-"""Pack and verify private frontend package artifacts.
+"""Pack and verify the public frontend package tarballs before npm publish.
 
-The first distribution form is a private npm tarball. This command records
-version, sha256, source identity, build environment and retention. It does not
+The packages are published to the public npm registry by a maintainer. This
+command packs the exact tarballs, records version, sha256, source identity,
+build environment and retention, and checks their contents. It does not
 publish, tag, or push.
 
 Exit codes:
   0: pack or verify succeeded
-  1: checksum, private flag, content, or policy failure
+  1: checksum, publish config, content, or policy failure
   2: input error
 """
 
@@ -240,9 +241,15 @@ def tool_versions() -> dict[str, str]:
 
 def package_metadata(package_dir: Path) -> dict[str, Any]:
     pkg = json.loads((package_dir / "package.json").read_text(encoding="utf-8"))
-    if pkg.get("private") is not True:
-        raise CheckFailure(f"{pkg.get('name')} must keep private: true")
+    check_publish_config(pkg, str(pkg.get("name")))
     return pkg
+
+
+def check_publish_config(pkg: Mapping[str, Any], label: str) -> None:
+    if pkg.get("private") is True:
+        raise CheckFailure(f"{label} must not be private")
+    if (pkg.get("publishConfig") or {}).get("access") != "public":
+        raise CheckFailure(f"{label} must set publishConfig.access to public")
 
 
 def pack_one(root: Path, package_dir: Path, dest_dir: Path) -> dict[str, Any]:
@@ -263,7 +270,7 @@ def pack_one(root: Path, package_dir: Path, dest_dir: Path) -> dict[str, Any]:
     return {
         "name": pkg["name"],
         "version": pkg["version"],
-        "private": True,
+        "access": "public",
         "file": match.name,
         "sha256": sha256_file(match),
     }
@@ -289,7 +296,7 @@ def write_manifest(root: Path, dest_dir: Path, packages: list[dict[str, Any]], r
         "source_identity": build_source_identity(root, dest_dir),
         "retention_days": retention_days,
         "access": {
-            "channel": "private-tarball",
+            "channel": "npm-public-manual",
             "public_npm_publish": False,
             "go_tag_push": False,
             "buf_publish": False,
@@ -411,8 +418,7 @@ def verify_artifacts(manifest_path: Path, expected: Mapping[str, str] | None = N
             if pkg_file is None:
                 raise CheckFailure(f"{path.name} missing package/package.json")
             pkg = json.loads(pkg_file.read().decode("utf-8"))
-            if pkg.get("private") is not True:
-                raise CheckFailure(f"{item['name']} tarball lost private: true")
+            check_publish_config(pkg, f"{item['name']} tarball")
             if pkg.get("name") != item["name"] or pkg.get("version") != item["version"]:
                 raise CheckFailure(f"{path.name} package identity does not match manifest")
 
