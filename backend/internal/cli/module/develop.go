@@ -94,6 +94,9 @@ func prepareDevelopment(root, name string) (map[string][]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	if err := checkModuleTablePrefix(root, d); err != nil {
+		return nil, err
+	}
 	paths, err := filepath.Glob(filepath.Join(root, backend, "resources/*.json"))
 	if err != nil {
 		return nil, err
@@ -263,6 +266,9 @@ func developmentGenerationSteps(repo, name, temp string) ([][]string, error) {
 	}
 	if !found {
 		defs = append(defs, target)
+	}
+	if err := checkTablePrefixes(defs); err != nil {
+		return nil, err
 	}
 	inputs, err := render(repo, defs)
 	if err != nil {

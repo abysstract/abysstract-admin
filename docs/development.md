@@ -89,7 +89,7 @@ sh scripts/generate.sh --phase offline --module product
 | 系统与业务 Model/query | `cd backend && go run ./cmd/modelgen` |
 | 离线 Proto、Resource 与框架夹具 | `cd backend && go generate ./...` |
 
-本仓库提交的模型统一从 PostgreSQL 生成。业务项目使用自己的目标数据库生成模型。列名、可空性、主键和默认值来自数据库；数据库整数类型通过共用映射固定 Go 宽度，并识别驱动返回的大小写名称。SQLite 的整数主键按 64 位自增标识处理；其他可空列保留数据库的 NULL 含义。特殊规则在模块的 `codegen/modelcfg` 中以 `map[string][]gen.ModelOpt` 提供，在 `internal/codegen/modelcfg.Overrides` 中配置。配置包只依赖生成工具和表名，使首次模型生成可以独立编译。
+本仓库提交的模型统一从 PostgreSQL 生成。业务项目使用自己的目标数据库生成模型。列名、可空性、主键和默认值来自数据库；数据库整数类型通过共用映射固定 Go 宽度，并识别驱动返回的大小写名称；MySQL/MariaDB 的无符号整数映射为能容纳其范围的有符号类型（`INT UNSIGNED`、`BIGINT UNSIGNED` 为 `int64`，`SMALLINT UNSIGNED` 为 `int32`），规则与取舍见[模块指南](module-guide.md#mysqlmariadb-无符号整数)。模型生成按 `tablePrefix` 的 `<前缀>_` 边界选择表，模块前缀相同或互为前缀时报错。SQLite 的整数主键按 64 位自增标识处理；其他可空列保留数据库的 NULL 含义。特殊规则在模块的 `codegen/modelcfg` 中以 `map[string][]gen.ModelOpt` 提供，在 `internal/codegen/modelcfg.Overrides` 中配置。配置包只依赖生成工具和表名，使首次模型生成可以独立编译。
 
 在数据库边界保留 NULL；现有 Proto 标量在转换时映射为零值。请求省略字段时保留原值。本仓库对其他数据库的模型生成检查在隔离副本运行，保留仓库提交的 PostgreSQL 模型。
 

@@ -68,6 +68,8 @@ CREATE TABLE notes_note (
 DROP TABLE notes_note;
 ```
 
+已有库统一使用无符号主键时，`id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY` 同样可用，引用它的列也可以是 `BIGINT UNSIGNED`；这些列在 Model、Proto 和页面中都是 `int64`，取值上限见[模块指南](module-guide.md#mysqlmariadb-无符号整数)。
+
 ### 继续生成资源
 
 执行数据库迁移，创建 `notes_note` 表：
