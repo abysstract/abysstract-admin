@@ -14,7 +14,7 @@ func fixture(t *testing.T) string {
 	t.Helper()
 	root := t.TempDir()
 	files := map[string][]byte{
-		"backend/go.mod": []byte("module " + strings.TrimSuffix(backendImport, "/") + "\n"),
+		"backend/go.mod": []byte("module " + strings.TrimSuffix(frameworkImport, "/") + "\n"),
 		"buf.base.yaml":  []byte("version: v2\nlint:\n  use: [STANDARD]\n"),
 	}
 	selected := selection{Modules: []string{"backend/system/module.json", "backend/internal/modules/product/module.json"}}

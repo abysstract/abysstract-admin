@@ -65,7 +65,14 @@ func prepareSeed(root, action string, d descriptor) (map[string][]byte, error) {
 		}
 		previousArg = "," + strconv.Quote(string(before))
 	}
-	for _, driver := range []string{"postgres", "mysql", "mariadb", "sqlite"} {
+	drivers, err := migrationDrivers(root)
+	if err != nil {
+		return nil, err
+	}
+	if len(drivers) == 0 {
+		return nil, fmt.Errorf("no migration directory: create backend/migrations/<driver> for each supported database")
+	}
+	for _, driver := range drivers {
 		src := fmt.Sprintf(`package %s
 import (
  "github.com/pressly/goose/v3"

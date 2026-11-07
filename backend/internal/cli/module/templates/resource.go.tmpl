@@ -1,9 +1,9 @@
 package definition
 
 import (
- api "{{.Import}}/gen/proto/company/{{.Module}}/v1"
- apiconnect "{{.Import}}/gen/proto/company/{{.Module}}/v1/{{.Module}}v1connect"
- "{{.Import}}/model"
+ api "{{.ProtoImport}}"
+ apiconnect "{{.ProtoImport}}/{{.Module}}v1connect"
+ "{{.ModelImport}}"
  "github.com/abysstract/abysstract-admin/backend/resource/schema"
 )
 
