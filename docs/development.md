@@ -71,7 +71,7 @@ Go 模块的 `go.mod` 位于仓库根目录，Go 代码位于 `backend/`。文�
 sh scripts/generate.sh
 ```
 
-`generate.sh` 依次运行 sync、Model/query、协议类型及 Resource 实现生成。**它处理已有的 Proto 和 Go Resource 定义；修改 `resources/*.json` 后，应执行 `module generate <名称>` 来更新这些定义。** `go generate ./...` 同样执行下游 Proto → Resource 生成，使用已提交的模型。
+`generate.sh` 依次运行 sync、Model/query、协议类型及 Resource 实现生成。`module generate NAME` 只生成一个模块：Model/query 在命令进程内生成，协议代码直接调用 `buf`，不需要 Node.js，独立应用也使用同一条链路。**它处理已有的 Proto 和 Go Resource 定义；修改 `resources/*.json` 后，应执行 `module generate <名称>` 来更新这些定义。** `go generate ./...` 同样执行下游 Proto → Resource 生成，使用已提交的模型。
 
 统一入口可用 `--phase model|offline|proto|resource` 选择阶段（默认 `all`），用 `--module product` 或 `--module system` 选择模型与 Resource 任务。例如：
 

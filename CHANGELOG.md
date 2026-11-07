@@ -7,6 +7,18 @@
 
 ## [Unreleased]
 
+### Added
+
+- 文档：[新建独立应用](docs/standalone-app.md)，按任务顺序在自己的仓库和 Go 模块中搭建后台、安装 module 命令并开发第一个模块。
+- `admin.modules.json` 支持 `frontendRoot`（前端源码目录，默认 `frontend/apps/reference/src`），并可用 `"system"` 选择框架的系统模块。
+
+### Changed
+
+- `module` 命令可在框架仓库之外使用（`go get -tool github.com/abysstract/abysstract-admin/backend/cmd/admin` 后运行 `go tool admin module ...`）：生成的 Go 代码按应用 `go.mod` 的模块路径导入应用自己的包，框架公共包仍从 `github.com/abysstract/abysstract-admin/backend/` 导入。
+- `module generate` 不再调用 `go run ./cmd/modelgen` 和 `node frontend/tools/generate-proto.mjs`：Model/query 在命令进程内生成，协议代码直接调用 `buf`，框架公共 Proto 从依赖的框架模块读取，Go 协议包路径按应用模块路径设置。
+- `module new`、`generate`、`sync` 和 `update` 按 `module.json` 中声明的路径读写模块代码、协议、页面和 Resource 生成配置，不再写死 `frontend/apps/reference/src`。
+- 模块菜单迁移和 `go_registry.gen.go` 只覆盖 `backend/migrations/` 下已存在的方言目录；迁移目录中不带版本号的 Go 文件（如 `doc.go`）不再被当作迁移。`sync` 只在框架仓库中维护 `buf.yaml` 和 `backend/internal/codegen/` 生成清单。
+
 ## [0.2.0] - 2026-11-07
 
 首个可通过 `go get` 使用的 Go 模块版本；npm 包没有变化，仍为 0.1.0。
