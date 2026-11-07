@@ -1,6 +1,6 @@
 {
   "name": "@abysstract/admin-proto",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "description": "System Protobuf-ES messages and Connect service descriptors for abysstract-admin.",
   "license": "Apache-2.0",
   "repository": {
