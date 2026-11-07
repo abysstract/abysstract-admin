@@ -26,11 +26,11 @@ func TestCRUDRejectsStorageAndDeclarationMismatch(t *testing.T) {
 		t.Fatal(err)
 	}
 	spec := crudSpec{Name: "Note", Table: "notes_note", Title: "笔记", UpdatedAt: "update_time", Fields: []crudField{{Column: "title", Label: "标题"}}}
-	if _, err := inspectCRUD(db, "sqlite", "notes", spec); err == nil || !strings.Contains(err.Error(), "owner requires a value") {
+	if _, err := inspectCRUD(db, "sqlite", moduleView{Module: "notes"}, "backend/internal/modules/notes", spec); err == nil || !strings.Contains(err.Error(), "owner requires a value") {
 		t.Fatalf("missing required column accepted: %v", err)
 	}
 	spec.Fields = append(spec.Fields, crudField{Column: "owner", Label: "所有者"}, crudField{Column: "missing", Label: "无此字段"})
-	if _, err := inspectCRUD(db, "sqlite", "notes", spec); err == nil || !strings.Contains(err.Error(), "missing is absent") {
+	if _, err := inspectCRUD(db, "sqlite", moduleView{Module: "notes"}, "backend/internal/modules/notes", spec); err == nil || !strings.Contains(err.Error(), "missing is absent") {
 		t.Fatalf("missing field accepted: %v", err)
 	}
 }

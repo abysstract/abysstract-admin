@@ -140,6 +140,9 @@ func checkReferences(root string, defs []descriptor, removed string) error {
 		return err
 	}
 	for _, d := range defs {
+		if d.builtin != "" {
+			continue
+		}
 		dirs := []string{d.Backend.Package, filepath.Dir(d.Frontend.Entry)}
 		if d.Generation != nil {
 			dirs = append(dirs, d.Generation.ProtoSource)
@@ -211,7 +214,12 @@ func changeSelection(root string, selected selection, action, name string) (sele
 		// Removal can recover from deleted source using the conventional module location.
 		changed = descriptor{Name: name}
 		selected.Modules = append(selected.Modules[:index], selected.Modules[index+1:]...)
-		notes = append(notes, "After applying the cleanup migration, source directories may be removed: backend/internal/modules/"+name+", frontend/apps/reference/src/modules/"+name)
+		layout, err := loadLayout(root)
+		if err != nil {
+			return selected, changed, notes, err
+		}
+		backend, front := layout.moduleDir(name)
+		notes = append(notes, "After applying the cleanup migration, source directories may be removed: "+backend+", "+front)
 	}
 	return selected, changed, notes, nil
 }

@@ -32,9 +32,18 @@ func resourceCommand(root *string) *cobra.Command {
 		if !moduleName.MatchString(module) || module == "system" {
 			return fmt.Errorf("invalid business module name %q", module)
 		}
-		backend := "backend/internal/modules/" + module
-		if _, err := readDescriptor(repo, backend+"/module.json"); err != nil {
+		layout, err := loadLayout(repo)
+		if err != nil {
 			return err
+		}
+		backend, _ := layout.moduleDir(module)
+		d, err := readDescriptor(repo, backend+"/module.json")
+		if err != nil {
+			return err
+		}
+		modelOutput := backend
+		if d.Generation != nil {
+			modelOutput = d.Generation.ModelOutput
 		}
 		if !columnName.MatchString(table) || !strings.HasPrefix(table, module+"_") {
 			return fmt.Errorf("business table must use the %s_ prefix and snake_case: %q", module, table)
@@ -59,7 +68,7 @@ func resourceCommand(root *string) *cobra.Command {
 		} else if !os.IsNotExist(err) {
 			return err
 		}
-		spec, err = inspectInitialResource(c.Context(), module, backend, spec)
+		spec, err = inspectInitialResource(c.Context(), module, modelOutput, spec)
 		if err != nil {
 			return err
 		}
@@ -88,7 +97,7 @@ func resourceCommand(root *string) *cobra.Command {
 	return cmd
 }
 
-func inspectInitialResource(ctx context.Context, module, backend string, spec crudSpec) (crudSpec, error) {
+func inspectInitialResource(ctx context.Context, module, modelOutput string, spec crudSpec) (crudSpec, error) {
 	cfg := adminconfig.Load()
 	if err := cfg.ValidateDatabase(); err != nil {
 		return spec, err
@@ -101,7 +110,7 @@ func inspectInitialResource(ctx context.Context, module, backend string, spec cr
 	if err != nil {
 		return spec, err
 	}
-	meta, inspectErr := readCRUDModel(db, cfg.DBDriver, spec.Table, backend)
+	meta, inspectErr := readCRUDModel(db, cfg.DBDriver, spec.Table, modelOutput)
 	if inspectErr == nil {
 		for _, f := range meta.Fields {
 			if f.ColumnName != "id" && f.ColumnName != spec.UpdatedAt {
