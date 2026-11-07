@@ -135,54 +135,81 @@ func renderMigrations(root string, pending map[string][]byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	drivers = pendingDrivers(drivers, pending)
+	factories := map[string][]string{}
+	for _, driver := range drivers {
+		inputs, err := migrationInputs(root, "backend/migrations/"+driver, pending)
+		if err != nil {
+			return nil, err
+		}
+		if factories[driver], err = migrationFactories(inputs); err != nil {
+			return nil, err
+		}
+	}
+	return migrationRegistry(layout, drivers, factories)
+}
+
+// pendingDrivers adds dialect directories that only pending files create.
+func pendingDrivers(drivers []string, pending map[string][]byte) []string {
 	for path := range pending {
 		dir := filepath.ToSlash(filepath.Dir(path))
 		if driver, ok := strings.CutPrefix(dir, "backend/migrations/"); ok && strings.HasSuffix(path, ".go") && !slices.Contains(drivers, driver) {
 			drivers = append(drivers, driver)
 		}
 	}
-	factories := map[string][]string{}
-	for _, driver := range drivers {
-		dir := "backend/migrations/" + driver
-		files, err := filepath.Glob(filepath.Join(root, dir, "*.go"))
+	return drivers
+}
+
+// migrationInputs reads one dialect's Go sources, overlaid with pending files.
+func migrationInputs(root, dir string, pending map[string][]byte) (map[string][]byte, error) {
+	files, err := filepath.Glob(filepath.Join(root, dir, "*.go"))
+	if err != nil {
+		return nil, err
+	}
+	inputs := map[string][]byte{}
+	for _, file := range files {
+		if strings.HasSuffix(file, "_test.go") {
+			continue
+		}
+		rel, err := filepath.Rel(root, file)
 		if err != nil {
 			return nil, err
 		}
-		inputs := map[string][]byte{}
-		for _, file := range files {
-			if strings.HasSuffix(file, "_test.go") {
-				continue
-			}
-			rel, err := filepath.Rel(root, file)
-			if err != nil {
-				return nil, err
-			}
-			data, err := os.ReadFile(file)
-			if err != nil {
-				return nil, err
-			}
-			inputs[filepath.ToSlash(rel)] = data
+		data, err := os.ReadFile(file)
+		if err != nil {
+			return nil, err
 		}
-		for path, data := range pending {
-			if filepath.ToSlash(filepath.Dir(path)) == dir && strings.HasSuffix(path, ".go") {
-				inputs[path] = data
-			}
-		}
-		names := make([]string, 0, len(inputs))
-		for name := range inputs {
-			names = append(names, name)
-		}
-		sort.Strings(names)
-		for _, name := range names {
-			factory, err := migrationFactory(name, inputs[name])
-			if err != nil {
-				return nil, err
-			}
-			if factory != "" {
-				factories[driver] = append(factories[driver], factory)
-			}
+		inputs[filepath.ToSlash(rel)] = data
+	}
+	for path, data := range pending {
+		if filepath.ToSlash(filepath.Dir(path)) == dir && strings.HasSuffix(path, ".go") {
+			inputs[path] = data
 		}
 	}
+	return inputs, nil
+}
+
+// migrationFactories lists the factory functions declared by inputs in file order.
+func migrationFactories(inputs map[string][]byte) ([]string, error) {
+	names := make([]string, 0, len(inputs))
+	for name := range inputs {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	var factories []string
+	for _, name := range names {
+		factory, err := migrationFactory(name, inputs[name])
+		if err != nil {
+			return nil, err
+		}
+		if factory != "" {
+			factories = append(factories, factory)
+		}
+	}
+	return factories, nil
+}
+
+func migrationRegistry(layout appLayout, drivers []string, factories map[string][]string) ([]byte, error) {
 	var src strings.Builder
 	src.WriteString("package migrations\nimport (\n\"github.com/pressly/goose/v3\"\n")
 	for _, driver := range drivers {

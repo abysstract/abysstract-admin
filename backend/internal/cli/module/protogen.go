@@ -41,9 +41,33 @@ func generateProtocol(ctx context.Context, root string, layout appLayout, defs [
 	}
 	defer os.RemoveAll(temp)
 
+	sources, tasks, err := stageProtos(root, core, defs, temp)
+	if err != nil {
+		return err
+	}
+	task := findGeneration(tasks, target)
+	if task == nil {
+		return fmt.Errorf("module %s has no generation configuration", target)
+	}
+	if err := writeBufConfig(temp, layout, sources, tasks); err != nil {
+		return err
+	}
+	if err := runBuf(ctx, temp); err != nil {
+		return err
+	}
+	goOutput, tsOutput, err := collectProtocol(temp, tasks, *task)
+	if err != nil {
+		return err
+	}
+	return writeProtocol(root, *task, goOutput, tsOutput)
+}
+
+// stageProtos copies the framework and every generating module's Proto
+// sources into the buf workspace, returning its module dirs and generations.
+func stageProtos(root, core string, defs []descriptor, temp string) ([]string, []generation, error) {
 	sources := []string{"src/core"}
 	if err := copyProtos(core, filepath.Join(temp, "src/core")); err != nil {
-		return err
+		return nil, nil, err
 	}
 	var tasks []generation
 	for i, d := range defs {
@@ -53,28 +77,34 @@ func generateProtocol(ctx context.Context, root string, layout appLayout, defs [
 		tasks = append(tasks, *d.Generation)
 		source := filepath.Join(root, filepath.FromSlash(d.Generation.ProtoSource))
 		if same, err := sameDir(source, core); err != nil {
-			return err
+			return nil, nil, err
 		} else if same {
 			continue
 		}
 		dir := fmt.Sprintf("src/m%d", i)
 		if err := copyProtos(source, filepath.Join(temp, dir)); err != nil {
-			return err
+			return nil, nil, err
 		}
 		if _, err := os.Stat(filepath.Join(temp, dir)); err == nil {
 			sources = append(sources, dir)
 		}
 	}
+	return sources, tasks, nil
+}
+
+func findGeneration(tasks []generation, name string) *generation {
 	var task *generation
 	for i := range tasks {
-		if tasks[i].Name == target {
+		if tasks[i].Name == name {
 			task = &tasks[i]
 		}
 	}
-	if task == nil {
-		return fmt.Errorf("module %s has no generation configuration", target)
-	}
+	return task
+}
 
+// writeBufConfig writes the workspace and a template that places every
+// module's Go package under the application import path.
+func writeBufConfig(temp string, layout appLayout, sources []string, tasks []generation) error {
 	var workspace strings.Builder
 	workspace.WriteString("version: v2\nmodules:\n")
 	for _, dir := range sources {
@@ -95,6 +125,10 @@ func generateProtocol(ctx context.Context, root string, layout appLayout, defs [
 			return err
 		}
 	}
+	return nil
+}
+
+func runBuf(ctx context.Context, temp string) error {
 	run := exec.CommandContext(ctx, "buf", "generate", "--template", "buf.gen.yaml")
 	run.Dir = temp
 	var stderr bytes.Buffer
@@ -105,15 +139,43 @@ func generateProtocol(ctx context.Context, root string, layout appLayout, defs [
 		}
 		return fmt.Errorf("buf generate: %w\n%s", err, stderr.String())
 	}
+	return nil
+}
 
+// collectProtocol reads the target module's buf output and rewrites its
+// TypeScript imports for the application layout.
+func collectProtocol(temp string, tasks []generation, task generation) (map[string][]byte, map[string][]byte, error) {
 	goFiles, err := relativeFiles(filepath.Join(temp, "out/go"))
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 	tsFiles, err := relativeFiles(filepath.Join(temp, "out/ts"))
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
+	systemFiles, moduleFiles := protoOwners(tsFiles, tasks)
+	goOutput, err := readPrefixed(filepath.Join(temp, "out/go"), goFiles, task.Prefix)
+	if err != nil {
+		return nil, nil, err
+	}
+	tsData, err := readPrefixed(filepath.Join(temp, "out/ts"), tsFiles, task.Prefix)
+	if err != nil {
+		return nil, nil, err
+	}
+	tsSources := make(map[string]string, len(tsData))
+	for file, data := range tsData {
+		tsSources[file] = string(data)
+	}
+	tsOutput, err := rewriteProtoImports(tsSources, systemFiles, moduleFiles, task.TSOutput)
+	if err != nil {
+		return nil, nil, err
+	}
+	return goOutput, tsOutput, nil
+}
+
+// protoOwners classifies TypeScript output as framework system files or
+// files owned by a module, mapped to their application output path.
+func protoOwners(tsFiles []string, tasks []generation) (map[string]bool, map[string]string) {
 	systemFiles := map[string]bool{}
 	moduleFiles := map[string]string{}
 	for _, file := range tsFiles {
@@ -126,28 +188,27 @@ func generateProtocol(ctx context.Context, root string, layout appLayout, defs [
 			}
 		}
 	}
-	goOutput := map[string][]byte{}
-	for _, file := range goFiles {
-		if strings.HasPrefix(file, task.Prefix) {
-			if goOutput[file], err = os.ReadFile(filepath.Join(temp, "out/go", file)); err != nil {
-				return err
-			}
+	return systemFiles, moduleFiles
+}
+
+func readPrefixed(dir string, files []string, prefix string) (map[string][]byte, error) {
+	output := map[string][]byte{}
+	for _, file := range files {
+		if !strings.HasPrefix(file, prefix) {
+			continue
 		}
-	}
-	tsSources := map[string]string{}
-	for _, file := range tsFiles {
-		if strings.HasPrefix(file, task.Prefix) {
-			data, err := os.ReadFile(filepath.Join(temp, "out/ts", file))
-			if err != nil {
-				return err
-			}
-			tsSources[file] = string(data)
+		data, err := os.ReadFile(filepath.Join(dir, file))
+		if err != nil {
+			return nil, err
 		}
+		output[file] = data
 	}
-	tsOutput, err := rewriteProtoImports(tsSources, systemFiles, moduleFiles, task.TSOutput)
-	if err != nil {
-		return err
-	}
+	return output, nil
+}
+
+// writeProtocol replaces the module's managed Go and TypeScript output,
+// validating every destination before updating any of them.
+func writeProtocol(root string, task generation, goOutput, tsOutput map[string][]byte) error {
 	if len(goOutput) == 0 || len(tsOutput) == 0 {
 		for _, dir := range []string{task.GoOutput, task.TSOutput} {
 			existing, err := relativeFiles(filepath.Join(root, filepath.FromSlash(dir), filepath.FromSlash(task.Prefix)))
@@ -164,7 +225,6 @@ func generateProtocol(ctx context.Context, root string, layout appLayout, defs [
 		dir   string
 		files map[string][]byte
 	}{{task.GoOutput, goOutput}, {task.TSOutput, tsOutput}}
-	// Validate every managed destination before updating any formal output.
 	for _, dest := range destinations {
 		if err := checkManaged(filepath.Join(root, filepath.FromSlash(dest.dir)), task.Prefix, dest.files); err != nil {
 			return err
