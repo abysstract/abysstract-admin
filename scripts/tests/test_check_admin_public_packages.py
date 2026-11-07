@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 import tempfile
 import unittest
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -27,8 +28,8 @@ class PublicPackageProbeTests(unittest.TestCase):
         root = Path(temp.name)
         backend = root / "backend"
         backend.mkdir()
-        (backend / "go.mod").write_text(
-            "module github.com/abysstract/abysstract-admin/backend\n\n"
+        (root / "go.mod").write_text(
+            "module github.com/abysstract/abysstract-admin\n\n"
             "go 1.25\n" + extra,
             encoding="utf-8",
         )
@@ -41,6 +42,9 @@ class PublicPackageProbeTests(unittest.TestCase):
             )
         return temp, root
 
+    # The k1 fixtures have no backend packages. Keep the module proxy out of
+    # the lookup so a published module cannot supply the missing path.
+    @mock.patch.dict("os.environ", {"GOPROXY": "off"})
     def test_k1_requires_the_precise_missing_package_diagnostic(self) -> None:
         temp, root = self.make_backend()
         self.addCleanup(temp.cleanup)
@@ -87,7 +91,7 @@ class PublicPackageProbeTests(unittest.TestCase):
         temp, root = self.make_backend()
         self.addCleanup(temp.cleanup)
         fake = self.make_fake_go(root, "echo 'dial tcp: lookup proxy.golang.org: no such host' >&2; exit 1\n")
-        result = MODULE.probe_package(root / "backend", "resource", "k1", go_bin=str(fake))
+        result = MODULE.probe_package(root, "resource", "k1", go_bin=str(fake))
         self.assertEqual(result.category, "dependency")
         self.assertFalse(result.passed)
 
@@ -95,7 +99,7 @@ class PublicPackageProbeTests(unittest.TestCase):
         temp, root = self.make_backend()
         self.addCleanup(temp.cleanup)
         fake = self.make_fake_go(root, "echo 'resource/bad.go: syntax error: unexpected token' >&2; exit 1\n")
-        result = MODULE.probe_package(root / "backend", "resource", "k1", go_bin=str(fake))
+        result = MODULE.probe_package(root, "resource", "k1", go_bin=str(fake))
         self.assertEqual(result.category, "syntax")
         self.assertFalse(result.passed)
 
@@ -103,22 +107,22 @@ class PublicPackageProbeTests(unittest.TestCase):
         temp, root = self.make_backend()
         self.addCleanup(temp.cleanup)
         fake = self.make_fake_go(root, "sleep 1\n")
-        result = MODULE.probe_package(root / "backend", "resource", "k1", go_bin=str(fake), timeout=0.01)
+        result = MODULE.probe_package(root, "resource", "k1", go_bin=str(fake), timeout=0.01)
         self.assertEqual(result.category, "timeout")
         self.assertFalse(result.passed)
 
+    @mock.patch.dict("os.environ", {"GOPROXY": "off"})
     def test_clean_missing_package_accepts_tls_in_replacement_path_as_data(self) -> None:
         with tempfile.TemporaryDirectory(prefix="admin-probe-tls-fixture-") as temp_name:
             root = Path(temp_name)
-            backend = root / "backend"
-            backend.mkdir()
-            (backend / "go.mod").write_text(
-                "module github.com/abysstract/abysstract-admin/backend\n\ngo 1.25\n",
+            (root / "backend").mkdir()
+            (root / "go.mod").write_text(
+                "module github.com/abysstract/abysstract-admin\n\ngo 1.25\n",
                 encoding="utf-8",
             )
             work = root / "probe-work"
             work.mkdir()
-            result = MODULE.probe_package(backend, "resource", "k1", temp_root=work)
+            result = MODULE.probe_package(root, "resource", "k1", temp_root=work)
         self.assertEqual(result.category, "missing_package")
         self.assertTrue(result.passed)
 
@@ -130,7 +134,7 @@ class PublicPackageProbeTests(unittest.TestCase):
             root,
             f'echo "cannot find module providing package {target}: reading https://modules.company.example/example/@v/list: 403 Forbidden" >&2; exit 1\n',
         )
-        result = MODULE.probe_package(root / "backend", "resource", "k1", go_bin=str(fake))
+        result = MODULE.probe_package(root, "resource", "k1", go_bin=str(fake))
         self.assertNotEqual(result.category, "missing_package")
         self.assertFalse(result.passed)
 
@@ -142,7 +146,7 @@ class PublicPackageProbeTests(unittest.TestCase):
             root,
             f'echo "cannot find module providing package {target}: open /tmp/review-cache: permission denied" >&2; exit 1\n',
         )
-        result = MODULE.probe_package(root / "backend", "resource", "k1", go_bin=str(fake))
+        result = MODULE.probe_package(root, "resource", "k1", go_bin=str(fake))
         self.assertNotEqual(result.category, "missing_package")
         self.assertFalse(result.passed)
 
@@ -155,11 +159,11 @@ class PublicPackageProbeTests(unittest.TestCase):
         fake.write_text(
             "#!/bin/sh\n"
             "if [ \"$1\" = \"version\" ]; then echo go1.26.4; exit 0; fi\n"
-            f'printf "module github.com/abysstract/abysstract-admin/backend found, but does not contain package {target}\\nother.go:4:2: undefined: MissingSymbol\\n" >&2; exit 1\n',
+            f'printf "module github.com/abysstract/abysstract-admin found, but does not contain package {target}\\nother.go:4:2: undefined: MissingSymbol\\n" >&2; exit 1\n',
             encoding="utf-8",
         )
         fake.chmod(0o755)
-        result = MODULE.probe_package(root / "backend", "resource", "k1", go_bin=str(fake))
+        result = MODULE.probe_package(root, "resource", "k1", go_bin=str(fake))
         self.assertNotEqual(result.category, "missing_package")
         self.assertFalse(result.passed)
 
@@ -171,7 +175,7 @@ class PublicPackageProbeTests(unittest.TestCase):
             root,
             f'echo \"cannot find module providing package {target}: Get https://proxy.golang.org/example/@v/list: dial tcp: lookup proxy.golang.org: no such host\" >&2; exit 1\n',
         )
-        result = MODULE.probe_package(root / "backend", "resource", "k1", go_bin=str(fake))
+        result = MODULE.probe_package(root, "resource", "k1", go_bin=str(fake))
         self.assertEqual(result.category, "dependency")
         self.assertFalse(result.passed)
 
@@ -183,7 +187,7 @@ class PublicPackageProbeTests(unittest.TestCase):
             root,
             f'printf \"module {target} found, but does not contain package {target}\\nother.go: missing go.sum entry for module providing package example.com/dep\\n\" >&2; exit 1\n',
         )
-        result = MODULE.probe_package(root / "backend", "resource", "k1", go_bin=str(fake))
+        result = MODULE.probe_package(root, "resource", "k1", go_bin=str(fake))
         self.assertEqual(result.category, "dependency")
         self.assertFalse(result.passed)
 
@@ -194,7 +198,7 @@ class PublicPackageProbeTests(unittest.TestCase):
             root,
             "echo 'no required module provides package example.com/other/dependency' >&2; exit 1\n",
         )
-        result = MODULE.probe_package(root / "backend", "resource", "k1", go_bin=str(fake))
+        result = MODULE.probe_package(root, "resource", "k1", go_bin=str(fake))
         self.assertEqual(result.category, "dependency")
         self.assertFalse(result.passed)
 
@@ -204,7 +208,7 @@ class PublicPackageProbeTests(unittest.TestCase):
         fake = Path(temp.name) / "fake-go"
         fake.write_text("#!/bin/sh\necho 'go: toolchain unavailable' >&2\nexit 1\n", encoding="utf-8")
         fake.chmod(0o755)
-        result = MODULE.probe_package(root / "backend", "resource", "k2", go_bin=str(fake))
+        result = MODULE.probe_package(root, "resource", "k2", go_bin=str(fake))
         self.assertEqual(result.category, "toolchain")
         self.assertFalse(result.passed)
 

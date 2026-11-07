@@ -1,6 +1,10 @@
-module github.com/abysstract/abysstract-admin/backend
+module github.com/abysstract/abysstract-admin
 
 go 1.26.0
+
+// Go code lives under backend/. Keep the toolchain out of the frontend
+// workspace, whose node_modules may contain stray .go files.
+ignore ./frontend
 
 require (
 	connectrpc.com/connect/v2 v2.0.2

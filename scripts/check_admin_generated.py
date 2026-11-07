@@ -220,7 +220,9 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     root = args.repo_root.resolve()
-    if not (root / "backend" / "go.mod").is_file():
+    if not (root / "backend").is_dir() or not any(
+        (root / mod).is_file() for mod in ("go.mod", "backend/go.mod")
+    ):
         print(f"input error: {root} is not the admin repository root", file=sys.stderr)
         return 2
     try:

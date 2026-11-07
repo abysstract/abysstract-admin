@@ -147,7 +147,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
-          cache-dependency-path: backend/go.sum
+          cache-dependency-path: go.sum
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -195,7 +195,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
-          cache-dependency-path: backend/go.sum
+          cache-dependency-path: go.sum
       - name: Probe public Go packages
         run: python3 scripts/check_admin_public_packages.py --repo-root . --stage k2 --timeout 300
 
@@ -228,7 +228,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
-          cache-dependency-path: backend/go.sum
+          cache-dependency-path: go.sum
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -274,7 +274,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
-          cache-dependency-path: backend/go.sum
+          cache-dependency-path: go.sum
       - name: Provision owned MySQL target
         working-directory: backend
         env:
@@ -334,7 +334,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
-          cache-dependency-path: backend/go.sum
+          cache-dependency-path: go.sum
       - name: Provision owned MariaDB target
         working-directory: backend
         env:
@@ -378,7 +378,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
-          cache-dependency-path: backend/go.sum
+          cache-dependency-path: go.sum
       - name: Provision owned SQLite file
         working-directory: backend
         run: |
@@ -428,7 +428,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
-          cache-dependency-path: backend/go.sum
+          cache-dependency-path: go.sum
       - name: go build
         working-directory: backend
         run: go build ./...
@@ -512,7 +512,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
-          cache-dependency-path: backend/go.sum
+          cache-dependency-path: go.sum
       - name: Provision disposable test database
         working-directory: backend
         env:
@@ -613,7 +613,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
-          cache-dependency-path: backend/go.sum
+          cache-dependency-path: go.sum
 
       # 1) docker compose up -d --wait：等待 healthcheck（pg_isready ×20，约 60s 上限）通过
       - name: Bring up compose stack
@@ -681,7 +681,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
-          cache-dependency-path: backend/go.sum
+          cache-dependency-path: go.sum
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}

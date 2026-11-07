@@ -15,13 +15,13 @@ export function ciScope(paths, { event, database } = {}) {
     file === ".github/workflows/ci.yml" || file.startsWith(".github/scripts/"),
   );
   const backend = workflow || files.some((file) =>
-    /^(backend\/|proto\/|buf[^/]*\.yaml$|admin\.modules\.json$|go\.work(?:\.sum)?$)/.test(file) ||
+    /^(backend\/|proto\/|buf[^/]*\.yaml$|admin\.modules\.json$|go\.(?:mod|sum|work(?:\.sum)?)$)/.test(file) ||
     /^(docker-compose[^/]*\.ya?ml|compose[^/]*\.ya?ml|scripts\/(generate\.sh|init_pg\.sql|reset_db\.sh|check_admin_(browser|generated)\.(sh|py)))$/.test(file),
   );
   const shared = workflow || files.some((file) => {
     if (/^backend\/(coremigrations|migrations)\/(postgres|mysql|mariadb|sqlite)\//.test(file)) return false;
     if (/^backend\/database\/(postgres|sqlite)(?:[._/])/.test(file)) return false;
-    return /^(proto\/|buf[^/]*\.yaml$|go\.work(?:\.sum)?$|admin\.modules\.json$|scripts\/generate\.sh$)/.test(file) ||
+    return /^(proto\/|buf[^/]*\.yaml$|go\.(?:mod|sum|work(?:\.sum)?)$|admin\.modules\.json$|scripts\/generate\.sh$)/.test(file) ||
       /^backend\/(go\.(mod|sum)$|database\/|coremigrations\/|migrations\/|moduleseed\/|resource(?:gen)?\/|testdb\/|system\/|cmd\/(modelgen|adminresource-gen|migrate)\/|internal\/(repo|service|dal|codegen|resource|testdb|testutil|modules)\/|internal\/cli\/module\/)/.test(file);
   });
   return {
