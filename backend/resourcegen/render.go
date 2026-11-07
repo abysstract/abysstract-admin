@@ -458,7 +458,7 @@ func snake(s string) string {
 	return b.String()
 }
 
-// moduleRoot 向上查找 go.mod 所在目录。
+// moduleRoot 返回 backend 目录：向上查找 go.mod，go.mod 在仓库根目录时取其下的 backend。
 func moduleRoot() (string, error) {
 	dir, err := os.Getwd()
 	if err != nil {
@@ -466,6 +466,9 @@ func moduleRoot() (string, error) {
 	}
 	for {
 		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
+			if info, err := os.Stat(filepath.Join(dir, "backend")); err == nil && info.IsDir() {
+				return filepath.Join(dir, "backend"), nil
+			}
 			return dir, nil
 		}
 		parent := filepath.Dir(dir)

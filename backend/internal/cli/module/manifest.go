@@ -209,7 +209,7 @@ func findRoot(start string) (string, error) {
 		return "", err
 	}
 	for {
-		if _, err := os.Stat(filepath.Join(root, "backend/go.mod")); err == nil {
+		if isRepoRoot(root) {
 			return root, nil
 		}
 		parent := filepath.Dir(root)
@@ -218,6 +218,20 @@ func findRoot(start string) (string, error) {
 		}
 		root = parent
 	}
+}
+
+// isRepoRoot reports whether dir holds a backend/ tree with its go.mod either
+// at dir (single repository module) or inside backend/ (nested module).
+func isRepoRoot(dir string) bool {
+	if info, err := os.Stat(filepath.Join(dir, "backend")); err != nil || !info.IsDir() {
+		return false
+	}
+	for _, mod := range []string{"go.mod", "backend/go.mod"} {
+		if _, err := os.Stat(filepath.Join(dir, mod)); err == nil {
+			return true
+		}
+	}
+	return false
 }
 
 func validateGeneration(root, path, name string, g generation) error {

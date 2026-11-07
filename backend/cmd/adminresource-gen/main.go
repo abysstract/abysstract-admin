@@ -42,9 +42,8 @@ func repoRoot() (string, error) {
 		return "", err
 	}
 	for {
-		backend := filepath.Join(dir, "backend", "go.mod")
 		frontend := filepath.Join(dir, "frontend", "package.json")
-		if _, err := os.Stat(backend); err == nil {
+		if hasGoMod(dir) {
 			if _, err := os.Stat(frontend); err == nil {
 				return dir, nil
 			}
@@ -55,4 +54,14 @@ func repoRoot() (string, error) {
 		}
 		dir = parent
 	}
+}
+
+// hasGoMod accepts the go.mod at the repository root or inside backend/.
+func hasGoMod(dir string) bool {
+	for _, mod := range []string{"go.mod", filepath.Join("backend", "go.mod")} {
+		if _, err := os.Stat(filepath.Join(dir, mod)); err == nil {
+			return true
+		}
+	}
+	return false
 }

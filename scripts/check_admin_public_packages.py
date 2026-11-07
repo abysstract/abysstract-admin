@@ -2,9 +2,9 @@
 """Probe the public Go packages from an isolated external module.
 
 The probe never changes the repository's go.mod.  It creates a temporary
-module, requires the system backend module explicitly, replaces it with the
-absolute backend directory supplied by --repo-root, and compiles one tiny
-package import at a time.
+module, requires the system module explicitly, replaces it with the absolute
+repository root supplied by --repo-root, and compiles one tiny package import
+from backend/ at a time.
 
 Exit codes:
   0: every package met the selected stage expectation
@@ -26,7 +26,8 @@ import tempfile
 from typing import Sequence
 
 
-SYSTEM_MODULE = "github.com/abysstract/abysstract-admin/backend"
+SYSTEM_MODULE = "github.com/abysstract/abysstract-admin"
+PACKAGE_PREFIX = f"{SYSTEM_MODULE}/backend"
 TARGET_PACKAGES = ("resource", "module", "permission", "resourcegen", "coremigrations", "database", "system", "adminconfig", "identity", "adminapp", "moduleseed")
 
 
@@ -113,8 +114,8 @@ def _run_go(go_bin: str, args: list[str], cwd: Path, timeout: float = 60.0) -> G
     return GoRunResult(completed.returncode, completed.stdout, completed.stderr)
 
 
-def _toolchain_error(go_bin: str, required: str, backend_root: Path) -> tuple[str, str] | None:
-    result = _run_go(go_bin, ["version"], backend_root, timeout=10)
+def _toolchain_error(go_bin: str, required: str, module_root: Path) -> tuple[str, str] | None:
+    result = _run_go(go_bin, ["version"], module_root, timeout=10)
     if result.failure is not None:
         return result.failure, result.output
     if result.exit_code != 0:
@@ -198,25 +199,25 @@ def _classify(exit_code: int, output: str, package_path: str, failure: str | Non
 
 
 def probe_package(
-    backend_root: Path,
+    module_root: Path,
     package_name: str,
     stage: str,
     go_bin: str = "go",
     temp_root: Path | None = None,
     timeout: float = 60.0,
 ) -> ProbeResult:
-    backend_root = backend_root.resolve()
-    go_mod = backend_root / "go.mod"
+    module_root = module_root.resolve()
+    go_mod = module_root / "go.mod"
     if not go_mod.is_file():
-        raise ProbeInputError(f"backend module not found: {go_mod}")
+        raise ProbeInputError(f"system module not found: {go_mod}")
     if _module_name(go_mod) != SYSTEM_MODULE:
-        raise ProbeInputError(f"backend module path must be {SYSTEM_MODULE}: {go_mod}")
+        raise ProbeInputError(f"system module path must be {SYSTEM_MODULE}: {go_mod}")
     if package_name not in TARGET_PACKAGES:
         raise ProbeInputError(f"unsupported package: {package_name}")
     if stage not in {"k1", "k2"}:
         raise ProbeInputError(f"unsupported stage: {stage}")
     required_go = _go_version(go_mod)
-    toolchain_problem = _toolchain_error(go_bin, required_go, backend_root)
+    toolchain_problem = _toolchain_error(go_bin, required_go, module_root)
     if toolchain_problem:
         category, message = toolchain_problem
         return ProbeResult(package_name, stage, category, 127, message)
@@ -228,10 +229,10 @@ def probe_package(
         (temp_dir / "go.mod").write_text(
             f"module {probe_module}\n\ngo {required_go}\n\n"
             f"require {SYSTEM_MODULE} v0.0.0\n\n"
-            f"replace {SYSTEM_MODULE} => {backend_root}\n",
+            f"replace {SYSTEM_MODULE} => {module_root}\n",
             encoding="utf-8",
         )
-        import_path = f"{SYSTEM_MODULE}/{package_name}"
+        import_path = f"{PACKAGE_PREFIX}/{package_name}"
         (temp_dir / "probe.go").write_text(
             "package probe\n\n"
             "import _ " + repr(import_path).replace("'", '"') + "\n",
@@ -248,10 +249,9 @@ def probe_package(
 
 def run_probe(repo_root: Path, stage: str, go_bin: str = "go", timeout: float = 60.0) -> list[ProbeResult]:
     repo_root = repo_root.resolve()
-    backend_root = repo_root / "backend"
-    if not backend_root.is_dir():
-        raise ProbeInputError(f"backend directory not found: {backend_root}")
-    return [probe_package(backend_root, package, stage, go_bin=go_bin, timeout=timeout) for package in TARGET_PACKAGES]
+    if not (repo_root / "backend").is_dir():
+        raise ProbeInputError(f"backend directory not found: {repo_root / 'backend'}")
+    return [probe_package(repo_root, package, stage, go_bin=go_bin, timeout=timeout) for package in TARGET_PACKAGES]
 
 
 def _build_parser() -> argparse.ArgumentParser:

@@ -6,6 +6,8 @@
 
 首次运行按 [README 快速开始](../README.md#快速开始体验自带后台)操作。仓库已包含生成文件，首次启动可以直接使用。
 
+Go 模块的 `go.mod` 位于仓库根目录，Go 代码位于 `backend/`。文档中的 `cd backend && go ...` 命令由 Go 自动找到上级 `go.mod`；在仓库根目录执行时，包路径写成 `./backend/...`，例如 `go test ./backend/...`。`go.mod` 用 `ignore ./frontend` 排除前端目录。
+
 ## 修改与完整生成
 
 在 `backend/internal/modules/<module>/resources/*.json` 维护暴露字段和业务规则。新增表或字段的流程为：

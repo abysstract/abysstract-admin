@@ -38,13 +38,13 @@ class ConsumerBoundaryTests(unittest.TestCase):
 
     def test_go_public_import_and_business_internal_are_allowed(self) -> None:
         self.write(
-            "backend/go.mod",
-            "module github.com/abysstract/abysstract-admin/backend\n",
+            "go.mod",
+            "module github.com/abysstract/abysstract-admin\n",
         )
         self.write(
             "integration/consumer/backend/go.mod",
             "module example.com/business\n\n"
-            "replace github.com/abysstract/abysstract-admin/backend => ../../../backend\n",
+            "replace github.com/abysstract/abysstract-admin => ../../..\n",
         )
         self.write(
             "integration/consumer/backend/main.go",
@@ -120,22 +120,34 @@ class ConsumerBoundaryTests(unittest.TestCase):
 
 
     def test_only_exact_system_module_replace_is_allowed(self) -> None:
-        self.write("backend/go.mod", "module github.com/abysstract/abysstract-admin/backend\n")
+        self.write("go.mod", "module github.com/abysstract/abysstract-admin\n")
+        self.write(
+            "integration/consumer/backend/go.mod",
+            "module example.com/business\n\n"
+            "replace github.com/abysstract/abysstract-admin => ../../..\n",
+        )
+        self.assertEqual(MODULE.check_references(self.root, self.consumer), [])
+
+        for target in ("../../../backend", "../../../backend/internal"):
+            self.write(
+                "integration/consumer/backend/go.mod",
+                "module example.com/business\n\n"
+                f"replace github.com/abysstract/abysstract-admin => {target}\n",
+            )
+            violations = MODULE.check_references(self.root, self.consumer)
+            self.assertEqual(len(violations), 1, target)
+            self.assertIn("replace", violations[0].message)
+
+    def test_legacy_backend_module_replace_is_rejected(self) -> None:
+        self.write("go.mod", "module github.com/abysstract/abysstract-admin\n")
         self.write(
             "integration/consumer/backend/go.mod",
             "module example.com/business\n\n"
             "replace github.com/abysstract/abysstract-admin/backend => ../../../backend\n",
         )
-        self.assertEqual(MODULE.check_references(self.root, self.consumer), [])
-
-        self.write(
-            "integration/consumer/backend/go.mod",
-            "module example.com/business\n\n"
-            "replace github.com/abysstract/abysstract-admin/backend => ../../../backend/internal\n",
-        )
         violations = MODULE.check_references(self.root, self.consumer)
         self.assertEqual(len(violations), 1)
-        self.assertIn("replace", violations[0].message)
+        self.assertIn("github.com/abysstract/abysstract-admin =>", violations[0].message)
 
     def test_snapshot_detects_added_modified_deleted_but_ignores_build_outputs(self) -> None:
         source = self.write("backend/resource/store.go", "package resource\n")

@@ -18,7 +18,8 @@ for (const [name, paths, databases] of [
   ["custom business query", ["backend/internal/modules/notes/note_query.go"], ["postgres", "sqlite", "mysql", "mariadb"]],
   ["model generator", ["backend/cmd/modelgen/main.go"], ["postgres", "sqlite", "mysql", "mariadb"]],
   ["generation script", ["scripts/generate.sh"], ["postgres", "sqlite", "mysql", "mariadb"]],
-  ["dependencies", ["backend/go.sum"], ["postgres", "sqlite", "mysql", "mariadb"]],
+  ["dependencies", ["go.sum"], ["postgres", "sqlite", "mysql", "mariadb"]],
+  ["module file", ["go.mod"], ["postgres", "sqlite", "mysql", "mariadb"]],
   ["workflow", [".github/workflows/ci.yml"], ["postgres", "sqlite", "mysql", "mariadb"]],
 ]) {
   test(name, () => {

@@ -2,6 +2,22 @@
 
 本页说明业务应用使用的公共包、生成器配置和前端接入方式。首次接入请先完成[模块教程](new-module-tutorial.md)。
 
+## 引用 Go 模块
+
+Go 模块路径是 `github.com/abysstract/abysstract-admin`，`go.mod` 位于仓库根目录，代码位于 `backend/`。在业务应用中添加依赖：
+
+```bash
+go get github.com/abysstract/abysstract-admin@v0.2.0
+```
+
+Go 模块与 npm 包共用同一个版本 tag（`vX.Y.Z`），升级时把 Go 依赖和两个前端包调整到同一版本。Go 模块的首个版本是 `v0.2.0`；`v0.1.0` 只发布了前端包。
+
+在本地联调未发布的改动时，用 `replace` 指向本仓库根目录：
+
+```bash
+go mod edit -replace github.com/abysstract/abysstract-admin=/absolute/path/to/abysstract-admin
+```
+
 ## 公共类型
 
 Go 应用按需导入 `github.com/abysstract/abysstract-admin/backend/` 下的公共包：

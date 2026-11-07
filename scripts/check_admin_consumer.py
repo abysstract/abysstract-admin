@@ -24,8 +24,11 @@ from dataclasses import dataclass
 from typing import Iterable, Iterator, Sequence
 
 
-SYSTEM_MODULE = "github.com/abysstract/abysstract-admin/backend"
-SYSTEM_PUBLIC_PREFIX = SYSTEM_MODULE + "/"
+SYSTEM_MODULE = "github.com/abysstract/abysstract-admin"
+# The module root is the repository root; Go packages live under backend/.
+SYSTEM_PUBLIC_PREFIX = SYSTEM_MODULE + "/backend/"
+# Module path used before the go.mod moved to the repository root.
+LEGACY_SYSTEM_MODULE = SYSTEM_MODULE + "/backend"
 SYSTEM_FRONTEND_DIRS = (
     Path("frontend/src"),
     Path("frontend/packages"),
@@ -459,14 +462,21 @@ def _go_mod_replacements(path: Path, repo_root: Path, consumer_root: Path) -> li
             resolved = Path(os.path.realpath(target_path))
         except OSError as exc:
             raise InputError(f"cannot resolve replace target {target_path}: {exc}") from exc
-        system_root = Path(os.path.realpath(repo_root / "backend"))
+        system_root = Path(os.path.realpath(repo_root))
+        system_sources = Path(os.path.realpath(repo_root / "backend"))
         if resolved == system_root and old_module == SYSTEM_MODULE:
             continue
-        if _is_under(resolved, system_root) or old_module == SYSTEM_MODULE:
+        if old_module == LEGACY_SYSTEM_MODULE:
             violations.append(Violation(
                 relative,
                 number,
-                f"Go replace 必须只指向系统公共模块根目录 {system_root.relative_to(repo_root)}: {target}",
+                f"系统模块路径已改为 {SYSTEM_MODULE}，replace 须改为 {SYSTEM_MODULE} => 仓库根目录: {target}",
+            ))
+        elif _is_under(resolved, system_sources) or old_module == SYSTEM_MODULE:
+            violations.append(Violation(
+                relative,
+                number,
+                f"Go replace 必须只指向系统模块根目录（仓库根目录）: {target}",
             ))
     return violations
 

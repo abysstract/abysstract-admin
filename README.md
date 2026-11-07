@@ -20,7 +20,8 @@ Abysstract 后台管理系统。前端使用 React、TypeScript 和 Ant Design /
 proto/                         # 框架公共 API（.proto）
 admin.modules.json             # 应用模块清单
 buf.yaml                       # 生成的系统与模块协议 workspace
-backend/                       # 独立 Go 模块：公共包、服务、迁移和模型生成命令
+go.mod                         # Go 模块 github.com/abysstract/abysstract-admin
+backend/                       # Go 代码：公共包、服务、迁移和模型生成命令
 backend/coremigrations/         # Core 系统迁移来源
 backend/migrations/             # 自带应用的集中迁移目录
 frontend/packages/admin-proto  # 公共 Proto TS 包
