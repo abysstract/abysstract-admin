@@ -6,6 +6,10 @@ go 1.26.0
 // workspace, whose node_modules may contain stray .go files.
 ignore ./frontend
 
+// v0.1.0 tagged the npm packages only; the Go module had no go.mod at the
+// repository root then, so that version contains no Go packages.
+retract v0.1.0
+
 require (
 	connectrpc.com/connect/v2 v2.0.2
 	github.com/golang-jwt/jwt/v5 v5.2.1
