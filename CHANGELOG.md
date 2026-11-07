@@ -7,6 +7,10 @@
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-07
+
+Go 模块与 `@abysstract/admin-core`、`@abysstract/admin-proto` 同步发布 0.3.0。
+
 ### Added
 
 - 文档：[新建独立应用](docs/standalone-app.md)，按任务顺序在自己的仓库和 Go 模块中搭建后台、安装 module 命令并开发第一个模块。
@@ -59,6 +63,7 @@
 
 - `modelgen` 按 `<前缀>_` 边界选择模块表，`tablePrefix` 不带下划线时不再选中其他模块的表。
 
-[Unreleased]: https://github.com/abysstract/abysstract-admin/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/abysstract/abysstract-admin/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/abysstract/abysstract-admin/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/abysstract/abysstract-admin/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/abysstract/abysstract-admin/releases/tag/v0.1.0

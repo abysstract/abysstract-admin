@@ -12,8 +12,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@abysstract/admin-core": "0.1.0",
-    "@abysstract/admin-proto": "0.1.0",
+    "@abysstract/admin-core": "0.3.0",
+    "@abysstract/admin-proto": "0.3.0",
     "@ant-design/icons": "^5.4.0",
     "@ant-design/pro-components": "^2.7.19",
     "@bufbuild/protobuf": "^2.2.0",
