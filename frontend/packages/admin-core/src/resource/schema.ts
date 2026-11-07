@@ -33,6 +33,11 @@ export interface FieldSchema {
   creatable: boolean;
   updatable: boolean;
   serverManaged: boolean;
+  /**
+   * Nullable field whose create request member is a Proto `optional`. The
+   * standard create form leaves it empty and omits it from the request.
+   */
+  optional?: boolean;
   relation?: FieldRelation;
 }
 

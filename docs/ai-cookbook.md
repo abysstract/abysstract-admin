@@ -109,6 +109,22 @@ Proto 字段名和 JSON 字段名用于接口；SQL、变更列集合 `ColumnSet
 
 密码、授权等流程的实现方式见 [Resource 扩展方式](resource-migration.md)。
 
+### 数据库错误
+
+生成的 Controller 先保留 Hook 返回的 Connect 错误，再按生成的 Repository 用 `resource.NormalizeDBError` 归类的结果返回接口错误。Hook 自己执行的语句和事务提交返回的数据库错误不做归类，按“其他错误”处理：
+
+| 数据库错误 | 接口错误 |
+|---|---|
+| 记录不存在 | `not_found` |
+| 唯一约束冲突 | `already_exists`，`resource.ErrDuplicate` |
+| 数值越界（MySQL/MariaDB） | `invalid_argument`，`resource.ErrOutOfRange` |
+| CHECK 约束 | `invalid_argument`，`resource.ErrCheckViolation` |
+| 外键约束：引用的记录不存在或仍被引用 | `failed_precondition`，`resource.ErrForeignKey` |
+| 触发器等主动拒绝：MySQL/MariaDB `SIGNAL SQLSTATE '45xxx'`、PostgreSQL `RAISE EXCEPTION` | `failed_precondition`，消息为 `MESSAGE_TEXT` |
+| 其他错误 | `internal`，消息固定为“服务内部错误” |
+
+接口消息不包含驱动返回的库名、表名和约束定义；原始错误写入服务日志（`resource request failed`）。需要把数据库规则展示给用户时，在触发器中用 `SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = '...'` 或 `RAISE EXCEPTION '...'` 写出面向用户的提示。
+
 ## 6. 权限与数据范围
 
 ### 权限注册

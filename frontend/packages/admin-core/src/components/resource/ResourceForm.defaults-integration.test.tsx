@@ -111,3 +111,33 @@ it("sends a touched field restored to its initial value through generated operat
   expect(onUpdate.mock.calls[0][0].dirty).toEqual(new Set());
   expect(updateConfig).toHaveBeenCalledWith({ id: 1n, configName: "原名称" });
 });
+
+it("leaves nullable create fields empty and omits them", async () => {
+  const nullable = {
+    name: "Nullable",
+    permPrefix: "nullable",
+    table: "nullable",
+    fields: [
+      { ...field, name: "count", tsType: "number" },
+      { ...field, name: "parentId", tsType: "bigint", optional: true },
+      { ...field, name: "weight", tsType: "number", optional: true },
+    ],
+  } as const;
+  const onCreate = vi.fn();
+  const props: ResourceFormCreateProps<
+    typeof nullable,
+    { count: number; parentId?: bigint; weight?: number }
+  > = { schema: nullable, mode: "create", onCreate };
+  render(<ResourceForm {...props} />);
+  expect(screen.getByLabelText("parentId")).toHaveValue("");
+  fireEvent.change(screen.getByLabelText("parentId"), { target: { value: "7" } });
+  fireEvent.change(screen.getByLabelText("parentId"), { target: { value: "" } });
+  fireEvent.click(screen.getByRole("button", { name: "提交" }));
+  await waitFor(() => expect(onCreate).toHaveBeenCalledOnce());
+  // Non-nullable fields keep their zero value; nullable ones stay unset.
+  expect(onCreate.mock.calls[0][0].values).toEqual({
+    count: 0,
+    parentId: undefined,
+    weight: undefined,
+  });
+});

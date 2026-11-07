@@ -65,5 +65,19 @@ func TestNullableBoolConverterPreservesAbsentCreateAndFalseUpdate(t *testing.T) 
 		if !strings.Contains(source, expected) {
 			t.Fatalf("nullable conversion missing %q: %s", expected, source)
 		}
+	} // The create form leaves nullable fields empty instead of a zero value.
+	_, ts, err := renderTS(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(ts), "optional: true,") {
+		t.Fatalf("nullable create field not marked optional in TS schema: %s", ts)
+	}
+	_, ts, err = renderTS(boolViewPlan(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(ts), "optional:") {
+		t.Fatalf("non-nullable field marked optional: %s", ts)
 	}
 }

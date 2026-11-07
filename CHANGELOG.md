@@ -7,6 +7,16 @@
 
 ## [Unreleased]
 
+### Changed
+
+- 生成的 Resource 服务不再把驱动原始信息（库名、表名、约束定义）返回给客户端：未归类的错误返回 `internal`，消息为“服务内部错误”，原始错误写入服务日志。
+- `resource.NormalizeDBError` 新增归类：外键约束为 `resource.ErrForeignKey`（`failed_precondition`），CHECK 约束为 `resource.ErrCheckViolation`（`invalid_argument`），触发器以 MySQL/MariaDB `SIGNAL SQLSTATE '45xxx'` 或 PostgreSQL `RAISE EXCEPTION` 拒绝的写入为 `*resource.RejectedError`（`failed_precondition`，消息为数据库中的 `MESSAGE_TEXT`）。现有应用重新执行 Resource 生成后生效。
+
+### Fixed
+
+- 没有自定义操作的 JSON 资源生成的 `definition/<resource>.gen.go` 不再写出单参数的 `append`，`go vet` 不再报 `append with no values`。
+- 标准创建表单不再给可空字段（创建请求中的 Proto `optional`）填零值：可选外键等字段默认留空并从创建请求中省略。生成的 TS schema 为这类字段加上 `optional: true`，需重新生成 Resource。
+
 ## [0.2.0] - 2026-11-07
 
 首个可通过 `go get` 使用的 Go 模块版本；npm 包没有变化，仍为 0.1.0。

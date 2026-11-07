@@ -503,8 +503,20 @@ func TestRenderControllerRepositoryErrorMapsNonNotFoundToInternal(t *testing.T) 
 		t.Fatal(err)
 	}
 	code := string(src)
-	if !strings.Contains(code, "return connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)") {
-		t.Fatalf("RepositoryError must map non-NotFound errors to Internal\n---\n%s", code)
+	for _, want := range []string{
+		"return connect.NewError(connect.CodeFailedPrecondition, rejected.Message).WithCause(err)",
+		"return connect.NewError(connect.CodeFailedPrecondition, resource.ErrForeignKey.Error()).WithCause(err)",
+		"return connect.NewError(connect.CodeInvalidArgument, resource.ErrCheckViolation.Error()).WithCause(err)",
+		`slog.Error("resource request failed", "resource", "Widget", "error", err)`,
+		"return connect.NewError(connect.CodeInternal, resource.ErrInternal.Error()).WithCause(err)",
+	} {
+		if !strings.Contains(code, want) {
+			t.Fatalf("RepositoryError lacks %q\n---\n%s", want, code)
+		}
+	}
+	// Raw driver messages name tables and constraints and must not reach clients.
+	if strings.Contains(code, "connect.CodeInternal, err.Error()") {
+		t.Fatalf("RepositoryError returns the raw error message\n---\n%s", code)
 	}
 	if strings.Contains(code, "return widgetRepositoryError(err)") {
 		t.Fatalf("RepositoryError must not recursively call itself\n---\n%s", code)
