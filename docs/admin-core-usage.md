@@ -98,12 +98,16 @@ import { coreSystemModule } from "@abysstract/admin-core/system";
 
 ```bash
 npm install @abysstract/admin-core @abysstract/admin-proto \
-  @bufbuild/protobuf @connectrpc/connect @connectrpc/connect-web \
-  antd @ant-design/icons @ant-design/pro-components \
-  react react-dom react-router-dom
+  @bufbuild/protobuf@^2 @connectrpc/connect@^2 @connectrpc/connect-web@^2 \
+  antd@^5 @ant-design/icons@^5 @ant-design/pro-components@^2 \
+  react@^18 react-dom@^18 react-router-dom@^6
 ```
 
-`@abysstract/admin-core` 固定依赖同版本的 `@abysstract/admin-proto`，升级时两个包一起升级。peer 依赖的版本范围以包的 `package.json` 为准。
+peer 依赖要带上大版本号。admin-core 目前要求 React 18、React Router 6 和 antd 5；不写版本时 npm 会装最新的 React 19，安装会因 `ERESOLVE` 失败。精确的版本范围以 `@abysstract/admin-core` 的 `package.json` 中 `peerDependencies` 为准。
+
+`@abysstract/admin-core` 固定依赖同版本的 `@abysstract/admin-proto`，升级时两个包一起升级。
+
+两个包发布的是 ES 模块，类型声明按打包器方式解析。TypeScript 项目请使用 `"moduleResolution": "bundler"`（Vite 模板的默认值）。
 
 需要试用尚未发布的改动时，可以在本仓库根目录打包，再安装生成的文件：
 
