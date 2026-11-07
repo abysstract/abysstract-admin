@@ -20,8 +20,11 @@ func scaffold(root, name string) (map[string][]byte, []string, error) {
 	if !moduleName.MatchString(name) || token.Lookup(name).IsKeyword() || name == "system" {
 		return nil, nil, fmt.Errorf("invalid business module name %q", name)
 	}
-	backend := "backend/internal/modules/" + name
-	front := "frontend/apps/reference/src/modules/" + name
+	layout, err := loadLayout(root)
+	if err != nil {
+		return nil, nil, err
+	}
+	backend, front := layout.moduleDir(name)
 	for _, path := range []string{backend, front} {
 		if _, err := os.Stat(filepath.Join(root, path)); err == nil {
 			return nil, nil, fmt.Errorf("module directory already exists: %s", path)
@@ -29,7 +32,7 @@ func scaffold(root, name string) (map[string][]byte, []string, error) {
 			return nil, nil, err
 		}
 	}
-	files, err := skeleton(name)
+	files, err := skeleton(layout, name)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -38,14 +41,13 @@ func scaffold(root, name string) (map[string][]byte, []string, error) {
 	}
 	return files, []string{
 		"Created module conventions and resources/. Apply business table migrations, then run module resource " + name + " <table>.",
-		"Generate: cd backend && go run ./cmd/admin module generate " + name,
-		"Apply the module with: go run ./cmd/admin module update " + name,
+		"Generate: admin module generate " + name,
+		"Apply the module with: admin module update " + name,
 	}, nil
 }
 
-func skeleton(name string) (map[string][]byte, error) {
-	backend := "backend/internal/modules/" + name
-	front := "frontend/apps/reference/src/modules/" + name
+func skeleton(layout appLayout, name string) (map[string][]byte, error) {
+	backend, front := layout.moduleDir(name)
 	d := descriptor{
 		Name: name, Requires: []string{"system"}, Backend: entry{Package: backend, Constructor: "NewModule"}, Frontend: frontend{Entry: front + "/index.tsx", Export: name + "Module"},
 		Generation: &generation{Name: name, TablePrefix: name + "_", ModelOutput: backend, Prefix: "company/" + name + "/v1/", GoOutput: backend + "/gen/proto", TSOutput: front + "/gen/proto", ProtoSource: backend + "/proto"},
@@ -66,7 +68,7 @@ func skeleton(name string) (map[string][]byte, error) {
 	src := fmt.Sprintf(`package %s
 import (
 "context"
-"github.com/abysstract/abysstract-admin/backend/module"
+"`+frameworkImport+`module"
 )
 func generatedModule() (module.Definition,error) {
  return module.Definition{Name:%q, Requires:[]string{"system"}, Create:func(context.Context, module.Runtime)(module.Instance,error){return module.Instance{},nil}},nil
@@ -77,7 +79,7 @@ func generatedModule() (module.Definition,error) {
 		return nil, err
 	}
 
-	files[backend+"/module.go"], err = editableGo("package " + name + "\nimport \"github.com/abysstract/abysstract-admin/backend/module\"\nfunc NewModule() (module.Definition,error) { return generatedModule() }\n")
+	files[backend+"/module.go"], err = editableGo("package " + name + "\nimport \"" + frameworkImport + "module\"\nfunc NewModule() (module.Definition,error) { return generatedModule() }\n")
 	if err != nil {
 		return nil, err
 	}
@@ -91,8 +93,11 @@ func generatedModule() (module.Definition,error) {
 	if err != nil {
 		return nil, err
 	}
-	view := crudView{Module: name, Backend: backend, Frontend: front, Import: backendImport + strings.TrimPrefix(backend, "backend/")}
-	config, err := renderScaffold("config.go.tmpl", view)
+	module, err := newModuleView(layout, d)
+	if err != nil {
+		return nil, err
+	}
+	config, err := renderScaffold("config.go.tmpl", crudView{moduleView: module})
 	if err != nil {
 		return nil, err
 	}

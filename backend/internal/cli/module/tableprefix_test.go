@@ -89,7 +89,7 @@ func TestGenerateRejectsTargetOverlappingInstalledModule(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), `module product tablePrefix "product_" overlaps module shop tablePrefix "product_shop_"`) {
 		t.Fatalf("generate accepted an overlapping target: %v", err)
 	}
-	if _, err := developmentGenerationSteps(root, "shop", t.TempDir()); err == nil || !strings.Contains(err.Error(), "overlaps") {
+	if _, _, _, err := generationTarget(root, "shop"); err == nil || !strings.Contains(err.Error(), "overlaps") {
 		t.Fatalf("generation inventory accepted an overlapping target: %v", err)
 	}
 }

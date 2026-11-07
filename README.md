@@ -8,6 +8,7 @@ Abysstract 后台管理系统。前端使用 React、TypeScript 和 Ant Design /
 
 - 体验自带后台：按下方「快速开始」运行。
 - 接入业务功能：按[模块开发教程](docs/new-module-tutorial.md)创建并持续扩展业务模块。
+- 在自己的仓库中使用框架：按[新建独立应用](docs/standalone-app.md)创建应用，通过 `go get` 和 npm 依赖框架。
 - 修改项目源码：从 [开发说明](docs/development.md) 和 [Resource 开发手册](docs/ai-cookbook.md) 开始。
 
 本系统的接口供后台前端使用。业务前台使用自己的接口，可以与后台共用从数据库生成的 Go 模型。Go 模型用结构体表示数据表。
@@ -146,6 +147,7 @@ cd "$repo_root"
 ## 文档
 
 - [模块开发教程](docs/new-module-tutorial.md) — 创建模块、增加表和字段、生成代码及安装升级
+- [新建独立应用](docs/standalone-app.md) — 在自己的仓库和 Go 模块中搭建后台，并用 module 命令开发模块
 - [商品手写扩展参考](docs/admin-core-getting-started.md) — 现有商品模块的 Proto、Resource 与 Hook
 - [公共 API 用法](docs/admin-core-usage.md) — 最小导入、回调、权限、页面注册与故障处理
 - [项目理解教程](docs/project-guide.md) — 项目组成、常用概念、接口调用与开发入口

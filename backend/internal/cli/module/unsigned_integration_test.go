@@ -86,7 +86,7 @@ func TestCRUDAcceptsMySQLUnsignedKeys(t *testing.T) {
 	}
 
 	signed := crudSpec{Name: "SignedInt", Table: "notes_signed_int", Title: "有符号", UpdatedAt: "update_time", Fields: []crudField{{Column: "title", Label: "标题"}}}
-	if _, err := inspectCRUD(db, cfg.Driver, "notes", signed); err == nil || !strings.Contains(err.Error(), "must generate an int64 ID") {
+	if _, err := inspectCRUD(db, cfg.Driver, moduleView{Module: "notes"}, "backend/internal/modules/notes", signed); err == nil || !strings.Contains(err.Error(), "must generate an int64 ID") {
 		t.Fatalf("signed INT identifier accepted: %v", err)
 	}
 }

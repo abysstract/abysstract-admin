@@ -18,6 +18,7 @@ import (
 
 	"github.com/abysstract/abysstract-admin/backend/adminconfig"
 	"github.com/abysstract/abysstract-admin/backend/database"
+	"github.com/abysstract/abysstract-admin/backend/internal/codegen/modelgen"
 	"github.com/abysstract/abysstract-admin/backend/moduleseed"
 )
 
@@ -59,24 +60,8 @@ func generateCommand(root *string) *cobra.Command {
 		if _, err := writeFiles(repo, registration, false); err != nil {
 			return err
 		}
-		temp, err := os.MkdirTemp(filepath.Join(repo, "backend"), ".module-generate-")
-		if err != nil {
-			return err
-		}
-		defer os.RemoveAll(temp)
-		steps, err := developmentGenerationSteps(repo, args[0], temp)
-		if err != nil {
-			return err
-		}
-
-		for _, step := range steps {
-			run := exec.CommandContext(c.Context(), step[0], step[1:]...)
-			run.Dir = filepath.Join(repo, "backend")
-			run.Stdout = c.OutOrStdout()
-			run.Stderr = c.ErrOrStderr()
-			if err := run.Run(); err != nil {
-				return fmt.Errorf("generation failed at %s: %w; correct the error and rerun module generate %s", strings.Join(step, " "), err, args[0])
-			}
+		if err := generateModule(c, repo, args[0]); err != nil {
+			return fmt.Errorf("%w; correct the error and rerun module generate %s", err, args[0])
 		}
 		fmt.Fprintf(c.OutOrStdout(), "Generation complete. Run module update %s when ready to use these changes in the application.\n", args[0])
 		return nil
@@ -88,28 +73,35 @@ func prepareDevelopment(root, name string) (map[string][]byte, error) {
 	if !moduleName.MatchString(name) || name == "system" {
 		return nil, fmt.Errorf("invalid business module name %q", name)
 	}
-	backend := "backend/internal/modules/" + name
-	front := "frontend/apps/reference/src/modules/" + name
-	d, err := readDescriptor(root, backend+"/module.json")
+	layout, err := loadLayout(root)
+	if err != nil {
+		return nil, err
+	}
+	declaration, _ := layout.moduleDir(name)
+	d, err := readDescriptor(root, declaration+"/module.json")
 	if err != nil {
 		return nil, err
 	}
 	if err := checkModuleTablePrefix(root, d); err != nil {
 		return nil, err
 	}
-	paths, err := filepath.Glob(filepath.Join(root, backend, "resources/*.json"))
+	module, err := newModuleView(layout, d)
+	if err != nil {
+		return nil, err
+	}
+	paths, err := filepath.Glob(filepath.Join(root, declaration, "resources/*.json"))
 	if err != nil {
 		return nil, err
 	}
 	if len(paths) == 0 {
-		if _, err := os.Stat(filepath.Join(root, backend, "resources.lock.json")); err == nil {
+		if _, err := os.Stat(filepath.Join(root, declaration, "resources.lock.json")); err == nil {
 			return nil, fmt.Errorf("resource declarations were removed; restore them before generation")
 		} else if !os.IsNotExist(err) {
 			return nil, err
 		}
 		return map[string][]byte{}, nil
 	}
-	statePath := backend + "/resources.lock.json"
+	statePath := declaration + "/resources.lock.json"
 	previous := developmentState{Protocols: map[string]protocolFields{}, Files: map[string]string{}}
 	if _, err := os.Stat(filepath.Join(root, statePath)); err == nil {
 		if err := readJSON(filepath.Join(root, statePath), &previous); err != nil {
@@ -130,22 +122,22 @@ func prepareDevelopment(root, name string) (map[string][]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	views, next, inspectErr := inspectDevelopmentResources(root, name, backend, paths, previous, db, cfg.DBDriver)
+	views, next, inspectErr := inspectDevelopmentResources(root, module, d.Generation.ModelOutput, paths, previous, db, cfg.DBDriver)
 	if err := errors.Join(inspectErr, pool.Close()); err != nil {
 		return nil, err
 	}
-	return renderDevelopment(root, name, backend, front, d, views, previous, next)
+	return renderDevelopment(root, layout, statePath, module, d, views, previous, next)
 }
 
-func renderDevelopment(root, name, backend, front string, d descriptor, views []crudView, previous, next developmentState) (map[string][]byte, error) {
+func renderDevelopment(root string, layout appLayout, statePath string, module moduleView, d descriptor, views []crudView, previous, next developmentState) (map[string][]byte, error) {
 	var err error
-	statePath := backend + "/resources.lock.json"
+	name, backend, front := module.Module, module.Backend, module.Frontend
 
 	files := map[string][]byte{}
 	editable := map[string][]byte{}
 	var resources, modules, pages strings.Builder
-	resources.WriteString("package definition\nimport \"github.com/abysstract/abysstract-admin/backend/resource/schema\"\nfunc generatedResources() []*schema.Resource { return []*schema.Resource{")
-	modules.WriteString("package " + name + "\nimport (\n\"context\"\n\"github.com/abysstract/abysstract-admin/backend/module\"\n\"github.com/abysstract/abysstract-admin/backend/permission\"\n)\nfunc generatedModule() (module.Definition,error) {\nvar defs []module.Definition\n")
+	resources.WriteString("package definition\nimport \"" + frameworkImport + "resource/schema\"\nfunc generatedResources() []*schema.Resource { return []*schema.Resource{")
+	modules.WriteString("package " + name + "\nimport (\n\"context\"\n\"" + frameworkImport + "module\"\n\"" + frameworkImport + "permission\"\n)\nfunc generatedModule() (module.Definition,error) {\nvar defs []module.Definition\n")
 	pages.WriteString(generatedHeader + "import { lazy } from \"react\";\nexport const generatedPages = {\n")
 	seed := moduleseed.Spec{Module: name, Menus: []moduleseed.Menu{{Key: name + ".root", Name: name, Path: name, Type: "M", Order: 60}}}
 	for _, view := range views {
@@ -164,11 +156,11 @@ func renderDevelopment(root, name, backend, front string, d descriptor, views []
 		if err != nil {
 			return nil, err
 		}
-		for _, path := range []string{backend + "/" + view.File + ".gen.go", backend + "/definition/" + view.File + ".gen.go", backend + "/proto/company/" + name + "/v1/" + view.File + ".proto"} {
+		for _, path := range []string{backend + "/" + view.File + ".gen.go", module.DefinitionDir + "/" + view.File + ".gen.go", module.ProtoDir + "/company/" + name + "/v1/" + view.File + ".proto"} {
 			files[path] = append([]byte(generatedHeader), rendered[path]...)
 		}
 		resources.WriteString(view.Name + "Resource,\n")
-		editable[backend+"/"+view.File+".go"], err = editableGo(fmt.Sprintf("package %s\nimport (gen %q; %q)\nfunc configure%s(rt module.Runtime, deps gen.%sControllerDeps) gen.%sControllerDeps { return deps }\n", name, view.Import+"/gen/resource", backendImport+"module", view.Name, view.Name, view.Name))
+		editable[backend+"/"+view.File+".go"], err = editableGo(fmt.Sprintf("package %s\nimport (gen %q; %q)\nfunc configure%s(rt module.Runtime, deps gen.%sControllerDeps) gen.%sControllerDeps { return deps }\n", name, view.Import+"/gen/resource", frameworkImport+"module", view.Name, view.Name, view.Name))
 		if err != nil {
 			return nil, err
 		}
@@ -178,7 +170,7 @@ func renderDevelopment(root, name, backend, front string, d descriptor, views []
 		seed.Menus = append(seed.Menus, resourceMenus...)
 	}
 	resources.WriteString("} }\n")
-	files[backend+"/definition/resources.gen.go"], err = goSource(resources.String())
+	files[module.DefinitionDir+"/resources.gen.go"], err = goSource(resources.String())
 	if err != nil {
 		return nil, err
 	}
@@ -217,7 +209,7 @@ func renderDevelopment(root, name, backend, front string, d descriptor, views []
 	if err != nil {
 		return nil, err
 	}
-	files[backend+"/definition/codegen.go"] = append([]byte(generatedHeader), cfgSource...)
+	files[module.DefinitionDir+"/codegen.go"] = append([]byte(generatedHeader), cfgSource...)
 	next.Seed = seed
 	var current moduleseed.Spec
 	if err := readJSON(filepath.Join(root, d.Seed), &current); err != nil {
@@ -234,29 +226,36 @@ func renderDevelopment(root, name, backend, front string, d descriptor, views []
 	if err != nil {
 		return nil, err
 	}
-	if err := preserveDevelopmentFiles(root, name, d.Seed, files, editable, previous, &next); err != nil {
+	if err := preserveDevelopmentFiles(root, layout, name, d.Seed, files, editable, previous, &next); err != nil {
 		return nil, err
 	}
 	files[statePath], err = jsonBytes(next)
 	return files, err
 }
 
-func developmentGenerationSteps(repo, name, temp string) ([][]string, error) {
-	// Include the explicit target only in this invocation's generation inputs.
+// generationTarget returns the selected modules plus the explicit target, so
+// a module can be generated before it is installed.
+func generationTarget(repo, name string) (appLayout, []descriptor, descriptor, error) {
+	var target descriptor
+	layout, err := loadLayout(repo)
+	if err != nil {
+		return layout, nil, target, err
+	}
 	var selected selection
 	if err := readJSON(filepath.Join(repo, "admin.modules.json"), &selected); err != nil {
-		return nil, err
+		return layout, nil, target, err
 	}
 	defs, err := load(repo, selected)
 	if err != nil {
-		return nil, err
+		return layout, nil, target, err
 	}
-	target, err := readDescriptor(repo, "backend/internal/modules/"+name+"/module.json")
+	declaration, _ := layout.moduleDir(name)
+	target, err = readDescriptor(repo, declaration+"/module.json")
 	if err != nil {
-		return nil, err
+		return layout, nil, target, err
 	}
 	if target.Generation == nil || target.Resource == nil {
-		return nil, fmt.Errorf("module %s requires generation and resource configuration", target.Name)
+		return layout, nil, target, fmt.Errorf("module %s requires generation and resource configuration", target.Name)
 	}
 	found := false
 	for _, d := range defs {
@@ -268,20 +267,34 @@ func developmentGenerationSteps(repo, name, temp string) ([][]string, error) {
 		defs = append(defs, target)
 	}
 	if err := checkTablePrefixes(defs); err != nil {
-		return nil, err
+		return layout, nil, target, err
 	}
-	inputs, err := render(repo, defs)
+	return layout, defs, target, nil
+}
+
+// generateModule writes Model/query, protocol and Resource implementations for
+// one module. Model and protocol generation run in this process; Resource
+// generation compiles the application's own declarations with go run.
+func generateModule(c *cobra.Command, repo, name string) error {
+	layout, defs, target, err := generationTarget(repo, name)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	inventory := filepath.Join(temp, "modules.json")
-	config := filepath.Join(temp, "buf.yaml")
-	if err := os.WriteFile(inventory, inputs["backend/internal/codegen/modules.json"], 0600); err != nil {
-		return nil, err
+	ctx := c.Context()
+	if ctx == nil {
+		ctx = context.Background()
 	}
-	if err := os.WriteFile(config, inputs["buf.yaml"], 0600); err != nil {
-		return nil, err
+	if err := generateModels(ctx, repo, defs, name); err != nil {
+		return fmt.Errorf("generate models: %w", err)
 	}
+	if err := generateProtocol(ctx, repo, layout, defs, name); err != nil {
+		return fmt.Errorf("generate protocol: %w", err)
+	}
+	temp, err := os.MkdirTemp(filepath.Join(repo, "backend"), ".module-generate-")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(temp)
 	runner, err := goSource(fmt.Sprintf(`package main
 import (
  "fmt"
@@ -295,18 +308,55 @@ func main() {
   os.Exit(1)
  }
 }
-`, importPath(target.Resource.Package), backendImport+"resourcegen", target.Resource.Config, repo, target.Resource.Resources))
+`, layout.importPath(target.Resource.Package), frameworkImport+"resourcegen", target.Resource.Config, repo, target.Resource.Resources))
 	if err != nil {
-		return nil, err
+		return err
 	}
 	runnerPath := filepath.Join(temp, "main.go")
 	if err := os.WriteFile(runnerPath, runner, 0600); err != nil {
-		return nil, err
+		return err
 	}
-	return [][]string{{"go", "run", "./cmd/modelgen", "--inventory", inventory, "--module", name}, {"node", "../frontend/tools/generate-proto.mjs", "--inventory", inventory, "--config", config}, {"go", "run", runnerPath}}, nil
+	run := exec.CommandContext(ctx, "go", "run", runnerPath)
+	run.Dir = filepath.Join(repo, "backend")
+	run.Stdout = c.OutOrStdout()
+	run.Stderr = c.ErrOrStderr()
+	if err := run.Run(); err != nil {
+		return fmt.Errorf("generate Resource implementations: %w", err)
+	}
+	return nil
 }
 
-func inspectDevelopmentResources(root, name, backend string, paths []string, previous developmentState, db *gorm.DB, driver string) ([]crudView, developmentState, error) {
+func generateModels(ctx context.Context, repo string, defs []descriptor, name string) (err error) {
+	var modules []modelgen.Module
+	for _, d := range defs {
+		if d.Generation != nil && d.builtin == "" {
+			modules = append(modules, modelgen.Module{Name: d.Name, TablePrefix: d.Generation.TablePrefix, ModelOutput: d.Generation.ModelOutput})
+		}
+	}
+	cfg := adminconfig.Load()
+	if err := cfg.ValidateDatabase(); err != nil {
+		return err
+	}
+	db, err := database.Open(ctx, cfg.DBDriver, cfg.DBDSN)
+	if err != nil {
+		return err
+	}
+	pool, err := db.DB()
+	if err != nil {
+		return err
+	}
+	defer func() { err = errors.Join(err, pool.Close()) }()
+	// gorm/gen reports generation failures by panicking.
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("%v", r)
+		}
+	}()
+	return modelgen.Generate(db, cfg.DBDriver, repo, modules, name)
+}
+
+func inspectDevelopmentResources(root string, module moduleView, modelOutput string, paths []string, previous developmentState, db *gorm.DB, driver string) ([]crudView, developmentState, error) {
+	name := module.Module
 	var views []crudView
 	next := developmentState{Protocols: map[string]protocolFields{}, Files: map[string]string{}, Operations: map[string][]crudOperation{}}
 
@@ -321,7 +371,7 @@ func inspectDevelopmentResources(root, name, backend string, paths []string, pre
 		if _, exists := next.Protocols[spec.Name]; exists {
 			return nil, next, fmt.Errorf("duplicate resource %s", spec.Name)
 		}
-		view, err := inspectCRUD(db, driver, name, spec)
+		view, err := inspectCRUD(db, driver, module, modelOutput, spec)
 		if err != nil {
 			return nil, next, err
 		}
@@ -337,7 +387,7 @@ func inspectDevelopmentResources(root, name, backend string, paths []string, pre
 			if source == "company/"+name+"/v1/"+view.File+".proto" {
 				return nil, next, fmt.Errorf("resource %s imports its own protocol", spec.Name)
 			}
-			if _, err := os.Stat(filepath.Join(root, backend, "proto", source)); err != nil {
+			if _, err := os.Stat(filepath.Join(root, module.ProtoDir, source)); err != nil {
 				return nil, next, err
 			}
 		}
@@ -407,8 +457,8 @@ func mergeDevelopmentMenus(current, previous, seed moduleseed.Spec) (moduleseed.
 	return merged, nil
 }
 
-func preserveDevelopmentFiles(root, name, seedPath string, files, editable map[string][]byte, previous developmentState, next *developmentState) error {
-	initial, err := skeleton(name)
+func preserveDevelopmentFiles(root string, layout appLayout, name, seedPath string, files, editable map[string][]byte, previous developmentState, next *developmentState) error {
+	initial, err := skeleton(layout, name)
 	if err != nil {
 		return err
 	}

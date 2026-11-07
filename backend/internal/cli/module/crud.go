@@ -2,6 +2,7 @@ package module
 
 import (
 	"fmt"
+	"path"
 	"regexp"
 	"strconv"
 	"strings"
@@ -49,14 +50,58 @@ type crudFieldView struct {
 	Options                    []string
 }
 type crudView struct {
-	Module, Backend, Frontend, Import, File, TSFile, Var, Name, Plural, Model, Title, AuditGo, AuditJSON string
-	Timestamp                                                                                            bool
-	Resources                                                                                            []crudView
-	Reserved                                                                                             []retiredField
-	Operations                                                                                           []crudOperation
-	CustomImports                                                                                        []string
-	CustomProtoMappings                                                                                  []protoMapping
-	Fields                                                                                               []crudFieldView
+	moduleView
+	File, TSFile, Var, Name, Plural, Model, Title, AuditGo, AuditJSON string
+	Timestamp                                                         bool
+	Resources                                                         []crudView
+	Reserved                                                          []retiredField
+	Operations                                                        []crudOperation
+	CustomImports                                                     []string
+	CustomProtoMappings                                               []protoMapping
+	Fields                                                            []crudFieldView
+}
+
+// moduleView holds the module paths from its declaration. Generated Go code
+// imports the application's packages by these paths, and generated pages
+// reach the protocol output relative to the module's frontend directory.
+type moduleView struct {
+	Module string
+	// Backend and Frontend are the module's backend package and frontend
+	// directories; Resource implementations are generated below them.
+	Backend, Frontend string
+	// DefinitionDir and ProtoDir hold the Resource declarations and the
+	// protocol sources.
+	DefinitionDir, ProtoDir string
+	// Import is the backend package; the other imports name generated packages.
+	Import, DefinitionImport, ProtoImport, ModelImport, QueryImport string
+	// ProtoFromPages and ProtoFromResource reach the TypeScript protocol
+	// output from the pages and generated Resource directories.
+	ProtoFromPages, ProtoFromResource string
+}
+
+func newModuleView(layout appLayout, d descriptor) (moduleView, error) {
+	if d.Generation == nil || d.Resource == nil {
+		return moduleView{}, fmt.Errorf("module %s requires generation and resource configuration", d.Name)
+	}
+	g := d.Generation
+	view := moduleView{
+		Module: d.Name, Backend: path.Clean(d.Backend.Package), Frontend: path.Dir(d.Frontend.Entry),
+		DefinitionDir: path.Clean(d.Resource.Package), ProtoDir: path.Clean(g.ProtoSource),
+		Import: layout.importPath(d.Backend.Package), DefinitionImport: layout.importPath(d.Resource.Package),
+		ProtoImport: layout.importPath(g.GoOutput) + "/" + strings.TrimSuffix(g.Prefix, "/"),
+		ModelImport: layout.importPath(g.ModelOutput) + "/model", QueryImport: layout.importPath(g.ModelOutput) + "/query",
+	}
+	if !strings.HasPrefix(path.Clean(g.GoOutput), "backend/") || !strings.HasPrefix(path.Clean(g.ModelOutput), "backend/") {
+		return moduleView{}, fmt.Errorf("module %s: generation goOutput and modelOutput must be under backend/", d.Name)
+	}
+	var err error
+	if view.ProtoFromPages, err = relativeImport(view.Frontend+"/pages", g.TSOutput); err != nil {
+		return moduleView{}, err
+	}
+	if view.ProtoFromResource, err = relativeImport(view.Frontend+"/gen/resource", g.TSOutput); err != nil {
+		return moduleView{}, err
+	}
+	return view, nil
 }
 
 type protoMapping struct{ Source, Target string }
@@ -129,16 +174,18 @@ func readCRUDModel(db *gorm.DB, driver, table, output string) (crudModel, error)
 	return result, nil
 }
 
-func inspectCRUD(db *gorm.DB, driver, module string, spec crudSpec) (crudView, error) {
-	meta, err := readCRUDModel(db, driver, spec.Table, "backend/internal/modules/"+module)
+func inspectCRUD(db *gorm.DB, driver string, module moduleView, modelOutput string, spec crudSpec) (crudView, error) {
+	meta, err := readCRUDModel(db, driver, spec.Table, modelOutput)
 	if err != nil {
 		return crudView{}, err
 	}
-	return inspectCRUDModel(module, spec, driver, meta)
+	view, err := inspectCRUDModel(module.Module, spec, driver, meta)
+	view.moduleView = module
+	return view, err
 }
 
 func inspectCRUDModel(module string, spec crudSpec, driver string, meta crudModel) (crudView, error) {
-	view := crudView{Module: module, Backend: "backend/internal/modules/" + module, Frontend: "frontend/apps/reference/src/modules/" + module, Name: spec.Name, Plural: inflection.Plural(spec.Name), Title: spec.Title}
+	view := crudView{moduleView: moduleView{Module: module}, Name: spec.Name, Plural: inflection.Plural(spec.Name), Title: spec.Title}
 	view.Operations = spec.Operations
 	imports := map[string]bool{}
 	for _, op := range spec.Operations {
@@ -147,7 +194,6 @@ func inspectCRUDModel(module string, spec crudSpec, driver string, meta crudMode
 			imports[op.Proto] = true
 		}
 	}
-	view.Import = backendImport + "internal/modules/" + module
 	view.File = schema.NamingStrategy{}.ColumnName("", spec.Name)
 	var tsName strings.Builder
 	for i, r := range spec.Name {
@@ -211,10 +257,10 @@ func inspectCRUDModel(module string, spec crudSpec, driver string, meta crudMode
 func renderCRUD(view crudView) (map[string][]byte, []moduleseed.Menu, error) {
 	files := map[string][]byte{}
 	targets := map[string]string{
-		view.Backend + "/" + view.File + ".gen.go":                                     "module.go.tmpl",
-		view.Backend + "/definition/" + view.File + ".gen.go":                          "resource.go.tmpl",
-		view.Backend + "/proto/company/" + view.Module + "/v1/" + view.File + ".proto": "resource.proto.tmpl",
-		view.Frontend + "/pages/" + view.Name + "List.tsx":                             "page.tsx.tmpl",
+		view.Backend + "/" + view.File + ".gen.go":                                "module.go.tmpl",
+		view.DefinitionDir + "/" + view.File + ".gen.go":                          "resource.go.tmpl",
+		view.ProtoDir + "/company/" + view.Module + "/v1/" + view.File + ".proto": "resource.proto.tmpl",
+		view.Frontend + "/pages/" + view.Name + "List.tsx":                        "page.tsx.tmpl",
 	}
 	for path, t := range targets {
 		data, err := renderScaffold(t, view)

@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { PageContainer } from "@ant-design/pro-components";
 import { formatErrorMessage, useAccess, useAdminRuntime, useAppMessage } from "@abysstract/admin-core";
 import { ResourceTable } from "@abysstract/admin-core/resource";
-import type { {{.Name}} } from "../gen/proto/company/{{.Module}}/v1/{{.File}}_pb";
+import type { {{.Name}} } from "{{.ProtoFromPages}}/company/{{.Module}}/v1/{{.File}}_pb";
 import { create{{.Name}}Operations, type {{.Name}}Filters, type {{.Name}}CreateValues, type {{.Name}}UpdateValues } from "../gen/resource/{{.TSFile}}.operations.gen";
 import { create{{.Name}}Raw } from "../gen/resource/{{.TSFile}}.raw.gen";
 import { {{.Var}}Schema } from "../gen/resource/{{.TSFile}}.schema.gen";

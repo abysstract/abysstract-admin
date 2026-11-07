@@ -13,14 +13,15 @@ import (
 	"github.com/abysstract/abysstract-admin/backend/internal/codegen/tableprefix"
 )
 
-const backendImport = "github.com/abysstract/abysstract-admin/backend/"
-
 var moduleName = regexp.MustCompile(`^[a-z][a-z0-9]{0,63}$`)
 var exportedName = regexp.MustCompile(`^[A-Z][A-Za-z0-9]*$`)
 var jsName = regexp.MustCompile(`^[a-zA-Z_$][a-zA-Z0-9_$]*$`)
 
 type selection struct {
-	Modules []string `json:"modules"`
+	// FrontendRoot is the frontend source directory of the application
+	// (default frontend/apps/reference/src).
+	FrontendRoot string   `json:"frontendRoot,omitempty"`
+	Modules      []string `json:"modules"`
 }
 type entry struct {
 	Package     string `json:"package"`
@@ -53,6 +54,10 @@ type descriptor struct {
 	Generation *generation   `json:"generation,omitempty"`
 	Resource   *resourceSpec `json:"resource,omitempty"`
 	Seed       string        `json:"seed,omitempty"`
+
+	// builtin is the import path of a module provided by the framework
+	// rather than by this repository.
+	builtin string
 }
 
 func readJSON(path string, dst any) error {
@@ -86,6 +91,9 @@ func localPath(root, path string) (string, error) {
 }
 
 func readDescriptor(root, path string) (descriptor, error) {
+	if path == systemEntry {
+		return systemDescriptor(), nil
+	}
 	var d descriptor
 	full, err := localPath(root, path)
 	if err != nil {

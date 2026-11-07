@@ -8,7 +8,7 @@ import (
 func GeneratorConfig(root string) resourcegen.Config {
  return resourcegen.Config{
   FormatVersion: resource.GeneratorFormatV1,
-  GenQueryImport: "{{.Import}}/query",
+  GenQueryImport: "{{.QueryImport}}",
   RootDir: root,
   GoOutputDir: "{{.Backend}}/gen/resource",
   GoPackage: "gen",
@@ -22,7 +22,7 @@ func GeneratorConfig(root string) resourcegen.Config {
    Operations: "@abysstract/admin-core/resource/operations",
    Relation: "@abysstract/admin-core/resource/relation",
    ProtoModules: map[string]string{
-{{range .Resources}}    "company/{{.Module}}/v1/{{.File}}.proto": "../proto/company/{{.Module}}/v1/{{.File}}_pb",
+{{range .Resources}}    "company/{{.Module}}/v1/{{.File}}.proto": "{{$.ProtoFromResource}}/company/{{.Module}}/v1/{{.File}}_pb",
 {{end}}
 {{range .CustomProtoMappings}}    {{printf "%q" .Source}}: {{printf "%q" .Target}},
 {{end}}    "abysstract/admin/v1/common.proto": "@abysstract/admin-proto/abysstract/admin/v1/common_pb",

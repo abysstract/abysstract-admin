@@ -32,7 +32,7 @@ linters:
     rules:
       # Resource schema 与 adminresource-gen 是声明式规划/代码生成核心，
       # 单个构建函数的分支数由字段与 RPC 组合决定，保留现有实现不拆散。
-      - path: "^(cmd/adminresource-gen|cmd/modelgen|resource/schema|resourcegen)/"
+      - path: "^(cmd/adminresource-gen|cmd/modelgen|internal/codegen/modelgen|resource/schema|resourcegen)/"
         linters:
           - gocyclo
 

@@ -2,6 +2,17 @@
 
 完整步骤见[笔记模块教程](new-module-tutorial.md)。`admin.modules.json` 选择应用加载和公共生成的模块。`module generate NAME` 直接读取指定模块的 `module.json`，支持安装前生成代码。`system` 始终是应用基础模块。
 
+这些命令在框架仓库和独立应用中通用。生成的 Go 代码按应用 `go.mod` 的模块路径导入应用自己的包，只从 `github.com/abysstract/abysstract-admin/backend/` 导入框架公共包。独立应用的搭建步骤和差异见[新建独立应用](standalone-app.md)。
+
+## 应用清单
+
+`admin.modules.json` 位于仓库根目录：
+
+| 字段 | 说明 |
+| --- | --- |
+| `modules` | 已安装模块的 `module.json` 路径，由 `update` 和 `uninstall` 维护。独立应用用 `"system"` 选择框架的系统模块 |
+| `frontendRoot` | 可选，前端源码目录，默认 `frontend/apps/reference/src`。`new` 在 `<frontendRoot>/modules/<名称>` 创建前端模块，`sync`、`update` 在这里写入 `modules.gen.ts` |
+
 ## 按任务选择命令
 
 新建模块：`new` → 创建并执行业务表迁移 → `resource` 创建 JSON → 修改字段规则 → `generate` → `update` → 启动应用。
@@ -14,7 +25,7 @@
 | --- | --- |
 | `new NAME` | 创建模块约定；已有目录时报错 |
 | `resource MODULE TABLE` | 从数据库创建初始 CRUD JSON；已有文件时报错，保留原内容 |
-| `generate NAME` | 读取 `resources/*.json` 和数据库，生成 Proto、Model/query、Resource 和页面；保持安装选择，不改写 JSON |
+| `generate NAME` | 读取 `resources/*.json` 和数据库，生成 Proto、Model/query、Resource 和页面；保持安装选择，不改写 JSON。Model/query 在命令进程内生成，协议代码通过 `buf` 生成（需要在 `PATH` 中），Resource 实现用 `go run` 编译模块的 `definition` 包生成 |
 | `update NAME` | 首次使用时接入模块，已接入时更新菜单和权限；保存相应迁移并执行应用待执行迁移 |
 | `uninstall NAME` | 从已安装模块列表移除，执行拥有对象清理迁移；保留业务表、业务数据和普通角色 |
 | `status NAME` | 查询安装状态、应用和模块待执行迁移、已执行快照及待更新声明差异 |
@@ -82,18 +93,18 @@
 
 ## 模块声明
 
-`new <名称>` 自动写入 `module.json`。以下字段的约定路径均从仓库根目录计算，普通开发沿用生成值：
+`new <名称>` 自动写入 `module.json`。以下字段的约定路径均从仓库根目录计算，普通开发沿用生成值。`generate` 按这些字段写入文件：修改路径后，生成物写到新位置，页面和协议之间的相对导入随之计算。`module.json` 本身固定在 `backend/internal/modules/<名称>/`，`resources/` 和 `resources.lock.json` 与它放在一起：
 
 | 字段 | 用途与默认值（以 notes 为例） |
 | --- | --- |
 | `name` | 模块标识 `notes` |
 | `requires` | 模块依赖，默认 `["system"]`；依赖其他模块时在此填写模块名 |
 | `backend.package` / `constructor` | `backend/internal/modules/notes` / `NewModule` |
-| `frontend.entry` / `export` | `frontend/apps/reference/src/modules/notes/index.tsx` / `notesModule` |
+| `frontend.entry` / `export` | `<frontendRoot>/modules/notes/index.tsx` / `notesModule`；页面写在入口所在目录的 `pages/` 下 |
 | `generation.name` / `tablePrefix` | `notes` / `notes_`，选择模型生成范围。按 `<前缀>_` 边界匹配：`notes` 与 `notes_` 都只选择 `notes_*` 表，不会选中 `notesx_*`。模块之间的前缀不能相同或互为前缀（如 `shop_` 与 `shop_order_`），`new`、`check`、`sync`、`update`、`generate` 和 `modelgen` 遇到这种情况会报错并指出冲突的模块 |
 | `generation.modelOutput` | `backend/internal/modules/notes`，其下生成 model/query |
 | `generation.prefix` / `protoSource` | `company/notes/v1/` / `backend/internal/modules/notes/proto` |
-| `generation.goOutput` / `tsOutput` | 后端模块的 `gen/proto` / 前端模块的 `gen/proto` |
+| `generation.goOutput` / `tsOutput` | 后端模块的 `gen/proto` / 前端模块的 `gen/proto`；`goOutput` 和 `modelOutput` 须位于 `backend/` 下 |
 | `resource.package` / `config` / `resources` | 模块 `definition` 包 / `GeneratorConfig` / `Resources` |
 | `seed` | `backend/internal/modules/notes/seed.json` |
 
@@ -132,9 +143,9 @@
 | --- | --- |
 | 新建模块 `new` | 创建内容均在模块前后端目录内 |
 | 创建业务表或改列 | 开发者在 `backend/migrations/<driver>/` 新增 SQL 迁移 |
-| 同步 `sync` | `backend/internal/codegen/modules.json`、`backend/internal/codegen/resources/tasks.gen.go`、`buf.yaml`；sync 同时维护下面列出的模块加载代码及迁移函数列表，内容相同时保留原文件 |
-| 安装或卸载 | `admin.modules.json`、`backend/internal/app/modules.gen.go`、`frontend/apps/reference/src/modules.gen.ts`，以及上述公共生成配置 |
-| 安装、升级或卸载产生新快照 | `backend/migrations/modules/<version>_<module>_<action>.json`、四个方言目录的 Go 迁移及 `backend/migrations/go_registry.gen.go` |
+| 同步 `sync` | 框架仓库（根目录有 `buf.base.yaml`）中为 `backend/internal/codegen/modules.json`、`backend/internal/codegen/resources/tasks.gen.go`、`buf.yaml`；sync 同时维护下面列出的模块加载代码及迁移函数列表，内容相同时保留原文件 |
+| 安装或卸载 | `admin.modules.json`、`backend/internal/app/modules.gen.go`、`<frontendRoot>/modules.gen.ts`，以及上述公共生成配置 |
+| 安装、升级或卸载产生新快照 | `backend/migrations/modules/<version>_<module>_<action>.json`、`backend/migrations/` 下每个已有方言目录的 Go 迁移及 `backend/migrations/go_registry.gen.go` |
 | 删除已卸载模块源码 | 模块外文件已在卸载时更新，历史快照与迁移函数列表保留 |
 
 命令列出实际变化路径，`--dry-run` 可预览。框架公共包、应用手写模块入口及前端手写模块入口调用生成的模块加载代码；模块增减通过以上文件完成。公共 Proto 生成刷新已选模块；`module generate NAME` 刷新已选模块及指定模块的协议与依赖，提交前审查实际 diff。
