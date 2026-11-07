@@ -18,6 +18,13 @@
 - `module generate` 不再调用 `go run ./cmd/modelgen` 和 `node frontend/tools/generate-proto.mjs`：Model/query 在命令进程内生成，协议代码直接调用 `buf`，框架公共 Proto 从依赖的框架模块读取，Go 协议包路径按应用模块路径设置。
 - `module new`、`generate`、`sync` 和 `update` 按 `module.json` 中声明的路径读写模块代码、协议、页面和 Resource 生成配置，不再写死 `frontend/apps/reference/src`。
 - 模块菜单迁移和 `go_registry.gen.go` 只覆盖 `backend/migrations/` 下已存在的方言目录；迁移目录中不带版本号的 Go 文件（如 `doc.go`）不再被当作迁移。`sync` 只在框架仓库中维护 `buf.yaml` 和 `backend/internal/codegen/` 生成清单。
+- 生成的 Resource 服务不再把驱动原始信息（库名、表名、约束定义）返回给客户端：未归类的错误返回 `internal`，消息为“服务内部错误”，原始错误写入服务日志。
+- `resource.NormalizeDBError` 新增归类：外键约束为 `resource.ErrForeignKey`（`failed_precondition`），CHECK 约束为 `resource.ErrCheckViolation`（`invalid_argument`），触发器以 MySQL/MariaDB `SIGNAL SQLSTATE '45xxx'` 或 PostgreSQL `RAISE EXCEPTION` 拒绝的写入为 `*resource.RejectedError`（`failed_precondition`，消息为数据库中的 `MESSAGE_TEXT`）。现有应用重新执行 Resource 生成后生效。
+
+### Fixed
+
+- 没有自定义操作的 JSON 资源生成的 `definition/<resource>.gen.go` 不再写出单参数的 `append`，`go vet` 不再报 `append with no values`。
+- 标准创建表单不再给可空字段（创建请求中的 Proto `optional`）填零值：可选外键等字段默认留空并从创建请求中省略。生成的 TS schema 为这类字段加上 `optional: true`，需重新生成 Resource。
 
 ## [0.2.0] - 2026-11-07
 

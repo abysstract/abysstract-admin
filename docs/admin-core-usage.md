@@ -159,7 +159,7 @@ npm install /absolute/path/to/abysstract-admin-proto-VERSION.tgz /absolute/path/
 
 在 Go Resource 声明共享标签，例如 `schema.F("Brand", schema.Label("品牌"), schema.MaxLen(60))`。列表标题和表单标签依次采用页面 Overrides、共享标签、字段名。
 
-标准创建表单为普通可创建字段提供类型零值：string 为 `""`、number 为 `0`、bigint 为 `0n`、boolean 为 `false`。页面 `initialValues` 可按字段覆盖这些值，显式 `undefined` 同样保留。关联字段和 unknown 类型需要显式配置。
+标准创建表单为普通可创建字段提供类型零值：string 为 `""`、number 为 `0`、bigint 为 `0n`、boolean 为 `false`。可空列（创建请求中为 Proto `optional`，生成的 schema 字段带 `optional: true`）不填初值，用户未填写或清空数字时，创建请求省略该字段，数据库保存 NULL；可选外键因此不会被填成 `0`。页面 `initialValues` 可按字段覆盖这些值，显式 `undefined` 同样保留。关联字段和 unknown 类型需要显式配置。
 
 `visible` 使用“类型零值 + 页面显式初值”判断创建字段的可见性。隐藏字段只保留页面显式提供的业务初值。服务端维护及当前模式不可写字段由表单自动过滤。
 

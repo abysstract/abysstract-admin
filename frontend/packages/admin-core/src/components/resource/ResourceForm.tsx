@@ -81,14 +81,19 @@ function inputValue(field: FieldSchema, value: unknown): string | boolean {
   return value === undefined || value === null ? "" : String(value);
 }
 
+/** Value of a cleared input: nullable fields return to "not set". */
+function emptyValue(field: FieldSchema): unknown {
+  return field.optional === true ? undefined : "";
+}
+
 function parseInput(field: FieldSchema, value: string | boolean, fallback?: unknown): unknown {
   switch (field.tsType) {
     case "boolean":
       return value;
     case "number":
-      return value === "" ? "" : Number(value);
+      return value === "" ? emptyValue(field) : Number(value);
     case "bigint":
-      if (value === "") return "";
+      if (value === "") return emptyValue(field);
       try {
         return BigInt(value);
       } catch {
@@ -403,7 +408,10 @@ function ProductionResourceForm({ props }: { props: ProductionProps }): JSX.Elem
     const defaults: Record<string, unknown> = {};
     if (mode === "create") {
       for (const field of schema.fields) {
-        if (!editable(field, mode) || field.relation !== undefined) continue;
+        // Nullable fields start empty: a zero value would be stored, and for an
+        // optional foreign key it references a row that does not exist.
+        if (!editable(field, mode) || field.relation !== undefined || field.optional === true)
+          continue;
         switch (field.tsType) {
           case "string":
             defaults[field.name] = "";
@@ -600,8 +608,10 @@ function ProductionResourceForm({ props }: { props: ProductionProps }): JSX.Elem
     const visible = override?.visible;
     if (
       visible === false ||
-      (typeof visible === "function" && !visible(fieldContext(schema, field, mode, visibilityValues)))
-    ) return null;
+      (typeof visible === "function" &&
+        !visible(fieldContext(schema, field, mode, visibilityValues)))
+    )
+      return null;
     const disabled =
       override?.disabled === true ||
       (typeof override?.disabled === "function" && override.disabled(context));
@@ -681,7 +691,7 @@ function ProductionResourceForm({ props }: { props: ProductionProps }): JSX.Elem
           max={fieldProps?.max}
           step={fieldProps?.step}
           value={value as number | undefined}
-          onChange={(nextValue) => change(field, nextValue ?? "")}
+          onChange={(nextValue) => change(field, nextValue ?? emptyValue(field))}
         />
       );
     } else if (field.tsType === "boolean" || override?.valueType === "boolean") {

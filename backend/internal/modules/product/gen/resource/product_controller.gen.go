@@ -70,7 +70,22 @@ func productRepositoryError(err error) error {
 	if errors.Is(err, resource.ErrHasChildren) {
 		return connect.NewError(connect.CodeFailedPrecondition, resource.ErrHasChildren.Error()).WithCause(resource.ErrHasChildren)
 	}
-	return connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
+	// A database rule (trigger SIGNAL / RAISE EXCEPTION) carries a message the
+	// application wrote for users.
+	var rejected *resource.RejectedError
+	if errors.As(err, &rejected) {
+		return connect.NewError(connect.CodeFailedPrecondition, rejected.Message).WithCause(err)
+	}
+	if errors.Is(err, resource.ErrForeignKey) {
+		return connect.NewError(connect.CodeFailedPrecondition, resource.ErrForeignKey.Error()).WithCause(err)
+	}
+	if errors.Is(err, resource.ErrCheckViolation) {
+		return connect.NewError(connect.CodeInvalidArgument, resource.ErrCheckViolation.Error()).WithCause(err)
+	}
+	// Driver messages name databases, tables and constraints: log the cause
+	// and return a generic message.
+	slog.Error("resource request failed", "resource", "Product", "error", err)
+	return connect.NewError(connect.CodeInternal, resource.ErrInternal.Error()).WithCause(err)
 }
 
 func productRunAfterCommit(hook string, fn func()) {
