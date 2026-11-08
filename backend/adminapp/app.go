@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net"
 	"net/http"
@@ -20,6 +21,7 @@ import (
 	"github.com/abysstract/abysstract-admin/backend/internal/jwt"
 	"github.com/abysstract/abysstract-admin/backend/internal/repo"
 	"github.com/abysstract/abysstract-admin/backend/module"
+	"github.com/abysstract/abysstract-admin/backend/storage"
 )
 
 // Options creates a public application. DB, when non-nil, is borrowed.
@@ -29,6 +31,11 @@ type Options struct {
 	DB                 *gorm.DB
 	Logger             *slog.Logger
 	AllowedHTTPMethods []string
+	// Storage, when non-nil, is the object storage handed to every module
+	// through module.Runtime. It is borrowed and never closed by the
+	// application. When nil, Start opens the driver selected by
+	// Config.StorageDriver (see OpenStorage) and closes it on shutdown.
+	Storage storage.Storage
 }
 
 type appState int
@@ -50,6 +57,7 @@ type App struct {
 	allowedMethods []string
 	borrowedDB     *gorm.DB
 	logger         *slog.Logger
+	borrowedStore  storage.Storage
 
 	mu          sync.Mutex
 	state       appState
@@ -62,12 +70,25 @@ type App struct {
 
 	db            *gorm.DB
 	closeDB       bool
+	store         storage.Storage
+	closeStore    bool
 	startCancel   context.CancelFunc
 	startFinished bool
 	runtimeCancel context.CancelFunc
 	instances     []createdInstance
 	listener      net.Listener
 	server        *http.Server
+}
+
+// Storage returns the object storage after Start or Run has initialized the
+// modules, or nil before that.
+func (a *App) Storage() storage.Storage {
+	if a == nil {
+		return nil
+	}
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.store
 }
 
 // ListenerAddr returns the bound address after Run has started listening.
@@ -114,6 +135,10 @@ func New(options Options) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
+	if options.Storage == nil && !storage.Registered(cfg.StorageDriverOrDefault()) {
+		return nil, fmt.Errorf("adminapp: storage driver %q is not registered (available: %v); import its package or pass Options.Storage",
+			cfg.StorageDriverOrDefault(), storage.Drivers())
+	}
 	return &App{
 		cfg:            cfg,
 		modules:        ordered,
@@ -121,6 +146,7 @@ func New(options Options) (*App, error) {
 		registry:       registry,
 		allowedMethods: allowed,
 		borrowedDB:     options.DB,
+		borrowedStore:  options.Storage,
 		logger:         defaultLogger(options.Logger),
 		stopCh:         make(chan struct{}),
 		stoppedCh:      make(chan struct{}),
@@ -239,6 +265,18 @@ func (a *App) start(ctx context.Context) (http.Handler, error) {
 	if err := requireSystemTables(gdb); err != nil {
 		return nil, err
 	}
+	objects := a.borrowedStore
+	if objects == nil {
+		opened, err := OpenStorage(ctx, a.cfg)
+		if err != nil {
+			return nil, err
+		}
+		objects = opened
+		a.closeStore = true
+	}
+	a.mu.Lock()
+	a.store = objects
+	a.mu.Unlock()
 	store := repo.New(gdb)
 	jwtMgr := jwt.NewManager(a.cfg.JWTSecret, a.cfg.JWTExpiresIn)
 	runtimeCtx, cancel := context.WithCancel(context.WithoutCancel(ctx))
@@ -249,6 +287,7 @@ func (a *App) start(ctx context.Context) (http.Handler, error) {
 		Config:    a.cfg.Clone(),
 		Context:   runtimeCtx,
 		DataScope: dataScopeAdapter{repo: store},
+		Storage:   objects,
 	}
 	created := make([]createdInstance, 0, len(a.modules))
 	for _, def := range a.modules {
@@ -289,7 +328,7 @@ func (a *App) start(ctx context.Context) (http.Handler, error) {
 		return nil, err
 	}
 	metricsReg := prometheus.NewRegistry()
-	handler, err := buildHandler(a.cfg, a.logger, a.allowedMethods, a.routes, a.instances, server, connectOpts, sec, sqlDB, metricsReg, metricsReg)
+	handler, err := buildHandler(a.cfg, a.logger, a.allowedMethods, a.routes, a.instances, server, connectOpts, sec, objects, sqlDB, metricsReg, metricsReg)
 	if err != nil {
 		return nil, err
 	}
@@ -379,6 +418,13 @@ func (a *App) cleanup(ctx context.Context, forceHTTP bool) error {
 		}
 		if err := entry.close(ctx); err != nil {
 			errs = append(errs, fmt.Errorf("module %q close: %w", entry.name, err))
+		}
+	}
+	if a.closeStore {
+		if closer, ok := a.store.(io.Closer); ok {
+			if err := closer.Close(); err != nil {
+				errs = append(errs, fmt.Errorf("storage close: %w", err))
+			}
 		}
 	}
 	if a.closeDB {

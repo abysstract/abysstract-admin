@@ -4,13 +4,15 @@
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { Timestamp } from "@bufbuild/protobuf/wkt";
+import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file abysstract/admin/v1/upload.proto.
  */
 export const file_abysstract_admin_v1_upload: GenFile = /*@__PURE__*/
-  fileDesc("CiBhYnlzc3RyYWN0L2FkbWluL3YxL3VwbG9hZC5wcm90bxITYWJ5c3N0cmFjdC5hZG1pbi52MSJJChFVcGxvYWRGaWxlUmVxdWVzdBIQCghmaWxlbmFtZRgBIAEoCRIRCgltaW1lX3R5cGUYAiABKAkSDwoHY29udGVudBgDIAEoDCIvChJVcGxvYWRGaWxlUmVzcG9uc2USCwoDdXJsGAEgASgJEgwKBHNpemUYAiABKAMiSwoTVXBsb2FkQXZhdGFyUmVxdWVzdBIQCghmaWxlbmFtZRgBIAEoCRIRCgltaW1lX3R5cGUYAiABKAkSDwoHY29udGVudBgDIAEoDCIjChRVcGxvYWRBdmF0YXJSZXNwb25zZRILCgN1cmwYASABKAky0wEKDVVwbG9hZFNlcnZpY2USXQoKVXBsb2FkRmlsZRImLmFieXNzdHJhY3QuYWRtaW4udjEuVXBsb2FkRmlsZVJlcXVlc3QaJy5hYnlzc3RyYWN0LmFkbWluLnYxLlVwbG9hZEZpbGVSZXNwb25zZRJjCgxVcGxvYWRBdmF0YXISKC5hYnlzc3RyYWN0LmFkbWluLnYxLlVwbG9hZEF2YXRhclJlcXVlc3QaKS5hYnlzc3RyYWN0LmFkbWluLnYxLlVwbG9hZEF2YXRhclJlc3BvbnNlQuQBChdjb20uYWJ5c3N0cmFjdC5hZG1pbi52MUILVXBsb2FkUHJvdG9QAVpOZ2l0aHViLmNvbS9hYnlzc3RyYWN0L2FieXNzdHJhY3QtYWRtaW4vYmFja2VuZC9nZW4vYWJ5c3N0cmFjdC9hZG1pbi92MTthZG1pbnYxogIDQUFYqgITQWJ5c3N0cmFjdC5BZG1pbi5WMcoCE0FieXNzdHJhY3RcQWRtaW5cVjHiAh9BYnlzc3RyYWN0XEFkbWluXFYxXEdQQk1ldGFkYXRh6gIVQWJ5c3N0cmFjdDo6QWRtaW46OlYxYgZwcm90bzM");
+  fileDesc("CiBhYnlzc3RyYWN0L2FkbWluL3YxL3VwbG9hZC5wcm90bxITYWJ5c3N0cmFjdC5hZG1pbi52MSJJChFVcGxvYWRGaWxlUmVxdWVzdBIQCghmaWxlbmFtZRgBIAEoCRIRCgltaW1lX3R5cGUYAiABKAkSDwoHY29udGVudBgDIAEoDCI8ChJVcGxvYWRGaWxlUmVzcG9uc2USCwoDdXJsGAEgASgJEgwKBHNpemUYAiABKAMSCwoDa2V5GAMgASgJIksKE1VwbG9hZEF2YXRhclJlcXVlc3QSEAoIZmlsZW5hbWUYASABKAkSEQoJbWltZV90eXBlGAIgASgJEg8KB2NvbnRlbnQYAyABKAwiMAoUVXBsb2FkQXZhdGFyUmVzcG9uc2USCwoDdXJsGAEgASgJEgsKA2tleRgCIAEoCSJLChNDcmVhdGVVcGxvYWRSZXF1ZXN0EhAKCGZpbGVuYW1lGAEgASgJEhQKDGNvbnRlbnRfdHlwZRgCIAEoCRIMCgRzaXplGAMgASgDIv0BChRDcmVhdGVVcGxvYWRSZXNwb25zZRILCgNrZXkYASABKAkSCwoDdXJsGAIgASgJEhIKCnVwbG9hZF91cmwYAyABKAkSDgoGbWV0aG9kGAQgASgJEkcKB2hlYWRlcnMYBSADKAsyNi5hYnlzc3RyYWN0LmFkbWluLnYxLkNyZWF0ZVVwbG9hZFJlc3BvbnNlLkhlYWRlcnNFbnRyeRIuCgpleHBpcmVzX2F0GAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBouCgxIZWFkZXJzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ATK4AgoNVXBsb2FkU2VydmljZRJdCgpVcGxvYWRGaWxlEiYuYWJ5c3N0cmFjdC5hZG1pbi52MS5VcGxvYWRGaWxlUmVxdWVzdBonLmFieXNzdHJhY3QuYWRtaW4udjEuVXBsb2FkRmlsZVJlc3BvbnNlEmMKDFVwbG9hZEF2YXRhchIoLmFieXNzdHJhY3QuYWRtaW4udjEuVXBsb2FkQXZhdGFyUmVxdWVzdBopLmFieXNzdHJhY3QuYWRtaW4udjEuVXBsb2FkQXZhdGFyUmVzcG9uc2USYwoMQ3JlYXRlVXBsb2FkEiguYWJ5c3N0cmFjdC5hZG1pbi52MS5DcmVhdGVVcGxvYWRSZXF1ZXN0GikuYWJ5c3N0cmFjdC5hZG1pbi52MS5DcmVhdGVVcGxvYWRSZXNwb25zZULkAQoXY29tLmFieXNzdHJhY3QuYWRtaW4udjFCC1VwbG9hZFByb3RvUAFaTmdpdGh1Yi5jb20vYWJ5c3N0cmFjdC9hYnlzc3RyYWN0LWFkbWluL2JhY2tlbmQvZ2VuL2FieXNzdHJhY3QvYWRtaW4vdjE7YWRtaW52MaICA0FBWKoCE0FieXNzdHJhY3QuQWRtaW4uVjHKAhNBYnlzc3RyYWN0XEFkbWluXFYx4gIfQWJ5c3N0cmFjdFxBZG1pblxWMVxHUEJNZXRhZGF0YeoCFUFieXNzdHJhY3Q6OkFkbWluOjpWMWIGcHJvdG8z", [file_google_protobuf_timestamp]);
 
 /**
  * @generated from message abysstract.admin.v1.UploadFileRequest
@@ -62,6 +64,13 @@ export type UploadFileResponse = Message<"abysstract.admin.v1.UploadFileResponse
    * @generated from field: int64 size = 2;
    */
   size: bigint;
+
+  /**
+   * 存储对象键；业务表应保存 key，输出时再解析为 URL
+   *
+   * @generated from field: string key = 3;
+   */
+  key: string;
 };
 
 /**
@@ -111,6 +120,13 @@ export type UploadAvatarResponse = Message<"abysstract.admin.v1.UploadAvatarResp
    * @generated from field: string url = 1;
    */
   url: string;
+
+  /**
+   * 存储对象键
+   *
+   * @generated from field: string key = 2;
+   */
+  key: string;
 };
 
 /**
@@ -119,6 +135,95 @@ export type UploadAvatarResponse = Message<"abysstract.admin.v1.UploadAvatarResp
  */
 export const UploadAvatarResponseSchema: GenMessage<UploadAvatarResponse> = /*@__PURE__*/
   messageDesc(file_abysstract_admin_v1_upload, 3);
+
+/**
+ * 预签名直传：与 UploadFile 相同的大小与扩展名白名单。
+ *
+ * @generated from message abysstract.admin.v1.CreateUploadRequest
+ */
+export type CreateUploadRequest = Message<"abysstract.admin.v1.CreateUploadRequest"> & {
+  /**
+   * 原始文件名（仅用于扩展名校验与对象键后缀）
+   *
+   * @generated from field: string filename = 1;
+   */
+  filename: string;
+
+  /**
+   * 客户端声明 MIME；服务端按扩展名推断，以响应 headers 为准
+   *
+   * @generated from field: string content_type = 2;
+   */
+  contentType: string;
+
+  /**
+   * 文件字节数；上传体必须与之完全一致
+   *
+   * @generated from field: int64 size = 3;
+   */
+  size: bigint;
+};
+
+/**
+ * Describes the message abysstract.admin.v1.CreateUploadRequest.
+ * Use `create(CreateUploadRequestSchema)` to create a new message.
+ */
+export const CreateUploadRequestSchema: GenMessage<CreateUploadRequest> = /*@__PURE__*/
+  messageDesc(file_abysstract_admin_v1_upload, 4);
+
+/**
+ * @generated from message abysstract.admin.v1.CreateUploadResponse
+ */
+export type CreateUploadResponse = Message<"abysstract.admin.v1.CreateUploadResponse"> & {
+  /**
+   * 存储对象键；上传成功后提交给业务接口保存
+   *
+   * @generated from field: string key = 1;
+   */
+  key: string;
+
+  /**
+   * 上传完成后的访问 URL
+   *
+   * @generated from field: string url = 2;
+   */
+  url: string;
+
+  /**
+   * 上传地址（本地驱动为相对 API 源站的路径）
+   *
+   * @generated from field: string upload_url = 3;
+   */
+  uploadUrl: string;
+
+  /**
+   * HTTP 方法，当前固定为 PUT
+   *
+   * @generated from field: string method = 4;
+   */
+  method: string;
+
+  /**
+   * 上传时必须原样携带的请求头
+   *
+   * @generated from field: map<string, string> headers = 5;
+   */
+  headers: { [key: string]: string };
+
+  /**
+   * 上传地址过期时间
+   *
+   * @generated from field: google.protobuf.Timestamp expires_at = 6;
+   */
+  expiresAt?: Timestamp | undefined;
+};
+
+/**
+ * Describes the message abysstract.admin.v1.CreateUploadResponse.
+ * Use `create(CreateUploadResponseSchema)` to create a new message.
+ */
+export const CreateUploadResponseSchema: GenMessage<CreateUploadResponse> = /*@__PURE__*/
+  messageDesc(file_abysstract_admin_v1_upload, 5);
 
 /**
  * @generated from service abysstract.admin.v1.UploadService
@@ -139,6 +244,14 @@ export const UploadService: GenService<{
     methodKind: "unary";
     input: typeof UploadAvatarRequestSchema;
     output: typeof UploadAvatarResponseSchema;
+  },
+  /**
+   * @generated from rpc abysstract.admin.v1.UploadService.CreateUpload
+   */
+  createUpload: {
+    methodKind: "unary";
+    input: typeof CreateUploadRequestSchema;
+    output: typeof CreateUploadResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_abysstract_admin_v1_upload, 0);

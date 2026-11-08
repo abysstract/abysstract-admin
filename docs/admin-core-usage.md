@@ -30,8 +30,9 @@ Go 应用按需导入 `github.com/abysstract/abysstract-admin/backend/` 下的�
 | `resource`、`resource/schema` | 使用事务、回调和 Resource 字段声明 |
 | `resourcegen` | 生成业务 Resource 代码 |
 | `coremigrations` | 提供系统迁移来源 |
+| `storage`、`storage/localstorage`、`storage/s3storage` | 文件存储接口、对象键工具与驱动，见[文件存储](storage.md) |
 
-前端从 `@abysstract/admin-core` 导入应用与组件，从 `@abysstract/admin-proto` 导入系统协议类型。包的安装方式见下文[安装前端包](#安装前端包)。
+前端从 `@abysstract/admin-core` 导入应用与组件（图片直传组件在 `@abysstract/admin-core/upload`），从 `@abysstract/admin-proto` 导入系统协议类型。包的安装方式见下文[安装前端包](#安装前端包)。
 
 ## Go RPC 接口
 
@@ -141,7 +142,9 @@ npm install /absolute/path/to/abysstract-admin-proto-VERSION.tgz /absolute/path/
 
 `adminapp.New` 校验配置和模块声明。`Start(ctx)` 打开数据库、初始化模块并返回 `http.Handler`。应用将 handler 挂载到自己的服务器，添加全局中间件，并启动监听。
 
-关闭时先调用应用服务器的 `Shutdown` 等待请求完成，再调用 Core 的 `Shutdown` 关闭模块与数据库。应用传入的 `Options.DB` 由应用关闭。`module.Runtime.Context` 持续到 Core 关闭，适合模块后台任务。
+`module.Runtime.Storage` 是所有模块共享的文件存储。未传入 `Options.Storage` 时，`Start` 按 `ADMIN_STORAGE_*` 配置打开存储；需要在后台之外复用同一实例时，用 `adminapp.OpenStorage` 打开后传入，见[注入自定义存储](storage.md#6-注入自定义存储)。
+
+关闭时先调用应用服务器的 `Shutdown` 等待请求完成，再调用 Core 的 `Shutdown` 关闭模块与数据库。应用传入的 `Options.DB` 和 `Options.Storage` 由应用关闭。`module.Runtime.Context` 持续到 Core 关闭，适合模块后台任务。
 
 启动或关闭失败时返回错误。`Start` 失败会释放已经创建的模块和 Core 打开的数据库。每个 Core 实例启动一次。
 

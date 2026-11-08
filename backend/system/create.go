@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 
 	"connectrpc.com/connect/v2"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -20,6 +19,9 @@ import (
 // ErrMissingSystemTables is returned when Create runs against a database that
 // has not been migrated.
 var ErrMissingSystemTables = errors.New("system: database is missing sys_user; run migrate first")
+
+// ErrMissingStorage is returned when Create runs without module.Runtime.Storage.
+var ErrMissingStorage = errors.New("system: module.Runtime.Storage is nil")
 
 func createSystem(ctx context.Context, rt module.Runtime) (module.Instance, error) {
 	if err := ctx.Err(); err != nil {
@@ -71,12 +73,8 @@ func newSystemHandlers(rt module.Runtime) (*systemHandlers, error) {
 	jwtMgr := jwt.NewManager(cfg.JWTSecret, cfg.JWTExpiresIn)
 	loginSec := repo.NewLoginSecurity(rt.DB, cfg.LoginMaxFailures, cfg.LoginLockoutSeconds)
 	refresh := repo.NewRefreshTokenRepo(rt.DB)
-	uploadDir := cfg.UploadDir
-	if uploadDir == "" {
-		uploadDir = "./uploads"
-	}
-	if err := os.MkdirAll(uploadDir, 0o755); err != nil {
-		return nil, fmt.Errorf("system: create upload dir: %w", err)
+	if rt.Storage == nil {
+		return nil, ErrMissingStorage
 	}
 	dictSvc, err := service.NewGeneratedDictService(store)
 	if err != nil {
@@ -121,12 +119,11 @@ func newSystemHandlers(rt module.Runtime) (*systemHandlers, error) {
 		config: configSvc,
 		notice: noticeSvc,
 		log:    service.NewLogService(store),
-		upload: service.NewUploadService(
-			store,
-			service.NewFileSystemSaver(uploadDir, "/static/"),
-			cfg.UploadMaxBytes,
-			cfg.AvatarMaxBytes,
-		),
+		upload: service.NewUploadService(store, rt.Storage, service.UploadConfig{
+			FileMaxBytes:   cfg.UploadMaxBytes,
+			AvatarMaxBytes: cfg.AvatarMaxBytes,
+			UploadTTL:      cfg.StorageUploadTTLOrDefault(),
+		}),
 		export:    service.NewCommonExportService(store, service.NewPermChecker(store.PermsOf)),
 		profile:   service.NewProfileService(store),
 		dashboard: service.NewDashboardService(store),

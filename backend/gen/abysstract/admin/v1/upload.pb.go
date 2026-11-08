@@ -9,6 +9,7 @@ package adminv1
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -85,6 +86,7 @@ type UploadFileResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Url           string                 `protobuf:"bytes,1,opt,name=url,proto3" json:"url,omitempty"`    // 可访问引用标识（相对路径或完整 URL）
 	Size          int64                  `protobuf:"varint,2,opt,name=size,proto3" json:"size,omitempty"` // 实际写入字节数
+	Key           string                 `protobuf:"bytes,3,opt,name=key,proto3" json:"key,omitempty"`    // 存储对象键；业务表应保存 key，输出时再解析为 URL
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -131,6 +133,13 @@ func (x *UploadFileResponse) GetSize() int64 {
 		return x.Size
 	}
 	return 0
+}
+
+func (x *UploadFileResponse) GetKey() string {
+	if x != nil {
+		return x.Key
+	}
+	return ""
 }
 
 // 头像上传：≤5MB 且类型在图片白名单内则更新当前用户 sys_user.avatar。
@@ -198,6 +207,7 @@ func (x *UploadAvatarRequest) GetContent() []byte {
 type UploadAvatarResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Url           string                 `protobuf:"bytes,1,opt,name=url,proto3" json:"url,omitempty"` // 新头像引用（成功后等于 sys_user.avatar）
+	Key           string                 `protobuf:"bytes,2,opt,name=key,proto3" json:"key,omitempty"` // 存储对象键
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -239,28 +249,199 @@ func (x *UploadAvatarResponse) GetUrl() string {
 	return ""
 }
 
+func (x *UploadAvatarResponse) GetKey() string {
+	if x != nil {
+		return x.Key
+	}
+	return ""
+}
+
+// 预签名直传：与 UploadFile 相同的大小与扩展名白名单。
+type CreateUploadRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Filename      string                 `protobuf:"bytes,1,opt,name=filename,proto3" json:"filename,omitempty"`                          // 原始文件名（仅用于扩展名校验与对象键后缀）
+	ContentType   string                 `protobuf:"bytes,2,opt,name=content_type,json=contentType,proto3" json:"content_type,omitempty"` // 客户端声明 MIME；服务端按扩展名推断，以响应 headers 为准
+	Size          int64                  `protobuf:"varint,3,opt,name=size,proto3" json:"size,omitempty"`                                 // 文件字节数；上传体必须与之完全一致
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateUploadRequest) Reset() {
+	*x = CreateUploadRequest{}
+	mi := &file_abysstract_admin_v1_upload_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateUploadRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateUploadRequest) ProtoMessage() {}
+
+func (x *CreateUploadRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_abysstract_admin_v1_upload_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateUploadRequest.ProtoReflect.Descriptor instead.
+func (*CreateUploadRequest) Descriptor() ([]byte, []int) {
+	return file_abysstract_admin_v1_upload_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *CreateUploadRequest) GetFilename() string {
+	if x != nil {
+		return x.Filename
+	}
+	return ""
+}
+
+func (x *CreateUploadRequest) GetContentType() string {
+	if x != nil {
+		return x.ContentType
+	}
+	return ""
+}
+
+func (x *CreateUploadRequest) GetSize() int64 {
+	if x != nil {
+		return x.Size
+	}
+	return 0
+}
+
+type CreateUploadResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Key           string                 `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`                                                                                   // 存储对象键；上传成功后提交给业务接口保存
+	Url           string                 `protobuf:"bytes,2,opt,name=url,proto3" json:"url,omitempty"`                                                                                   // 上传完成后的访问 URL
+	UploadUrl     string                 `protobuf:"bytes,3,opt,name=upload_url,json=uploadUrl,proto3" json:"upload_url,omitempty"`                                                      // 上传地址（本地驱动为相对 API 源站的路径）
+	Method        string                 `protobuf:"bytes,4,opt,name=method,proto3" json:"method,omitempty"`                                                                             // HTTP 方法，当前固定为 PUT
+	Headers       map[string]string      `protobuf:"bytes,5,rep,name=headers,proto3" json:"headers,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // 上传时必须原样携带的请求头
+	ExpiresAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`                                                      // 上传地址过期时间
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateUploadResponse) Reset() {
+	*x = CreateUploadResponse{}
+	mi := &file_abysstract_admin_v1_upload_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateUploadResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateUploadResponse) ProtoMessage() {}
+
+func (x *CreateUploadResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_abysstract_admin_v1_upload_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateUploadResponse.ProtoReflect.Descriptor instead.
+func (*CreateUploadResponse) Descriptor() ([]byte, []int) {
+	return file_abysstract_admin_v1_upload_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *CreateUploadResponse) GetKey() string {
+	if x != nil {
+		return x.Key
+	}
+	return ""
+}
+
+func (x *CreateUploadResponse) GetUrl() string {
+	if x != nil {
+		return x.Url
+	}
+	return ""
+}
+
+func (x *CreateUploadResponse) GetUploadUrl() string {
+	if x != nil {
+		return x.UploadUrl
+	}
+	return ""
+}
+
+func (x *CreateUploadResponse) GetMethod() string {
+	if x != nil {
+		return x.Method
+	}
+	return ""
+}
+
+func (x *CreateUploadResponse) GetHeaders() map[string]string {
+	if x != nil {
+		return x.Headers
+	}
+	return nil
+}
+
+func (x *CreateUploadResponse) GetExpiresAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ExpiresAt
+	}
+	return nil
+}
+
 var File_abysstract_admin_v1_upload_proto protoreflect.FileDescriptor
 
 const file_abysstract_admin_v1_upload_proto_rawDesc = "" +
 	"\n" +
-	" abysstract/admin/v1/upload.proto\x12\x13abysstract.admin.v1\"f\n" +
+	" abysstract/admin/v1/upload.proto\x12\x13abysstract.admin.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"f\n" +
 	"\x11UploadFileRequest\x12\x1a\n" +
 	"\bfilename\x18\x01 \x01(\tR\bfilename\x12\x1b\n" +
 	"\tmime_type\x18\x02 \x01(\tR\bmimeType\x12\x18\n" +
-	"\acontent\x18\x03 \x01(\fR\acontent\":\n" +
+	"\acontent\x18\x03 \x01(\fR\acontent\"L\n" +
 	"\x12UploadFileResponse\x12\x10\n" +
 	"\x03url\x18\x01 \x01(\tR\x03url\x12\x12\n" +
-	"\x04size\x18\x02 \x01(\x03R\x04size\"h\n" +
+	"\x04size\x18\x02 \x01(\x03R\x04size\x12\x10\n" +
+	"\x03key\x18\x03 \x01(\tR\x03key\"h\n" +
 	"\x13UploadAvatarRequest\x12\x1a\n" +
 	"\bfilename\x18\x01 \x01(\tR\bfilename\x12\x1b\n" +
 	"\tmime_type\x18\x02 \x01(\tR\bmimeType\x12\x18\n" +
-	"\acontent\x18\x03 \x01(\fR\acontent\"(\n" +
+	"\acontent\x18\x03 \x01(\fR\acontent\":\n" +
 	"\x14UploadAvatarResponse\x12\x10\n" +
-	"\x03url\x18\x01 \x01(\tR\x03url2\xd3\x01\n" +
+	"\x03url\x18\x01 \x01(\tR\x03url\x12\x10\n" +
+	"\x03key\x18\x02 \x01(\tR\x03key\"h\n" +
+	"\x13CreateUploadRequest\x12\x1a\n" +
+	"\bfilename\x18\x01 \x01(\tR\bfilename\x12!\n" +
+	"\fcontent_type\x18\x02 \x01(\tR\vcontentType\x12\x12\n" +
+	"\x04size\x18\x03 \x01(\x03R\x04size\"\xba\x02\n" +
+	"\x14CreateUploadResponse\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x10\n" +
+	"\x03url\x18\x02 \x01(\tR\x03url\x12\x1d\n" +
+	"\n" +
+	"upload_url\x18\x03 \x01(\tR\tuploadUrl\x12\x16\n" +
+	"\x06method\x18\x04 \x01(\tR\x06method\x12P\n" +
+	"\aheaders\x18\x05 \x03(\v26.abysstract.admin.v1.CreateUploadResponse.HeadersEntryR\aheaders\x129\n" +
+	"\n" +
+	"expires_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\x1a:\n" +
+	"\fHeadersEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x012\xb8\x02\n" +
 	"\rUploadService\x12]\n" +
 	"\n" +
 	"UploadFile\x12&.abysstract.admin.v1.UploadFileRequest\x1a'.abysstract.admin.v1.UploadFileResponse\x12c\n" +
-	"\fUploadAvatar\x12(.abysstract.admin.v1.UploadAvatarRequest\x1a).abysstract.admin.v1.UploadAvatarResponseB\xe4\x01\n" +
+	"\fUploadAvatar\x12(.abysstract.admin.v1.UploadAvatarRequest\x1a).abysstract.admin.v1.UploadAvatarResponse\x12c\n" +
+	"\fCreateUpload\x12(.abysstract.admin.v1.CreateUploadRequest\x1a).abysstract.admin.v1.CreateUploadResponseB\xe4\x01\n" +
 	"\x17com.abysstract.admin.v1B\vUploadProtoP\x01ZNgithub.com/abysstract/abysstract-admin/backend/gen/abysstract/admin/v1;adminv1\xa2\x02\x03AAX\xaa\x02\x13Abysstract.Admin.V1\xca\x02\x13Abysstract\\Admin\\V1\xe2\x02\x1fAbysstract\\Admin\\V1\\GPBMetadata\xea\x02\x15Abysstract::Admin::V1b\x06proto3"
 
 var (
@@ -275,23 +456,31 @@ func file_abysstract_admin_v1_upload_proto_rawDescGZIP() []byte {
 	return file_abysstract_admin_v1_upload_proto_rawDescData
 }
 
-var file_abysstract_admin_v1_upload_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_abysstract_admin_v1_upload_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_abysstract_admin_v1_upload_proto_goTypes = []any{
-	(*UploadFileRequest)(nil),    // 0: abysstract.admin.v1.UploadFileRequest
-	(*UploadFileResponse)(nil),   // 1: abysstract.admin.v1.UploadFileResponse
-	(*UploadAvatarRequest)(nil),  // 2: abysstract.admin.v1.UploadAvatarRequest
-	(*UploadAvatarResponse)(nil), // 3: abysstract.admin.v1.UploadAvatarResponse
+	(*UploadFileRequest)(nil),     // 0: abysstract.admin.v1.UploadFileRequest
+	(*UploadFileResponse)(nil),    // 1: abysstract.admin.v1.UploadFileResponse
+	(*UploadAvatarRequest)(nil),   // 2: abysstract.admin.v1.UploadAvatarRequest
+	(*UploadAvatarResponse)(nil),  // 3: abysstract.admin.v1.UploadAvatarResponse
+	(*CreateUploadRequest)(nil),   // 4: abysstract.admin.v1.CreateUploadRequest
+	(*CreateUploadResponse)(nil),  // 5: abysstract.admin.v1.CreateUploadResponse
+	nil,                           // 6: abysstract.admin.v1.CreateUploadResponse.HeadersEntry
+	(*timestamppb.Timestamp)(nil), // 7: google.protobuf.Timestamp
 }
 var file_abysstract_admin_v1_upload_proto_depIdxs = []int32{
-	0, // 0: abysstract.admin.v1.UploadService.UploadFile:input_type -> abysstract.admin.v1.UploadFileRequest
-	2, // 1: abysstract.admin.v1.UploadService.UploadAvatar:input_type -> abysstract.admin.v1.UploadAvatarRequest
-	1, // 2: abysstract.admin.v1.UploadService.UploadFile:output_type -> abysstract.admin.v1.UploadFileResponse
-	3, // 3: abysstract.admin.v1.UploadService.UploadAvatar:output_type -> abysstract.admin.v1.UploadAvatarResponse
-	2, // [2:4] is the sub-list for method output_type
-	0, // [0:2] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	6, // 0: abysstract.admin.v1.CreateUploadResponse.headers:type_name -> abysstract.admin.v1.CreateUploadResponse.HeadersEntry
+	7, // 1: abysstract.admin.v1.CreateUploadResponse.expires_at:type_name -> google.protobuf.Timestamp
+	0, // 2: abysstract.admin.v1.UploadService.UploadFile:input_type -> abysstract.admin.v1.UploadFileRequest
+	2, // 3: abysstract.admin.v1.UploadService.UploadAvatar:input_type -> abysstract.admin.v1.UploadAvatarRequest
+	4, // 4: abysstract.admin.v1.UploadService.CreateUpload:input_type -> abysstract.admin.v1.CreateUploadRequest
+	1, // 5: abysstract.admin.v1.UploadService.UploadFile:output_type -> abysstract.admin.v1.UploadFileResponse
+	3, // 6: abysstract.admin.v1.UploadService.UploadAvatar:output_type -> abysstract.admin.v1.UploadAvatarResponse
+	5, // 7: abysstract.admin.v1.UploadService.CreateUpload:output_type -> abysstract.admin.v1.CreateUploadResponse
+	5, // [5:8] is the sub-list for method output_type
+	2, // [2:5] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_abysstract_admin_v1_upload_proto_init() }
@@ -305,7 +494,7 @@ func file_abysstract_admin_v1_upload_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_abysstract_admin_v1_upload_proto_rawDesc), len(file_abysstract_admin_v1_upload_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

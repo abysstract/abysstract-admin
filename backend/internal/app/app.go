@@ -7,6 +7,10 @@ import (
 
 	"github.com/abysstract/abysstract-admin/backend/adminapp"
 	"github.com/abysstract/abysstract-admin/backend/adminconfig"
+
+	// Enables ADMIN_STORAGE_DRIVER=s3. Remove the import to drop the AWS SDK
+	// from the binary when only local storage is used.
+	_ "github.com/abysstract/abysstract-admin/backend/storage/s3storage"
 )
 
 // New assembles the modules used by this application.

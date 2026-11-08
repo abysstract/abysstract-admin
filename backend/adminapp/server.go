@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"os"
+	"slices"
 
 	"connectrpc.com/connect/v2"
 	"connectrpc.com/connect/v2/connecthttp"
@@ -16,6 +16,7 @@ import (
 	"github.com/abysstract/abysstract-admin/backend/adminconfig"
 	"github.com/abysstract/abysstract-admin/backend/internal/observ"
 	"github.com/abysstract/abysstract-admin/backend/module"
+	"github.com/abysstract/abysstract-admin/backend/storage"
 )
 
 type createdInstance struct {
@@ -34,6 +35,7 @@ func buildHandler(
 	server *connect.Server,
 	connectOpts connecthttp.Option,
 	sec httpSecurity,
+	objects storage.Storage,
 	pinger observ.Pinger,
 	registerer prometheus.Registerer,
 	gatherer prometheus.Gatherer,
@@ -62,14 +64,19 @@ func buildHandler(
 		}
 	}
 	connecthttp.Mount(mux, server, connectOpts)
-	uploadDir := cfg.UploadDir
-	if uploadDir == "" {
-		uploadDir = "./uploads"
+	corsMethods := append([]string{}, allowedMethods...)
+	if served, ok := objects.(storage.HTTPHandler); ok {
+		// Drivers that serve objects from the application (the local
+		// driver) take the reserved /static/ subtree, including signed PUT
+		// uploads from the browser.
+		if served.MountPath() != storageMountPath {
+			return nil, fmt.Errorf("adminapp: storage mount path %q must be %q", served.MountPath(), storageMountPath)
+		}
+		mux.Handle(storageMountPath, served)
+		if !slices.Contains(corsMethods, http.MethodPut) {
+			corsMethods = append(corsMethods, http.MethodPut)
+		}
 	}
-	if err := os.MkdirAll(uploadDir, 0o755); err != nil {
-		return nil, fmt.Errorf("adminapp: create upload dir: %w", err)
-	}
-	mux.Handle("/static/", http.StripPrefix("/static/", staticFileHandler(http.Dir(uploadDir))))
 	mux.Handle("/healthz", observ.HealthzHandler())
 	mux.Handle("/readyz", observ.ReadyzHandler(pinger))
 	mux.Handle("/metrics", metricsHandler(cfg, promhttp.HandlerFor(gatherer, promhttp.HandlerOpts{})))
@@ -77,7 +84,7 @@ func buildHandler(
 
 	corsHandler := cors.New(cors.Options{
 		AllowedOrigins:   cfg.CORSOriginsOrDefault(),
-		AllowedMethods:   append(append([]string{}, allowedMethods...), http.MethodOptions),
+		AllowedMethods:   append(corsMethods, http.MethodOptions),
 		AllowedHeaders:   []string{"Content-Type", "Authorization", "Connect-Protocol-Version", "Connect-Timeout-Ms"},
 		ExposedHeaders:   []string{"Connect-Protocol-Version", observ.HeaderRequestID},
 		AllowCredentials: false,

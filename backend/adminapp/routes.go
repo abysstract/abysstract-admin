@@ -159,7 +159,7 @@ func prepareHTTPRoute(moduleName string, index int, route module.HTTPRoute, allo
 
 func frameworkRoutes() []preparedRoute {
 	exact := []string{"/healthz", "/readyz", "/metrics", "/version"}
-	out := make([]preparedRoute, 0, len(exact)+1)
+	out := make([]preparedRoute, 0, len(exact)+2)
 	for _, path := range exact {
 		out = append(out, preparedRoute{
 			Framework: true,
@@ -167,11 +167,15 @@ func frameworkRoutes() []preparedRoute {
 			Route:     module.HTTPRoute{Method: http.MethodGet, Path: path},
 		})
 	}
-	out = append(out, preparedRoute{
-		Framework: true,
-		Pattern:   http.MethodGet + " /static/",
-		Route:     module.HTTPRoute{Method: http.MethodGet, Path: "/static/", Subtree: true},
-	})
+	// /static/ is reserved for the storage handler: GET/HEAD downloads and
+	// signed PUT uploads of the local driver.
+	for _, method := range []string{http.MethodGet, http.MethodPut} {
+		out = append(out, preparedRoute{
+			Framework: true,
+			Pattern:   method + " " + storageMountPath,
+			Route:     module.HTTPRoute{Method: method, Path: storageMountPath, Subtree: true},
+		})
+	}
 	return out
 }
 

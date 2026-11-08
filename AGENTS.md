@@ -6,7 +6,7 @@ This repository contains a Go ConnectRPC backend, public frontend packages, an a
 
 - `proto/` owns public API sources; business Proto lives in `backend/internal/modules/<module>/proto`. Root `buf.yaml` declares their workspace.
 - `backend/internal/app/` owns application module composition, HTTP routes, middleware, and server lifecycle. Business development continues in the root application.
-- The Go module `github.com/abysstract/abysstract-admin` has its `go.mod` at the repository root; Go code lives in `backend/`. Public packages are `backend/{resource,module,permission,resourcegen,coremigrations,database,system,adminconfig,identity,adminapp,moduleseed}`. Commands are under `backend/cmd/`. Go commands work from the root (`./backend/...`) or inside `backend/`. One `vX.Y.Z` tag versions both the Go module and the npm packages.
+- The Go module `github.com/abysstract/abysstract-admin` has its `go.mod` at the repository root; Go code lives in `backend/`. Public packages are `backend/{resource,module,permission,resourcegen,coremigrations,database,system,adminconfig,identity,adminapp,moduleseed,storage}`; `storage/localstorage` and `storage/s3storage` are its drivers (importing `s3storage` pulls in the AWS SDK). Commands are under `backend/cmd/`. Go commands work from the root (`./backend/...`) or inside `backend/`. One `vX.Y.Z` tag versions both the Go module and the npm packages.
 - `frontend/packages/admin-proto` and `frontend/packages/admin-core` are the public frontend packages. `frontend/apps/reference` is the bundled admin app.
 - Product code lives in `backend/internal/modules/product` and `frontend/apps/reference/src/modules/product`.
 - Resource-style CRUD: Proto defines the wire contract, Go `resource/schema.Resource` defines behavior, and generated repositories call application Gen queries. System declarations live in `backend/internal/resource/coredefs`.
@@ -61,3 +61,4 @@ Keep current usage and development guidance in README and `docs/`. Keep agent in
 - Public API usage: `docs/admin-core-usage.md`
 - Model/query and Resource generation: `docs/development.md`
 - Standard CRUD and dedicated system workflows: `docs/resource-migration.md`
+- File storage, presigned uploads and drivers: `docs/storage.md`

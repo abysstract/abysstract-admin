@@ -341,3 +341,99 @@ func TestSQLitePoolDefaults(t *testing.T) {
 		t.Fatalf("pool=%d/%d", cfg.DBMaxOpenConns, cfg.DBMaxIdleConns)
 	}
 }
+
+func validStorageBaseConfig() Config {
+	return Config{
+		Env:      EnvDev,
+		DBDriver: "postgres", DBDSN: "non-default",
+		JWTSecret:           "non-default",
+		JWTExpiresIn:        time.Hour,
+		CORSOrigins:         []string{"https://example.com"},
+		ShutdownTimeout:     30 * time.Second,
+		DBMaxOpenConns:      20,
+		DBMaxIdleConns:      10,
+		LoginMaxFailures:    5,
+		LoginLockoutSeconds: 900,
+		UploadMaxBytes:      1 << 20,
+		AvatarMaxBytes:      1 << 20,
+	}
+}
+
+func TestStorageDefaults(t *testing.T) {
+	c := validStorageBaseConfig()
+	if err := c.Validate(); err != nil {
+		t.Fatalf("zero storage config rejected: %v", err)
+	}
+	if c.StorageDriverOrDefault() != StorageDriverLocal {
+		t.Fatalf("driver = %q", c.StorageDriverOrDefault())
+	}
+	if c.StorageUploadTTLOrDefault() != 15*time.Minute {
+		t.Fatalf("ttl = %s", c.StorageUploadTTLOrDefault())
+	}
+	for _, key := range []string{"ADMIN_STORAGE_DRIVER", "ADMIN_STORAGE_UPLOAD_TTL_SECONDS"} {
+		t.Setenv(key, "")
+	}
+	loaded := Load()
+	if loaded.StorageDriver != StorageDriverLocal || loaded.StorageUploadTTL != 15*time.Minute {
+		t.Fatalf("Load defaults = %q %s", loaded.StorageDriver, loaded.StorageUploadTTL)
+	}
+}
+
+func TestLoadStorageEnv(t *testing.T) {
+	t.Setenv("ADMIN_STORAGE_DRIVER", " S3 ")
+	t.Setenv("ADMIN_STORAGE_PUBLIC_BASE_URL", "https://img.example.com/")
+	t.Setenv("ADMIN_STORAGE_S3_BUCKET", "media")
+	t.Setenv("ADMIN_STORAGE_S3_REGION", "auto")
+	t.Setenv("ADMIN_STORAGE_S3_ENDPOINT", "http://localhost:9000")
+	t.Setenv("ADMIN_STORAGE_S3_PATH_STYLE", "true")
+	t.Setenv("ADMIN_STORAGE_UPLOAD_TTL_SECONDS", "120")
+	t.Setenv("ADMIN_STORAGE_SIGNING_SECRET", "a-signing-secret-long-enough")
+	c := Load()
+	if c.StorageDriver != StorageDriverS3 || c.StorageS3Bucket != "media" || c.StorageS3Region != "auto" ||
+		c.StorageS3Endpoint != "http://localhost:9000" || !c.StorageS3PathStyle || c.StorageUploadTTL != 2*time.Minute ||
+		c.StoragePublicBaseURL != "https://img.example.com/" || c.StorageSigningSecret != "a-signing-secret-long-enough" {
+		t.Fatalf("Load = %+v", c)
+	}
+	if text := c.LogValue().String(); strings.Contains(text, "a-signing-secret") {
+		t.Fatalf("log leaked storage secret: %s", text)
+	}
+}
+
+func TestStorageValidation(t *testing.T) {
+	cases := []struct {
+		name   string
+		mutate func(*Config)
+		want   string
+	}{
+		{"s3 without bucket", func(c *Config) { c.StorageDriver = "s3"; c.StorageS3Region = "us-east-1" }, "ADMIN_STORAGE_S3_BUCKET"},
+		{"s3 without region", func(c *Config) { c.StorageDriver = "s3"; c.StorageS3Bucket = "b" }, "ADMIN_STORAGE_S3_REGION"},
+		{"s3 bad endpoint", func(c *Config) {
+			c.StorageDriver, c.StorageS3Bucket, c.StorageS3Region, c.StorageS3Endpoint = "s3", "b", "r", "localhost:9000"
+		}, "ADMIN_STORAGE_S3_ENDPOINT"},
+		{"bad public url", func(c *Config) { c.StoragePublicBaseURL = "cdn.example.com" }, "ADMIN_STORAGE_PUBLIC_BASE_URL"},
+		{"protocol-relative public url", func(c *Config) { c.StoragePublicBaseURL = "//cdn.example.com/" }, "ADMIN_STORAGE_PUBLIC_BASE_URL"},
+		{"short secret", func(c *Config) { c.StorageSigningSecret = "short" }, "ADMIN_STORAGE_SIGNING_SECRET"},
+		{"ttl too long", func(c *Config) { c.StorageUploadTTL = 8 * 24 * time.Hour }, "ADMIN_STORAGE_UPLOAD_TTL_SECONDS"},
+		{"bad driver name", func(c *Config) { c.StorageDriver = "a/b" }, "ADMIN_STORAGE_DRIVER"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			c := validStorageBaseConfig()
+			tc.mutate(&c)
+			err := c.Validate()
+			if err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("Validate = %v, want mention of %s", err, tc.want)
+			}
+		})
+	}
+	ok := validStorageBaseConfig()
+	ok.StorageDriver, ok.StorageS3Bucket, ok.StorageS3Region = "s3", "media", "us-east-1"
+	ok.StoragePublicBaseURL = "/files/"
+	if err := ok.Validate(); err != nil {
+		t.Fatalf("valid s3 config rejected: %v", err)
+	}
+	t.Setenv("ADMIN_STORAGE_UPLOAD_TTL_SECONDS", "soon")
+	if err := Load().Validate(); err == nil || !strings.Contains(err.Error(), "ADMIN_STORAGE_UPLOAD_TTL_SECONDS") {
+		t.Fatalf("invalid ttl env = %v", err)
+	}
+}

@@ -2,9 +2,12 @@ syntax = "proto3";
 
 package abysstract.admin.v1;
 
+import "google/protobuf/timestamp.proto";
+
 // 文件 / 头像上传服务（需求 9.1–9.4）。
-// 文件内容以 bytes 内联在请求中：脚手架场景 ≤50MB，ConnectRPC 配合 MaxReceiveBytes 足够。
-// 真正大文件场景请二次开发接入对象存储 + 分片上传。
+// UploadFile / UploadAvatar 把文件内容以 bytes 内联在请求中，由服务端写入存储。
+// CreateUpload 返回预签名 PUT，客户端直接把文件传到存储（本地驱动或 S3），
+// 服务端不经手文件内容。存储驱动与配置见 docs/storage.md。
 
 message UploadFileRequest {
   string filename = 1; // 原始文件名（仅用于扩展名推断 + 保存名）
@@ -14,6 +17,7 @@ message UploadFileRequest {
 message UploadFileResponse {
   string url = 1; // 可访问引用标识（相对路径或完整 URL）
   int64 size = 2; // 实际写入字节数
+  string key = 3; // 存储对象键；业务表应保存 key，输出时再解析为 URL
 }
 
 // 头像上传：≤5MB 且类型在图片白名单内则更新当前用户 sys_user.avatar。
@@ -25,9 +29,26 @@ message UploadAvatarRequest {
 }
 message UploadAvatarResponse {
   string url = 1; // 新头像引用（成功后等于 sys_user.avatar）
+  string key = 2; // 存储对象键
+}
+
+// 预签名直传：与 UploadFile 相同的大小与扩展名白名单。
+message CreateUploadRequest {
+  string filename = 1; // 原始文件名（仅用于扩展名校验与对象键后缀）
+  string content_type = 2; // 客户端声明 MIME；服务端按扩展名推断，以响应 headers 为准
+  int64 size = 3; // 文件字节数；上传体必须与之完全一致
+}
+message CreateUploadResponse {
+  string key = 1; // 存储对象键；上传成功后提交给业务接口保存
+  string url = 2; // 上传完成后的访问 URL
+  string upload_url = 3; // 上传地址（本地驱动为相对 API 源站的路径）
+  string method = 4; // HTTP 方法，当前固定为 PUT
+  map<string, string> headers = 5; // 上传时必须原样携带的请求头
+  google.protobuf.Timestamp expires_at = 6; // 上传地址过期时间
 }
 
 service UploadService {
   rpc UploadFile(UploadFileRequest) returns (UploadFileResponse);
   rpc UploadAvatar(UploadAvatarRequest) returns (UploadAvatarResponse);
+  rpc CreateUpload(CreateUploadRequest) returns (CreateUploadResponse);
 }

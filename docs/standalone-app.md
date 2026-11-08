@@ -206,6 +206,8 @@ func main() {
 }
 ```
 
+默认使用本地文件存储。需要 `ADMIN_STORAGE_DRIVER=s3` 时，在 `import` 中加入 `_ "github.com/abysstract/abysstract-admin/backend/storage/s3storage"`，见[文件存储](storage.md#2-切换到-s3-或兼容服务)。
+
 需要自定义路由、中间件或 HTTP 服务时，改用 `adminapp.App.Start` 取得 handler 并自己创建 `http.Server`，写法见[应用启动与关闭](admin-core-usage.md#应用启动与关闭)。
 
 ## 4. 初始化系统表

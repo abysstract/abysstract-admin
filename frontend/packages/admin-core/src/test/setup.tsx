@@ -328,6 +328,7 @@ vi.mock("@ant-design/icons", () => {
     DeleteOutlined: Icon,
     DownloadOutlined: Icon,
     KeyOutlined: Icon,
+    LoadingOutlined: Icon,
     LockOutlined: Icon,
     LoginOutlined: Icon,
     LogoutOutlined: Icon,

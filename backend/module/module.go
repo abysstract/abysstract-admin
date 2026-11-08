@@ -12,6 +12,7 @@ import (
 	"github.com/abysstract/abysstract-admin/backend/adminconfig"
 	"github.com/abysstract/abysstract-admin/backend/permission"
 	"github.com/abysstract/abysstract-admin/backend/resource"
+	"github.com/abysstract/abysstract-admin/backend/storage"
 )
 
 // Runtime is the shared infrastructure supplied by the application to a
@@ -23,6 +24,9 @@ type Runtime struct {
 	Config    adminconfig.Config
 	Context   context.Context
 	DataScope resource.DataScopeProvider
+	// Storage is the application's object storage, shared by every module.
+	// It is borrowed: modules must not close it.
+	Storage storage.Storage
 }
 
 // Definition declares one module. Static Services, Permissions, HTTP, and

@@ -137,12 +137,14 @@ import type { ResourceSchema } from "@abysstract/admin-core/resource/schema";
 import type { ResourceOperations } from "@abysstract/admin-core/resource/operations";
 import { createRelationOptionLoader } from "@abysstract/admin-core/resource/relation";
 import { useSystemClients, useSystemOperations } from "@abysstract/admin-core/system";
+import { DirectImageUpload, useDirectUpload } from "@abysstract/admin-core/upload";
 import { ConnectError } from "@connectrpc/connect";
 export const schema = { name: "demo" } as ResourceSchema;
 export type Ops = ResourceOperations<unknown, string>;
 export const loader = createRelationOptionLoader;
 export const table = ResourceTable;
 export const systemHooks = { useSystemClients, useSystemOperations };
+export const upload = { DirectImageUpload, useDirectUpload };
 export const app = createAdminApp({
   host: {
     apiBaseUrl: "http://localhost:8080",
