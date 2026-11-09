@@ -26,6 +26,7 @@ import (
 	"github.com/abysstract/abysstract-admin/backend/internal/testutil"
 	"github.com/abysstract/abysstract-admin/backend/module"
 	"github.com/abysstract/abysstract-admin/backend/permission"
+	"github.com/abysstract/abysstract-admin/backend/storage/localstorage"
 )
 
 func TestSystemModuleCreateFailsOnEmptyDatabase(t *testing.T) {
@@ -53,7 +54,15 @@ func TestSystemModuleCreateSucceedsOnMigratedDatabase(t *testing.T) {
 	}
 	cfg := testConfig(t)
 	cfg.UploadDir = t.TempDir() + "/uploads"
-	inst, err := def.Create(context.Background(), module.Runtime{DB: db, Config: cfg, Logger: silentLogger()})
+	if _, err := def.Create(context.Background(), module.Runtime{DB: db, Config: cfg, Logger: silentLogger()}); err != ErrMissingStorage {
+		t.Fatalf("Create without storage err = %v", err)
+	}
+	objects, err := localstorage.New(localstorage.Options{Dir: cfg.UploadDir})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = objects.Close() })
+	inst, err := def.Create(context.Background(), module.Runtime{DB: db, Config: cfg, Logger: silentLogger(), Storage: objects})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -180,6 +189,8 @@ func TestSystemAppLoginAndBusinessProbe(t *testing.T) {
 		t.Fatal("empty token")
 	}
 
+	assertPresignedUpload(t, base, login.GetToken())
+
 	client := connect.NewClient(connecthttp.NewTransport(http.DefaultClient, base))
 	err = client.CallUnary(context.Background(), connect.Spec{Procedure: procedure}, &wrapperspb.StringValue{Value: "ping"}, &wrapperspb.StringValue{})
 	if err == nil {
@@ -300,5 +311,60 @@ func TestShutdownDuringSystemCreateCancels(t *testing.T) {
 		}
 	case <-time.After(2 * time.Second):
 		t.Fatal("Create did not observe cancel")
+	}
+}
+
+// assertPresignedUpload drives the default local storage through the running
+// application: CreateUpload, a signed PUT to /static/, then a public GET.
+func assertPresignedUpload(t *testing.T, base, token string) {
+	t.Helper()
+	uploads := adminv1connect.NewUploadServiceClient(connect.NewClient(connecthttp.NewTransport(http.DefaultClient, base)))
+	anon, err := uploads.CreateUpload(context.Background(), &adminv1.CreateUploadRequest{Filename: "a.png", Size: 3})
+	if err == nil || anon != nil {
+		t.Fatal("anonymous CreateUpload succeeded")
+	}
+	ctx, info := connect.NewClientContext(context.Background())
+	info.RequestHeader().Set("Authorization", "Bearer "+token)
+	if _, err := uploads.CreateUpload(ctx, &adminv1.CreateUploadRequest{Filename: "a.exe", Size: 3}); connect.CodeOf(err) != connect.CodeInvalidArgument {
+		t.Fatalf("CreateUpload .exe err = %v", err)
+	}
+	ctx, info = connect.NewClientContext(context.Background())
+	info.RequestHeader().Set("Authorization", "Bearer "+token)
+	up, err := uploads.CreateUpload(ctx, &adminv1.CreateUploadRequest{Filename: "photo.png", Size: 3})
+	if err != nil {
+		t.Fatalf("CreateUpload: %v", err)
+	}
+	if !strings.HasPrefix(up.GetUploadUrl(), "/static/files/") || up.GetMethod() != http.MethodPut {
+		t.Fatalf("CreateUpload = %+v", up)
+	}
+	put := func(body string) int {
+		req, err := http.NewRequest(up.GetMethod(), base+up.GetUploadUrl(), strings.NewReader(body))
+		if err != nil {
+			t.Fatal(err)
+		}
+		for k, v := range up.GetHeaders() {
+			req.Header.Set(k, v)
+		}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp.Body.Close()
+		return resp.StatusCode
+	}
+	if code := put("toolong"); code != http.StatusBadRequest {
+		t.Fatalf("oversized PUT = %d", code)
+	}
+	if code := put("png"); code != http.StatusOK {
+		t.Fatalf("signed PUT = %d", code)
+	}
+	resp, err := http.Get(base + up.GetUrl())
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK || string(body) != "png" || resp.Header.Get("Content-Type") != "image/png" {
+		t.Fatalf("GET %s = %d %q %q", up.GetUrl(), resp.StatusCode, body, resp.Header.Get("Content-Type"))
 	}
 }

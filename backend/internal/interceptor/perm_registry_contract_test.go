@@ -46,6 +46,7 @@ var expectedRequiredPermissions = map[string]string{
 	adminv1connect.LogServiceCleanLoginLogsProcedure:        "system:logininfor:remove",
 	adminv1connect.UploadServiceUploadFileProcedure:         AuthSentinel,
 	adminv1connect.UploadServiceUploadAvatarProcedure:       AuthSentinel,
+	adminv1connect.UploadServiceCreateUploadProcedure:       AuthSentinel,
 	adminv1connect.CommonExportServiceBatchDeleteProcedure:  AuthSentinel,
 	adminv1connect.CommonExportServiceExportExcelProcedure:  AuthSentinel,
 	adminv1connect.CommonExportServiceImportExcelProcedure:  AuthSentinel,

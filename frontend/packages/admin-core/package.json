@@ -44,6 +44,10 @@
       "types": "./dist/system/index.d.ts",
       "import": "./dist/system/index.js"
     },
+    "./upload": {
+      "types": "./dist/upload/index.d.ts",
+      "import": "./dist/upload/index.js"
+    },
     "./styles.css": "./dist/styles.css"
   },
   "scripts": {

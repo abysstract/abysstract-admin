@@ -7,6 +7,23 @@
 
 ## [Unreleased]
 
+### Added
+
+- 可替换的文件存储：公共包 `backend/storage` 定义 `storage.Storage`（`Put`、`Stat`、`PresignPut`、`URL`）、`storage.ErrNotFound` 和对象键工具（`ValidateKey`、`JoinKey`、`RandomKey`）。业务保存对象键，输出时用 `URL(key)` 解析访问地址。见[文件存储](docs/storage.md)。
+- 存储驱动：`storage/localstorage`（默认，本地目录，`/static/` 下提供下载并接收 HMAC 签名的 `PUT` 直传）与 `storage/s3storage`（aws-sdk-go-v2，支持 endpoint 覆盖、路径风格寻址和公开访问前缀，适配 MinIO、R2；只有导入该包的应用才会编译 AWS SDK）。驱动通过 `storage.Register` 注册，应用可接入自己的实现。
+- 配置项 `ADMIN_STORAGE_DRIVER`、`ADMIN_STORAGE_PUBLIC_BASE_URL`、`ADMIN_STORAGE_UPLOAD_TTL_SECONDS`、`ADMIN_STORAGE_SIGNING_SECRET` 与 `ADMIN_STORAGE_S3_BUCKET` / `_REGION` / `_ENDPOINT` / `_PATH_STYLE`，启动时校验。
+- `adminapp.Options.Storage` 注入应用自己的存储实例，`module.Runtime.Storage` 把它交给所有模块；`adminapp.OpenStorage` / `adminapp.StorageConfig` 按配置打开同一驱动，`App.Storage()` 返回运行中的实例。
+- `UploadService.CreateUpload`：按 `UploadFile` 相同的大小上限与扩展名白名单签发预签名上传，返回对象键、访问 URL、上传地址、请求头和过期时间。`UploadFileResponse`、`UploadAvatarResponse` 新增 `key` 字段。
+- 业务自建预签名接口的辅助函数：`storage.UploadPolicy`、`storage.Presign`、`storage.VerifyUpload`、`storage.ContentTypeByExt`、`storage.ImageExts` / `FileExts`。
+- 前端 `@abysstract/admin-core/upload`：`useDirectUpload`（申请地址 → 直传 → 返回 key 与 URL，支持进度与取消、自定义 `presign`）和图片表单项 `DirectImageUpload`（表单值为对象键）。
+
+### Changed
+
+- `UploadFile` / `UploadAvatar` 改为写入 `storage.Storage`；新文件的对象键为 `files/<年>/<月>/<随机名>` 与 `avatars/<年>/<月>/<随机名>`，本地驱动下访问地址仍以 `/static/` 开头，已上传的文件不受影响。头像仍把访问 URL 写入 `sys_user.avatar`。
+- 系统模块要求 `module.Runtime.Storage`，未提供时 `Create` 返回 `system.ErrMissingStorage`。通过 `adminapp` 启动的应用不受影响；直接调用系统模块 `Create` 的测试需要传入存储。
+- `/static/` 只在存储驱动由后端自行提供文件时挂载（本地驱动）。框架保留 `GET /static/` 与 `PUT /static/` 路由；使用本地驱动时 CORS 允许 `PUT`。
+- 自带后台（`backend/internal/app`）导入 `storage/s3storage`，可直接使用 `ADMIN_STORAGE_DRIVER=s3`。
+
 ## [0.3.0] - 2026-11-07
 
 Go 模块与 `@abysstract/admin-core`、`@abysstract/admin-proto` 同步发布 0.3.0。

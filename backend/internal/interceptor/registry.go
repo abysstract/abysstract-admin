@@ -220,6 +220,7 @@ var builtinPermissionEntries = []PermissionEntry{
 	{Procedure: adminv1connect.LogServiceCleanLoginLogsProcedure, Permission: "system:logininfor:remove"},
 	{Procedure: adminv1connect.UploadServiceUploadFileProcedure, Permission: AuthSentinel},
 	{Procedure: adminv1connect.UploadServiceUploadAvatarProcedure, Permission: AuthSentinel},
+	{Procedure: adminv1connect.UploadServiceCreateUploadProcedure, Permission: AuthSentinel},
 	{Procedure: adminv1connect.CommonExportServiceBatchDeleteProcedure, Permission: AuthSentinel},
 	{Procedure: adminv1connect.CommonExportServiceExportExcelProcedure, Permission: AuthSentinel},
 	{Procedure: adminv1connect.CommonExportServiceImportExcelProcedure, Permission: AuthSentinel},

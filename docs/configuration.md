@@ -101,7 +101,9 @@ scrape_configs:
 
 `credentials_file` 的内容与 `ADMIN_METRICS_TOKEN` 相同。
 
-### 上传文件
+### 文件存储
+
+上传文件默认保存在 `ADMIN_UPLOAD_DIR`，由后端在 `/static/` 下提供下载。设置 `ADMIN_STORAGE_DRIVER=s3` 可改用 S3 或 S3 兼容服务。驱动、预签名直传和全部 `ADMIN_STORAGE_*` 变量见[文件存储](storage.md)。
 
 `/static/` 下的上传文件不校验登录，持有链接的人都可以下载。服务端关闭目录列表，并通过 `X-Content-Type-Options: nosniff` 和 CSP 沙箱阻止上传的 HTML、SVG 在后台域名下执行脚本。PDF 不加沙箱，以便浏览器内置阅读器正常显示。
 
@@ -112,6 +114,7 @@ scrape_configs:
 - `ADMIN_JWT_SECRET`：设置为强随机密钥。
 - `ADMIN_DB_DSN`：填写实际部署数据库的连接串。
 - `ADMIN_CORS_ORIGINS`：显式列出允许的前端来源。
+- 使用 `s3` 存储驱动时，`ADMIN_STORAGE_S3_BUCKET` 和 `ADMIN_STORAGE_S3_REGION` 必填（开发模式同样检查）。
 
 本地示例密钥、示例 PostgreSQL 连接串和通配 CORS 来源仅用于开发环境。开发模式会为这些配置打印告警。
 

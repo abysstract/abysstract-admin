@@ -5,6 +5,7 @@ package adminconfig
 import (
 	"fmt"
 	"log/slog"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -39,6 +40,17 @@ const (
 
 	defaultUploadMaxBytes = 50 * 1024 * 1024 // 50 MB
 	defaultAvatarMaxBytes = 5 * 1024 * 1024  // 5 MB
+
+	defaultStorageDriver    = StorageDriverLocal
+	defaultStorageUploadTTL = 15 * time.Minute
+	maxStorageUploadTTL     = 7 * 24 * time.Hour
+	minStorageSecretLength  = 16
+)
+
+// 内置存储驱动名。其他驱动可由应用通过 storage.Register 注册后按名称选择。
+const (
+	StorageDriverLocal = "local"
+	StorageDriverS3    = "s3"
 )
 
 // 运行模式。
@@ -74,9 +86,19 @@ type Config struct {
 	LoginLockoutSeconds int // 锁定时长（≥1s）
 
 	// 上传限制（需求 9.1–9.4）
-	UploadMaxBytes int64 // 通用上传大小上限
-	AvatarMaxBytes int64 // 头像上传大小上限
-	UploadDir      string
+	UploadMaxBytes int64  // 通用上传大小上限
+	AvatarMaxBytes int64  // 头像上传大小上限
+	UploadDir      string // 本地存储驱动的根目录
+
+	// 对象存储（见 docs/storage.md）
+	StorageDriver        string        // 驱动名：local（默认）| s3 | 应用注册的驱动；空值按 local
+	StoragePublicBaseURL string        // 对象访问 URL 前缀；空值使用驱动默认值
+	StorageSigningSecret string        // 本地驱动预签名上传密钥；空值时由 JWTSecret 派生
+	StorageUploadTTL     time.Duration // 预签名上传有效期；0 使用默认 15 分钟
+	StorageS3Bucket      string
+	StorageS3Region      string
+	StorageS3Endpoint    string // S3 兼容服务地址（MinIO、R2 等）
+	StorageS3PathStyle   bool   // 使用 endpoint/bucket/key 路径风格寻址
 
 	// 解析错误按校验边界保留；Validate 汇总应用与数据库错误，
 	// ValidateDatabase 汇总数据库错误，ValidateDatabaseDriver 校验离线类型。
@@ -117,6 +139,14 @@ func Load() *Config {
 		AvatarMaxBytes:      defaultAvatarMaxBytes,
 
 		UploadDir: getenv("ADMIN_UPLOAD_DIR", "./uploads"),
+
+		StorageDriver:        strings.ToLower(strings.TrimSpace(getenv("ADMIN_STORAGE_DRIVER", defaultStorageDriver))),
+		StoragePublicBaseURL: strings.TrimSpace(os.Getenv("ADMIN_STORAGE_PUBLIC_BASE_URL")),
+		StorageSigningSecret: os.Getenv("ADMIN_STORAGE_SIGNING_SECRET"),
+		StorageS3Bucket:      strings.TrimSpace(os.Getenv("ADMIN_STORAGE_S3_BUCKET")),
+		StorageS3Region:      strings.TrimSpace(os.Getenv("ADMIN_STORAGE_S3_REGION")),
+		StorageS3Endpoint:    strings.TrimSpace(os.Getenv("ADMIN_STORAGE_S3_ENDPOINT")),
+		StorageS3PathStyle:   getenv("ADMIN_STORAGE_S3_PATH_STYLE", "") == "true",
 	}
 
 	// 解析数值/时长类配置：仅当环境变量「已设置」时尝试解析；
@@ -134,6 +164,7 @@ func Load() *Config {
 	c.LoginLockoutSeconds = c.getInt("ADMIN_LOGIN_LOCKOUT_SECONDS", defaultLoginLockoutSeconds)
 	c.UploadMaxBytes = c.getInt64("ADMIN_UPLOAD_MAX_BYTES", defaultUploadMaxBytes)
 	c.AvatarMaxBytes = c.getInt64("ADMIN_AVATAR_MAX_BYTES", defaultAvatarMaxBytes)
+	c.StorageUploadTTL = c.getDuration("ADMIN_STORAGE_UPLOAD_TTL_SECONDS", defaultStorageUploadTTL)
 
 	return c
 }
@@ -259,10 +290,67 @@ func (c *Config) validateRange() error {
 	if c.AvatarMaxBytes <= 0 {
 		problems = append(problems, "ADMIN_AVATAR_MAX_BYTES 必须 > 0")
 	}
+	problems = append(problems, c.storageProblems()...)
 	if len(problems) == 0 {
 		return nil
 	}
 	return fmt.Errorf("配置范围校验失败:\n  - %s", strings.Join(problems, "\n  - "))
+}
+
+// StorageDriverOrDefault 返回存储驱动名；未配置时为 local。
+func (c *Config) StorageDriverOrDefault() string {
+	if c.StorageDriver == "" {
+		return defaultStorageDriver
+	}
+	return c.StorageDriver
+}
+
+// StorageUploadTTLOrDefault 返回预签名上传有效期；未配置时为 15 分钟。
+func (c *Config) StorageUploadTTLOrDefault() time.Duration {
+	if c.StorageUploadTTL <= 0 {
+		return defaultStorageUploadTTL
+	}
+	return c.StorageUploadTTL
+}
+
+// storageProblems 校验存储配置（dev/prod 一致强制）。驱动名本身是否已注册
+// 由 adminapp 在创建应用时检查。
+func (c *Config) storageProblems() []string {
+	var problems []string
+	driver := c.StorageDriverOrDefault()
+	if strings.ContainsAny(driver, " /\\") {
+		problems = append(problems, fmt.Sprintf("ADMIN_STORAGE_DRIVER 非法（got=%q）", driver))
+	}
+	if driver == StorageDriverS3 {
+		if c.StorageS3Bucket == "" {
+			problems = append(problems, "ADMIN_STORAGE_DRIVER=s3 时必须设置 ADMIN_STORAGE_S3_BUCKET")
+		}
+		if c.StorageS3Region == "" {
+			problems = append(problems, "ADMIN_STORAGE_DRIVER=s3 时必须设置 ADMIN_STORAGE_S3_REGION（R2 使用 auto）")
+		}
+		if c.StorageS3Endpoint != "" && !isHTTPURL(c.StorageS3Endpoint) {
+			problems = append(problems, fmt.Sprintf("ADMIN_STORAGE_S3_ENDPOINT 必须是 http(s) 地址（got=%q）", c.StorageS3Endpoint))
+		}
+	}
+	if u := c.StoragePublicBaseURL; u != "" && !strings.HasPrefix(u, "/") && !isHTTPURL(u) {
+		problems = append(problems, fmt.Sprintf("ADMIN_STORAGE_PUBLIC_BASE_URL 必须是 http(s) 地址或以 / 开头的路径（got=%q）", u))
+	}
+	if strings.HasPrefix(c.StoragePublicBaseURL, "//") {
+		problems = append(problems, "ADMIN_STORAGE_PUBLIC_BASE_URL 不能使用协议相对地址 //")
+	}
+	if c.StorageSigningSecret != "" && len(c.StorageSigningSecret) < minStorageSecretLength {
+		problems = append(problems, fmt.Sprintf("ADMIN_STORAGE_SIGNING_SECRET 至少 %d 字节", minStorageSecretLength))
+	}
+	if c.StorageUploadTTL < 0 || c.StorageUploadTTL > maxStorageUploadTTL {
+		problems = append(problems, fmt.Sprintf("ADMIN_STORAGE_UPLOAD_TTL_SECONDS 越界（got=%ds, want=1..%d）",
+			int(c.StorageUploadTTL/time.Second), int(maxStorageUploadTTL/time.Second)))
+	}
+	return problems
+}
+
+func isHTTPURL(raw string) bool {
+	u, err := url.Parse(raw)
+	return err == nil && (u.Scheme == "http" || u.Scheme == "https") && u.Host != ""
 }
 
 // validateSecurity 检查敏感默认值：prod 模式拒绝，dev 仅告警。
@@ -414,5 +502,13 @@ func (c Config) LogValue() slog.Value {
 		slog.Int64("upload_max_bytes", c.UploadMaxBytes),
 		slog.Int64("avatar_max_bytes", c.AvatarMaxBytes),
 		slog.String("upload_dir", c.UploadDir),
+		slog.String("storage_driver", c.StorageDriverOrDefault()),
+		slog.String("storage_public_base_url", c.StoragePublicBaseURL),
+		slog.Bool("storage_signing_secret_set", c.StorageSigningSecret != ""),
+		slog.Duration("storage_upload_ttl", c.StorageUploadTTLOrDefault()),
+		slog.String("storage_s3_bucket", c.StorageS3Bucket),
+		slog.String("storage_s3_region", c.StorageS3Region),
+		slog.String("storage_s3_endpoint", c.StorageS3Endpoint),
+		slog.Bool("storage_s3_path_style", c.StorageS3PathStyle),
 	)
 }

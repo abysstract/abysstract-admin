@@ -28,6 +28,8 @@ const (
 	UploadServiceUploadFileProcedure = "/abysstract.admin.v1.UploadService/UploadFile"
 	// UploadServiceUploadAvatarProcedure is the procedure name of the UploadService's UploadAvatar RPC.
 	UploadServiceUploadAvatarProcedure = "/abysstract.admin.v1.UploadService/UploadAvatar"
+	// UploadServiceCreateUploadProcedure is the procedure name of the UploadService's CreateUpload RPC.
+	UploadServiceCreateUploadProcedure = "/abysstract.admin.v1.UploadService/CreateUpload"
 )
 
 var (
@@ -45,12 +47,20 @@ var (
 			Procedure:  UploadServiceUploadAvatarProcedure,
 		}
 	})
+	uploadServiceCreateUploadSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_abysstract_admin_v1_upload_proto.Services().ByName("UploadService").Methods().ByName("CreateUpload"),
+			Procedure:  UploadServiceCreateUploadProcedure,
+		}
+	})
 )
 
 // UploadServiceClient is a client for the abysstract.admin.v1.UploadService service.
 type UploadServiceClient interface {
 	UploadFile(context.Context, *v1.UploadFileRequest) (*v1.UploadFileResponse, error)
 	UploadAvatar(context.Context, *v1.UploadAvatarRequest) (*v1.UploadAvatarResponse, error)
+	CreateUpload(context.Context, *v1.CreateUploadRequest) (*v1.CreateUploadResponse, error)
 }
 
 // NewUploadServiceClient constructs a client for the abysstract.admin.v1.UploadService service.
@@ -63,6 +73,7 @@ func NewUploadServiceClient(client *connect.Client) UploadServiceClient {
 type UploadServiceHandler interface {
 	UploadFile(context.Context, *v1.UploadFileRequest) (*v1.UploadFileResponse, error)
 	UploadAvatar(context.Context, *v1.UploadAvatarRequest) (*v1.UploadAvatarResponse, error)
+	CreateUpload(context.Context, *v1.CreateUploadRequest) (*v1.CreateUploadResponse, error)
 }
 
 // RegisterUploadServiceHandler registers svc as the abysstract.admin.v1.UploadService
@@ -72,6 +83,7 @@ func RegisterUploadServiceHandler(server *connect.Server, svc UploadServiceHandl
 	server.Register(
 		connect.Method{Spec: uploadServiceUploadFileSpec(), Handler: adapter.uploadFile},
 		connect.Method{Spec: uploadServiceUploadAvatarSpec(), Handler: adapter.uploadAvatar},
+		connect.Method{Spec: uploadServiceCreateUploadSpec(), Handler: adapter.createUpload},
 	)
 }
 
@@ -84,6 +96,10 @@ func (UnimplementedUploadServiceHandler) UploadFile(context.Context, *v1.UploadF
 
 func (UnimplementedUploadServiceHandler) UploadAvatar(context.Context, *v1.UploadAvatarRequest) (*v1.UploadAvatarResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, "abysstract.admin.v1.UploadService.UploadAvatar is not implemented")
+}
+
+func (UnimplementedUploadServiceHandler) CreateUpload(context.Context, *v1.CreateUploadRequest) (*v1.CreateUploadResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "abysstract.admin.v1.UploadService.CreateUpload is not implemented")
 }
 
 type uploadServiceClient struct {
@@ -101,6 +117,14 @@ func (c *uploadServiceClient) UploadFile(ctx context.Context, req *v1.UploadFile
 func (c *uploadServiceClient) UploadAvatar(ctx context.Context, req *v1.UploadAvatarRequest) (*v1.UploadAvatarResponse, error) {
 	var res v1.UploadAvatarResponse
 	if err := c.client.CallUnary(ctx, uploadServiceUploadAvatarSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *uploadServiceClient) CreateUpload(ctx context.Context, req *v1.CreateUploadRequest) (*v1.CreateUploadResponse, error) {
+	var res v1.CreateUploadResponse
+	if err := c.client.CallUnary(ctx, uploadServiceCreateUploadSpec(), req, &res); err != nil {
 		return nil, err
 	}
 	return &res, nil
@@ -126,6 +150,18 @@ func (h uploadServiceHandler) uploadAvatar(ctx context.Context, _ connect.Spec, 
 		return err
 	}
 	res, err := h.svc.UploadAvatar(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h uploadServiceHandler) createUpload(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.CreateUploadRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.CreateUpload(ctx, &req)
 	if err != nil {
 		return err
 	}
