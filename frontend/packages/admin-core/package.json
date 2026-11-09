@@ -1,6 +1,6 @@
 {
   "name": "@abysstract/admin-core",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "React admin runtime, resource CRUD components and system pages for abysstract-admin.",
   "license": "Apache-2.0",
   "repository": {
@@ -57,7 +57,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@abysstract/admin-proto": "0.3.0"
+    "@abysstract/admin-proto": "0.4.0"
   },
   "peerDependencies": {
     "@ant-design/icons": "^5.4.0",
