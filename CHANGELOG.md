@@ -7,6 +7,10 @@
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-09
+
+Go 模块与 `@abysstract/admin-core`、`@abysstract/admin-proto` 同步发布 0.4.0。新增可替换的文件存储与前端直传；直接调用系统模块 `Create` 的代码需要提供 `module.Runtime.Storage`（见 Changed）。
+
 ### Added
 
 - 可替换的文件存储：公共包 `backend/storage` 定义 `storage.Storage`（`Put`、`Stat`、`PresignPut`、`URL`）、`storage.ErrNotFound` 和对象键工具（`ValidateKey`、`JoinKey`、`RandomKey`）。业务保存对象键，输出时用 `URL(key)` 解析访问地址。见[文件存储](docs/storage.md)。
@@ -80,7 +84,8 @@ Go 模块与 `@abysstract/admin-core`、`@abysstract/admin-proto` 同步发布 0
 
 - `modelgen` 按 `<前缀>_` 边界选择模块表，`tablePrefix` 不带下划线时不再选中其他模块的表。
 
-[Unreleased]: https://github.com/abysstract/abysstract-admin/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/abysstract/abysstract-admin/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/abysstract/abysstract-admin/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/abysstract/abysstract-admin/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/abysstract/abysstract-admin/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/abysstract/abysstract-admin/releases/tag/v0.1.0

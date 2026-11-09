@@ -7,7 +7,7 @@
 Go 模块路径是 `github.com/abysstract/abysstract-admin`，`go.mod` 位于仓库根目录，代码位于 `backend/`。在业务应用中添加依赖：
 
 ```bash
-go get github.com/abysstract/abysstract-admin@v0.3.0
+go get github.com/abysstract/abysstract-admin@v0.4.0
 ```
 
 Go 模块与 npm 包共用同一个版本 tag（`vX.Y.Z`），升级时把 Go 依赖和两个前端包调整到同一版本。Go 模块的首个版本是 `v0.2.0`；`v0.1.0` 只发布了前端包。
