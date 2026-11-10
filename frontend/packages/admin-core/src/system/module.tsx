@@ -1,6 +1,7 @@
 import { lazy, type ReactNode } from "react";
 import {
   ApartmentOutlined,
+  ApiOutlined,
   BookOutlined,
   LoginOutlined,
   MenuOutlined,
@@ -23,6 +24,7 @@ export const CORE_SYSTEM_PAGE_KEYS = [
   "system/notice/index",
   "monitor/operlog/index",
   "monitor/logininfor/index",
+  "monitor/accesslog/index",
   "dashboard/index",
   "profile/index",
 ] as const;
@@ -37,6 +39,7 @@ const pages = {
   "system/notice/index": lazy(() => import("../pages/system/NoticeList")),
   "monitor/operlog/index": lazy(() => import("../pages/system/OperLogList")),
   "monitor/logininfor/index": lazy(() => import("../pages/system/LoginLogList")),
+  "monitor/accesslog/index": lazy(() => import("../pages/system/AccessLogList")),
   "dashboard/index": lazy(() => import("../pages/dashboard")),
   "profile/index": lazy(() => import("../pages/profile")),
 } as const;
@@ -52,6 +55,7 @@ const icons: Readonly<Record<string, ReactNode>> = {
   notification: <NotificationOutlined />,
   profile: <ProfileOutlined />,
   login: <LoginOutlined />,
+  api: <ApiOutlined />,
 };
 
 export const coreSystemModule: AdminFrontendModule = Object.freeze({

@@ -210,6 +210,14 @@ vi.mock("antd", () => {
     ),
     Dropdown: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
     Tag: passThrough,
+    Descriptions: Object.assign(passThrough, {
+      Item: ({ label, children }: { label?: ReactNode; children?: ReactNode }) => (
+        <div>
+          <span>{label}</span>
+          <span>{children}</span>
+        </div>
+      ),
+    }),
     Form,
     Input,
     Popconfirm: (props: Record<string, unknown>) => <>{props.children as ReactNode}</>,
@@ -343,6 +351,7 @@ vi.mock("@ant-design/icons", () => {
     ToolOutlined: Icon,
     NotificationOutlined: Icon,
     ProfileOutlined: Icon,
+    ApiOutlined: Icon,
   };
 });
 

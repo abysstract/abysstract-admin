@@ -45,6 +45,16 @@ const (
 	defaultStorageUploadTTL = 15 * time.Minute
 	maxStorageUploadTTL     = 7 * 24 * time.Hour
 	minStorageSecretLength  = 16
+
+	defaultAccessLogQueueSize     = 4096
+	defaultAccessLogBatchSize     = 200
+	defaultAccessLogFlushInterval = time.Second
+	defaultAccessLogRetentionDays = 30
+	maxAccessLogQueueSize         = 1_000_000
+	maxAccessLogBatchSize         = 10_000
+	minAccessLogFlushInterval     = 10 * time.Millisecond
+	maxAccessLogFlushInterval     = time.Minute
+	maxAccessLogRetentionDays     = 3650
 )
 
 // 内置存储驱动名。其他驱动可由应用通过 storage.Register 注册后按名称选择。
@@ -100,6 +110,13 @@ type Config struct {
 	StorageS3Endpoint    string // S3 兼容服务地址（MinIO、R2 等）
 	StorageS3PathStyle   bool   // 使用 endpoint/bucket/key 路径风格寻址
 
+	// 请求日志（见 docs/access-log.md）
+	AccessLogSinks         []string      // sink 名列表；Load 在未设置时为 db,stdout；空列表关闭请求日志
+	AccessLogQueueSize     int           // 待写队列容量；0 使用默认 4096，队列满时丢弃
+	AccessLogBatchSize     int           // 每批写入条数；0 使用默认 200
+	AccessLogFlushInterval time.Duration // 批次最长等待；0 使用默认 1s
+	AccessLogRetentionDays int           // db sink 保留天数；0 永久保留（Load 默认 30）
+
 	// 解析错误按校验边界保留；Validate 汇总应用与数据库错误，
 	// ValidateDatabase 汇总数据库错误，ValidateDatabaseDriver 校验离线类型。
 	parseErrs         []string
@@ -147,6 +164,8 @@ func Load() *Config {
 		StorageS3Region:      strings.TrimSpace(os.Getenv("ADMIN_STORAGE_S3_REGION")),
 		StorageS3Endpoint:    strings.TrimSpace(os.Getenv("ADMIN_STORAGE_S3_ENDPOINT")),
 		StorageS3PathStyle:   getenv("ADMIN_STORAGE_S3_PATH_STYLE", "") == "true",
+
+		AccessLogSinks: parseAccessLogSinks(),
 	}
 
 	// 解析数值/时长类配置：仅当环境变量「已设置」时尝试解析；
@@ -165,6 +184,10 @@ func Load() *Config {
 	c.UploadMaxBytes = c.getInt64("ADMIN_UPLOAD_MAX_BYTES", defaultUploadMaxBytes)
 	c.AvatarMaxBytes = c.getInt64("ADMIN_AVATAR_MAX_BYTES", defaultAvatarMaxBytes)
 	c.StorageUploadTTL = c.getDuration("ADMIN_STORAGE_UPLOAD_TTL_SECONDS", defaultStorageUploadTTL)
+	c.AccessLogQueueSize = c.getInt("ADMIN_ACCESS_LOG_QUEUE_SIZE", defaultAccessLogQueueSize)
+	c.AccessLogBatchSize = c.getInt("ADMIN_ACCESS_LOG_BATCH_SIZE", defaultAccessLogBatchSize)
+	c.AccessLogFlushInterval = time.Duration(c.getInt("ADMIN_ACCESS_LOG_FLUSH_INTERVAL_MS", int(defaultAccessLogFlushInterval/time.Millisecond))) * time.Millisecond
+	c.AccessLogRetentionDays = c.getInt("ADMIN_ACCESS_LOG_RETENTION_DAYS", defaultAccessLogRetentionDays)
 
 	return c
 }
@@ -291,10 +314,69 @@ func (c *Config) validateRange() error {
 		problems = append(problems, "ADMIN_AVATAR_MAX_BYTES 必须 > 0")
 	}
 	problems = append(problems, c.storageProblems()...)
+	problems = append(problems, c.accessLogProblems()...)
 	if len(problems) == 0 {
 		return nil
 	}
 	return fmt.Errorf("配置范围校验失败:\n  - %s", strings.Join(problems, "\n  - "))
+}
+
+// DefaultAccessLogSinks 是 Load 在未设置 ADMIN_ACCESS_LOG_SINKS 时使用的 sink 列表。
+const DefaultAccessLogSinks = "db,stdout"
+
+// parseAccessLogSinks 读取 ADMIN_ACCESS_LOG_SINKS：未设置时使用默认列表；
+// 设置为空串或 none 时关闭请求日志。名称去空白、转小写并去重。
+func parseAccessLogSinks() []string {
+	raw, ok := os.LookupEnv("ADMIN_ACCESS_LOG_SINKS")
+	if !ok {
+		raw = DefaultAccessLogSinks
+	}
+	if strings.EqualFold(strings.TrimSpace(raw), "none") {
+		return nil
+	}
+	var out []string
+	seen := map[string]bool{}
+	for _, item := range strings.Split(raw, ",") {
+		name := strings.ToLower(strings.TrimSpace(item))
+		if name == "" || seen[name] {
+			continue
+		}
+		seen[name] = true
+		out = append(out, name)
+	}
+	return out
+}
+
+// AccessLogRetention 返回 db sink 的保留时长；0 表示永久保留。
+func (c *Config) AccessLogRetention() time.Duration {
+	if c.AccessLogRetentionDays <= 0 {
+		return 0
+	}
+	return time.Duration(c.AccessLogRetentionDays) * 24 * time.Hour
+}
+
+// accessLogProblems 校验请求日志配置。sink 名是否已注册由 adminapp 在创建应用时检查。
+func (c *Config) accessLogProblems() []string {
+	var problems []string
+	for _, name := range c.AccessLogSinks {
+		if name == "" || strings.ContainsAny(name, " /\\,") {
+			problems = append(problems, fmt.Sprintf("ADMIN_ACCESS_LOG_SINKS 含非法名称（got=%q）", name))
+		}
+	}
+	if c.AccessLogQueueSize < 0 || c.AccessLogQueueSize > maxAccessLogQueueSize {
+		problems = append(problems, fmt.Sprintf("ADMIN_ACCESS_LOG_QUEUE_SIZE 越界（got=%d, want=1..%d）", c.AccessLogQueueSize, maxAccessLogQueueSize))
+	}
+	if c.AccessLogBatchSize < 0 || c.AccessLogBatchSize > maxAccessLogBatchSize {
+		problems = append(problems, fmt.Sprintf("ADMIN_ACCESS_LOG_BATCH_SIZE 越界（got=%d, want=1..%d）", c.AccessLogBatchSize, maxAccessLogBatchSize))
+	}
+	if c.AccessLogFlushInterval != 0 && (c.AccessLogFlushInterval < minAccessLogFlushInterval || c.AccessLogFlushInterval > maxAccessLogFlushInterval) {
+		problems = append(problems, fmt.Sprintf("ADMIN_ACCESS_LOG_FLUSH_INTERVAL_MS 越界（got=%d, want=%d..%d）",
+			c.AccessLogFlushInterval/time.Millisecond, minAccessLogFlushInterval/time.Millisecond, maxAccessLogFlushInterval/time.Millisecond))
+	}
+	if c.AccessLogRetentionDays < 0 || c.AccessLogRetentionDays > maxAccessLogRetentionDays {
+		problems = append(problems, fmt.Sprintf("ADMIN_ACCESS_LOG_RETENTION_DAYS 越界（got=%d, want=0..%d）", c.AccessLogRetentionDays, maxAccessLogRetentionDays))
+	}
+	return problems
 }
 
 // StorageDriverOrDefault 返回存储驱动名；未配置时为 local。
@@ -432,6 +514,9 @@ func (c Config) Clone() Config {
 	if c.CORSOrigins != nil {
 		out.CORSOrigins = append([]string(nil), c.CORSOrigins...)
 	}
+	if c.AccessLogSinks != nil {
+		out.AccessLogSinks = append([]string(nil), c.AccessLogSinks...)
+	}
 	if c.parseErrs != nil {
 		out.parseErrs = append([]string(nil), c.parseErrs...)
 	}
@@ -510,5 +595,10 @@ func (c Config) LogValue() slog.Value {
 		slog.String("storage_s3_region", c.StorageS3Region),
 		slog.String("storage_s3_endpoint", c.StorageS3Endpoint),
 		slog.Bool("storage_s3_path_style", c.StorageS3PathStyle),
+		slog.String("access_log_sinks", strings.Join(c.AccessLogSinks, ",")),
+		slog.Int("access_log_queue_size", c.AccessLogQueueSize),
+		slog.Int("access_log_batch_size", c.AccessLogBatchSize),
+		slog.Duration("access_log_flush_interval", c.AccessLogFlushInterval),
+		slog.Int("access_log_retention_days", c.AccessLogRetentionDays),
 	)
 }

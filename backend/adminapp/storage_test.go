@@ -29,7 +29,7 @@ func testHandler(t *testing.T, cfg adminconfig.Config, objects storage.Storage) 
 	t.Helper()
 	reg := prometheus.NewRegistry()
 	h, err := buildHandler(cfg, slog.New(slog.NewTextHandler(io.Discard, nil)), []string{http.MethodGet, http.MethodPost},
-		nil, nil, connect.NewServer(), connecthttp.WithReadMaxBytes(1<<20), httpSecurity{}, objects, nopPinger{}, reg, reg)
+		nil, nil, connect.NewServer(), connecthttp.WithReadMaxBytes(1<<20), httpSecurity{}, objects, nil, nopPinger{}, reg, reg)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -118,7 +118,7 @@ func TestBuildHandlerRejectsOtherMountPath(t *testing.T) {
 	defer st.Close()
 	reg := prometheus.NewRegistry()
 	_, err = buildHandler(adminconfig.Config{}, slog.New(slog.NewTextHandler(io.Discard, nil)), []string{http.MethodGet},
-		nil, nil, connect.NewServer(), connecthttp.WithReadMaxBytes(1<<20), httpSecurity{}, wrongMount{st}, nopPinger{}, reg, reg)
+		nil, nil, connect.NewServer(), connecthttp.WithReadMaxBytes(1<<20), httpSecurity{}, wrongMount{st}, nil, nopPinger{}, reg, reg)
 	if err == nil || !strings.Contains(err.Error(), "mount path") {
 		t.Fatalf("buildHandler = %v", err)
 	}

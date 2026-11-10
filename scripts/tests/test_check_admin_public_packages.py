@@ -20,6 +20,7 @@ EXPECTED_PACKAGES = (
     "resource", "module", "permission", "resourcegen", "coremigrations",
     "database", "system", "adminconfig", "identity", "adminapp", "moduleseed",
     "storage", "storage/localstorage", "storage/s3storage",
+    "accesslog", "accesslog/stdoutsink", "accesslog/dbsink",
 )
 
 

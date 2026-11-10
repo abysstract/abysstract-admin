@@ -584,6 +584,583 @@ func (*CleanLoginLogsResponse) Descriptor() ([]byte, []int) {
 	return file_abysstract_admin_v1_log_proto_rawDescGZIP(), []int{9}
 }
 
+// 请求日志（每个请求一条，由可替换的 sink 异步写入；队列满时丢弃）
+type AccessLog struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Time          *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=time,proto3" json:"time,omitempty"` // 请求开始时间
+	RequestId     string                 `protobuf:"bytes,3,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	Kind          string                 `protobuf:"bytes,4,opt,name=kind,proto3" json:"kind,omitempty"`                                        // rpc | http
+	Service       string                 `protobuf:"bytes,5,opt,name=service,proto3" json:"service,omitempty"`                                  // Connect 服务全名
+	Procedure     string                 `protobuf:"bytes,6,opt,name=procedure,proto3" json:"procedure,omitempty"`                              // Connect 过程，如 /abysstract.admin.v1.UserService/ListUsers
+	Method        string                 `protobuf:"bytes,7,opt,name=method,proto3" json:"method,omitempty"`                                    // HTTP 方法
+	Path          string                 `protobuf:"bytes,8,opt,name=path,proto3" json:"path,omitempty"`                                        // HTTP 路径
+	PrincipalType string                 `protobuf:"bytes,9,opt,name=principal_type,json=principalType,proto3" json:"principal_type,omitempty"` // user | api_credential | 应用自定义；匿名为空
+	PrincipalId   string                 `protobuf:"bytes,10,opt,name=principal_id,json=principalId,proto3" json:"principal_id,omitempty"`
+	PrincipalName string                 `protobuf:"bytes,11,opt,name=principal_name,json=principalName,proto3" json:"principal_name,omitempty"`
+	ClientIp      string                 `protobuf:"bytes,12,opt,name=client_ip,json=clientIp,proto3" json:"client_ip,omitempty"`
+	UserAgent     string                 `protobuf:"bytes,13,opt,name=user_agent,json=userAgent,proto3" json:"user_agent,omitempty"`
+	Code          string                 `protobuf:"bytes,14,opt,name=code,proto3" json:"code,omitempty"`      // Connect 错误码（ok、not_found 等）；普通 HTTP 请求为空
+	Status        int32                  `protobuf:"varint,15,opt,name=status,proto3" json:"status,omitempty"` // HTTP 状态码；未知为 0
+	Success       bool                   `protobuf:"varint,16,opt,name=success,proto3" json:"success,omitempty"`
+	Error         string                 `protobuf:"bytes,17,opt,name=error,proto3" json:"error,omitempty"`                              // 错误信息（已截断）
+	DurationUs    int64                  `protobuf:"varint,18,opt,name=duration_us,json=durationUs,proto3" json:"duration_us,omitempty"` // 耗时（微秒）
+	AttrsJson     string                 `protobuf:"bytes,19,opt,name=attrs_json,json=attrsJson,proto3" json:"attrs_json,omitempty"`     // 业务字段的 JSON 对象文本；无业务字段时为空
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AccessLog) Reset() {
+	*x = AccessLog{}
+	mi := &file_abysstract_admin_v1_log_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AccessLog) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AccessLog) ProtoMessage() {}
+
+func (x *AccessLog) ProtoReflect() protoreflect.Message {
+	mi := &file_abysstract_admin_v1_log_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AccessLog.ProtoReflect.Descriptor instead.
+func (*AccessLog) Descriptor() ([]byte, []int) {
+	return file_abysstract_admin_v1_log_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *AccessLog) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *AccessLog) GetTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.Time
+	}
+	return nil
+}
+
+func (x *AccessLog) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
+func (x *AccessLog) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
+func (x *AccessLog) GetService() string {
+	if x != nil {
+		return x.Service
+	}
+	return ""
+}
+
+func (x *AccessLog) GetProcedure() string {
+	if x != nil {
+		return x.Procedure
+	}
+	return ""
+}
+
+func (x *AccessLog) GetMethod() string {
+	if x != nil {
+		return x.Method
+	}
+	return ""
+}
+
+func (x *AccessLog) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *AccessLog) GetPrincipalType() string {
+	if x != nil {
+		return x.PrincipalType
+	}
+	return ""
+}
+
+func (x *AccessLog) GetPrincipalId() string {
+	if x != nil {
+		return x.PrincipalId
+	}
+	return ""
+}
+
+func (x *AccessLog) GetPrincipalName() string {
+	if x != nil {
+		return x.PrincipalName
+	}
+	return ""
+}
+
+func (x *AccessLog) GetClientIp() string {
+	if x != nil {
+		return x.ClientIp
+	}
+	return ""
+}
+
+func (x *AccessLog) GetUserAgent() string {
+	if x != nil {
+		return x.UserAgent
+	}
+	return ""
+}
+
+func (x *AccessLog) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+func (x *AccessLog) GetStatus() int32 {
+	if x != nil {
+		return x.Status
+	}
+	return 0
+}
+
+func (x *AccessLog) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *AccessLog) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
+func (x *AccessLog) GetDurationUs() int64 {
+	if x != nil {
+		return x.DurationUs
+	}
+	return 0
+}
+
+func (x *AccessLog) GetAttrsJson() string {
+	if x != nil {
+		return x.AttrsJson
+	}
+	return ""
+}
+
+type ListAccessLogsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Page          *PageRequest           `protobuf:"bytes,1,opt,name=page,proto3" json:"page,omitempty"`
+	StartTime     *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=start_time,json=startTime,proto3" json:"start_time,omitempty"` // 含
+	EndTime       *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=end_time,json=endTime,proto3" json:"end_time,omitempty"`       // 不含
+	Principal     string                 `protobuf:"bytes,4,opt,name=principal,proto3" json:"principal,omitempty"`                  // 精确匹配调用方 ID 或名称
+	Procedure     string                 `protobuf:"bytes,5,opt,name=procedure,proto3" json:"procedure,omitempty"`                  // 以 / 开头为前缀匹配，否则为包含匹配；同时匹配 HTTP 路径
+	Result        string                 `protobuf:"bytes,6,opt,name=result,proto3" json:"result,omitempty"`                        // 空 | success | failure
+	Code          string                 `protobuf:"bytes,7,opt,name=code,proto3" json:"code,omitempty"`                            // 精确匹配 Connect 错误码
+	RequestId     string                 `protobuf:"bytes,8,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	PrincipalType string                 `protobuf:"bytes,9,opt,name=principal_type,json=principalType,proto3" json:"principal_type,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListAccessLogsRequest) Reset() {
+	*x = ListAccessLogsRequest{}
+	mi := &file_abysstract_admin_v1_log_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListAccessLogsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListAccessLogsRequest) ProtoMessage() {}
+
+func (x *ListAccessLogsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_abysstract_admin_v1_log_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListAccessLogsRequest.ProtoReflect.Descriptor instead.
+func (*ListAccessLogsRequest) Descriptor() ([]byte, []int) {
+	return file_abysstract_admin_v1_log_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *ListAccessLogsRequest) GetPage() *PageRequest {
+	if x != nil {
+		return x.Page
+	}
+	return nil
+}
+
+func (x *ListAccessLogsRequest) GetStartTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.StartTime
+	}
+	return nil
+}
+
+func (x *ListAccessLogsRequest) GetEndTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.EndTime
+	}
+	return nil
+}
+
+func (x *ListAccessLogsRequest) GetPrincipal() string {
+	if x != nil {
+		return x.Principal
+	}
+	return ""
+}
+
+func (x *ListAccessLogsRequest) GetProcedure() string {
+	if x != nil {
+		return x.Procedure
+	}
+	return ""
+}
+
+func (x *ListAccessLogsRequest) GetResult() string {
+	if x != nil {
+		return x.Result
+	}
+	return ""
+}
+
+func (x *ListAccessLogsRequest) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+func (x *ListAccessLogsRequest) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
+func (x *ListAccessLogsRequest) GetPrincipalType() string {
+	if x != nil {
+		return x.PrincipalType
+	}
+	return ""
+}
+
+type ListAccessLogsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Items         []*AccessLog           `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	Page          *PageInfo              `protobuf:"bytes,2,opt,name=page,proto3" json:"page,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListAccessLogsResponse) Reset() {
+	*x = ListAccessLogsResponse{}
+	mi := &file_abysstract_admin_v1_log_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListAccessLogsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListAccessLogsResponse) ProtoMessage() {}
+
+func (x *ListAccessLogsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_abysstract_admin_v1_log_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListAccessLogsResponse.ProtoReflect.Descriptor instead.
+func (*ListAccessLogsResponse) Descriptor() ([]byte, []int) {
+	return file_abysstract_admin_v1_log_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *ListAccessLogsResponse) GetItems() []*AccessLog {
+	if x != nil {
+		return x.Items
+	}
+	return nil
+}
+
+func (x *ListAccessLogsResponse) GetPage() *PageInfo {
+	if x != nil {
+		return x.Page
+	}
+	return nil
+}
+
+type GetAccessLogStatusRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetAccessLogStatusRequest) Reset() {
+	*x = GetAccessLogStatusRequest{}
+	mi := &file_abysstract_admin_v1_log_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetAccessLogStatusRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetAccessLogStatusRequest) ProtoMessage() {}
+
+func (x *GetAccessLogStatusRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_abysstract_admin_v1_log_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetAccessLogStatusRequest.ProtoReflect.Descriptor instead.
+func (*GetAccessLogStatusRequest) Descriptor() ([]byte, []int) {
+	return file_abysstract_admin_v1_log_proto_rawDescGZIP(), []int{13}
+}
+
+type AccessLogSinkStatus struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Reader        bool                   `protobuf:"varint,2,opt,name=reader,proto3" json:"reader,omitempty"` // 支持查询（请求日志页面需要至少一个）
+	Written       int64                  `protobuf:"varint,3,opt,name=written,proto3" json:"written,omitempty"`
+	Failed        int64                  `protobuf:"varint,4,opt,name=failed,proto3" json:"failed,omitempty"`
+	Dropped       int64                  `protobuf:"varint,5,opt,name=dropped,proto3" json:"dropped,omitempty"` // sink 积压时跳过的条数
+	Errors        int64                  `protobuf:"varint,6,opt,name=errors,proto3" json:"errors,omitempty"`
+	LastError     string                 `protobuf:"bytes,7,opt,name=last_error,json=lastError,proto3" json:"last_error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AccessLogSinkStatus) Reset() {
+	*x = AccessLogSinkStatus{}
+	mi := &file_abysstract_admin_v1_log_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AccessLogSinkStatus) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AccessLogSinkStatus) ProtoMessage() {}
+
+func (x *AccessLogSinkStatus) ProtoReflect() protoreflect.Message {
+	mi := &file_abysstract_admin_v1_log_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AccessLogSinkStatus.ProtoReflect.Descriptor instead.
+func (*AccessLogSinkStatus) Descriptor() ([]byte, []int) {
+	return file_abysstract_admin_v1_log_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *AccessLogSinkStatus) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *AccessLogSinkStatus) GetReader() bool {
+	if x != nil {
+		return x.Reader
+	}
+	return false
+}
+
+func (x *AccessLogSinkStatus) GetWritten() int64 {
+	if x != nil {
+		return x.Written
+	}
+	return 0
+}
+
+func (x *AccessLogSinkStatus) GetFailed() int64 {
+	if x != nil {
+		return x.Failed
+	}
+	return 0
+}
+
+func (x *AccessLogSinkStatus) GetDropped() int64 {
+	if x != nil {
+		return x.Dropped
+	}
+	return 0
+}
+
+func (x *AccessLogSinkStatus) GetErrors() int64 {
+	if x != nil {
+		return x.Errors
+	}
+	return 0
+}
+
+func (x *AccessLogSinkStatus) GetLastError() string {
+	if x != nil {
+		return x.LastError
+	}
+	return ""
+}
+
+type GetAccessLogStatusResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Enabled       bool                   `protobuf:"varint,1,opt,name=enabled,proto3" json:"enabled,omitempty"`   // 已配置至少一个 sink
+	Readable      bool                   `protobuf:"varint,2,opt,name=readable,proto3" json:"readable,omitempty"` // 有支持查询的 sink；为 false 时 ListAccessLogs 返回 FailedPrecondition
+	Sinks         []*AccessLogSinkStatus `protobuf:"bytes,3,rep,name=sinks,proto3" json:"sinks,omitempty"`
+	Queued        int64                  `protobuf:"varint,4,opt,name=queued,proto3" json:"queued,omitempty"`
+	QueueSize     int64                  `protobuf:"varint,5,opt,name=queue_size,json=queueSize,proto3" json:"queue_size,omitempty"`
+	Enqueued      int64                  `protobuf:"varint,6,opt,name=enqueued,proto3" json:"enqueued,omitempty"`
+	Dropped       int64                  `protobuf:"varint,7,opt,name=dropped,proto3" json:"dropped,omitempty"` // 队列满或关闭时丢弃的条数
+	WriteErrors   int64                  `protobuf:"varint,8,opt,name=write_errors,json=writeErrors,proto3" json:"write_errors,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetAccessLogStatusResponse) Reset() {
+	*x = GetAccessLogStatusResponse{}
+	mi := &file_abysstract_admin_v1_log_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetAccessLogStatusResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetAccessLogStatusResponse) ProtoMessage() {}
+
+func (x *GetAccessLogStatusResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_abysstract_admin_v1_log_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetAccessLogStatusResponse.ProtoReflect.Descriptor instead.
+func (*GetAccessLogStatusResponse) Descriptor() ([]byte, []int) {
+	return file_abysstract_admin_v1_log_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *GetAccessLogStatusResponse) GetEnabled() bool {
+	if x != nil {
+		return x.Enabled
+	}
+	return false
+}
+
+func (x *GetAccessLogStatusResponse) GetReadable() bool {
+	if x != nil {
+		return x.Readable
+	}
+	return false
+}
+
+func (x *GetAccessLogStatusResponse) GetSinks() []*AccessLogSinkStatus {
+	if x != nil {
+		return x.Sinks
+	}
+	return nil
+}
+
+func (x *GetAccessLogStatusResponse) GetQueued() int64 {
+	if x != nil {
+		return x.Queued
+	}
+	return 0
+}
+
+func (x *GetAccessLogStatusResponse) GetQueueSize() int64 {
+	if x != nil {
+		return x.QueueSize
+	}
+	return 0
+}
+
+func (x *GetAccessLogStatusResponse) GetEnqueued() int64 {
+	if x != nil {
+		return x.Enqueued
+	}
+	return 0
+}
+
+func (x *GetAccessLogStatusResponse) GetDropped() int64 {
+	if x != nil {
+		return x.Dropped
+	}
+	return 0
+}
+
+func (x *GetAccessLogStatusResponse) GetWriteErrors() int64 {
+	if x != nil {
+		return x.WriteErrors
+	}
+	return 0
+}
+
 var File_abysstract_admin_v1_log_proto protoreflect.FileDescriptor
 
 const file_abysstract_admin_v1_log_proto_rawDesc = "" +
@@ -626,13 +1203,75 @@ const file_abysstract_admin_v1_log_proto_rawDesc = "" +
 	"\x05items\x18\x01 \x03(\v2\x1d.abysstract.admin.v1.LoginLogR\x05items\x121\n" +
 	"\x04page\x18\x02 \x01(\v2\x1d.abysstract.admin.v1.PageInfoR\x04page\"\x17\n" +
 	"\x15CleanLoginLogsRequest\"\x18\n" +
-	"\x16CleanLoginLogsResponse2\xac\x03\n" +
+	"\x16CleanLoginLogsResponse\"\xab\x04\n" +
+	"\tAccessLog\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12.\n" +
+	"\x04time\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\x04time\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\x03 \x01(\tR\trequestId\x12\x12\n" +
+	"\x04kind\x18\x04 \x01(\tR\x04kind\x12\x18\n" +
+	"\aservice\x18\x05 \x01(\tR\aservice\x12\x1c\n" +
+	"\tprocedure\x18\x06 \x01(\tR\tprocedure\x12\x16\n" +
+	"\x06method\x18\a \x01(\tR\x06method\x12\x12\n" +
+	"\x04path\x18\b \x01(\tR\x04path\x12%\n" +
+	"\x0eprincipal_type\x18\t \x01(\tR\rprincipalType\x12!\n" +
+	"\fprincipal_id\x18\n" +
+	" \x01(\tR\vprincipalId\x12%\n" +
+	"\x0eprincipal_name\x18\v \x01(\tR\rprincipalName\x12\x1b\n" +
+	"\tclient_ip\x18\f \x01(\tR\bclientIp\x12\x1d\n" +
+	"\n" +
+	"user_agent\x18\r \x01(\tR\tuserAgent\x12\x12\n" +
+	"\x04code\x18\x0e \x01(\tR\x04code\x12\x16\n" +
+	"\x06status\x18\x0f \x01(\x05R\x06status\x12\x18\n" +
+	"\asuccess\x18\x10 \x01(\bR\asuccess\x12\x14\n" +
+	"\x05error\x18\x11 \x01(\tR\x05error\x12\x1f\n" +
+	"\vduration_us\x18\x12 \x01(\x03R\n" +
+	"durationUs\x12\x1d\n" +
+	"\n" +
+	"attrs_json\x18\x13 \x01(\tR\tattrsJson\"\xed\x02\n" +
+	"\x15ListAccessLogsRequest\x124\n" +
+	"\x04page\x18\x01 \x01(\v2 .abysstract.admin.v1.PageRequestR\x04page\x129\n" +
+	"\n" +
+	"start_time\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\tstartTime\x125\n" +
+	"\bend_time\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\aendTime\x12\x1c\n" +
+	"\tprincipal\x18\x04 \x01(\tR\tprincipal\x12\x1c\n" +
+	"\tprocedure\x18\x05 \x01(\tR\tprocedure\x12\x16\n" +
+	"\x06result\x18\x06 \x01(\tR\x06result\x12\x12\n" +
+	"\x04code\x18\a \x01(\tR\x04code\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\b \x01(\tR\trequestId\x12%\n" +
+	"\x0eprincipal_type\x18\t \x01(\tR\rprincipalType\"\x81\x01\n" +
+	"\x16ListAccessLogsResponse\x124\n" +
+	"\x05items\x18\x01 \x03(\v2\x1e.abysstract.admin.v1.AccessLogR\x05items\x121\n" +
+	"\x04page\x18\x02 \x01(\v2\x1d.abysstract.admin.v1.PageInfoR\x04page\"\x1b\n" +
+	"\x19GetAccessLogStatusRequest\"\xc4\x01\n" +
+	"\x13AccessLogSinkStatus\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x16\n" +
+	"\x06reader\x18\x02 \x01(\bR\x06reader\x12\x18\n" +
+	"\awritten\x18\x03 \x01(\x03R\awritten\x12\x16\n" +
+	"\x06failed\x18\x04 \x01(\x03R\x06failed\x12\x18\n" +
+	"\adropped\x18\x05 \x01(\x03R\adropped\x12\x16\n" +
+	"\x06errors\x18\x06 \x01(\x03R\x06errors\x12\x1d\n" +
+	"\n" +
+	"last_error\x18\a \x01(\tR\tlastError\"\xa2\x02\n" +
+	"\x1aGetAccessLogStatusResponse\x12\x18\n" +
+	"\aenabled\x18\x01 \x01(\bR\aenabled\x12\x1a\n" +
+	"\breadable\x18\x02 \x01(\bR\breadable\x12>\n" +
+	"\x05sinks\x18\x03 \x03(\v2(.abysstract.admin.v1.AccessLogSinkStatusR\x05sinks\x12\x16\n" +
+	"\x06queued\x18\x04 \x01(\x03R\x06queued\x12\x1d\n" +
+	"\n" +
+	"queue_size\x18\x05 \x01(\x03R\tqueueSize\x12\x1a\n" +
+	"\benqueued\x18\x06 \x01(\x03R\benqueued\x12\x18\n" +
+	"\adropped\x18\a \x01(\x03R\adropped\x12!\n" +
+	"\fwrite_errors\x18\b \x01(\x03R\vwriteErrors2\x8e\x05\n" +
 	"\n" +
 	"LogService\x12c\n" +
 	"\fListOperLogs\x12(.abysstract.admin.v1.ListOperLogsRequest\x1a).abysstract.admin.v1.ListOperLogsResponse\x12f\n" +
 	"\rCleanOperLogs\x12).abysstract.admin.v1.CleanOperLogsRequest\x1a*.abysstract.admin.v1.CleanOperLogsResponse\x12f\n" +
 	"\rListLoginLogs\x12).abysstract.admin.v1.ListLoginLogsRequest\x1a*.abysstract.admin.v1.ListLoginLogsResponse\x12i\n" +
-	"\x0eCleanLoginLogs\x12*.abysstract.admin.v1.CleanLoginLogsRequest\x1a+.abysstract.admin.v1.CleanLoginLogsResponseB\xe1\x01\n" +
+	"\x0eCleanLoginLogs\x12*.abysstract.admin.v1.CleanLoginLogsRequest\x1a+.abysstract.admin.v1.CleanLoginLogsResponse\x12i\n" +
+	"\x0eListAccessLogs\x12*.abysstract.admin.v1.ListAccessLogsRequest\x1a+.abysstract.admin.v1.ListAccessLogsResponse\x12u\n" +
+	"\x12GetAccessLogStatus\x12..abysstract.admin.v1.GetAccessLogStatusRequest\x1a/.abysstract.admin.v1.GetAccessLogStatusResponseB\xe1\x01\n" +
 	"\x17com.abysstract.admin.v1B\bLogProtoP\x01ZNgithub.com/abysstract/abysstract-admin/backend/gen/abysstract/admin/v1;adminv1\xa2\x02\x03AAX\xaa\x02\x13Abysstract.Admin.V1\xca\x02\x13Abysstract\\Admin\\V1\xe2\x02\x1fAbysstract\\Admin\\V1\\GPBMetadata\xea\x02\x15Abysstract::Admin::V1b\x06proto3"
 
 var (
@@ -647,44 +1286,61 @@ func file_abysstract_admin_v1_log_proto_rawDescGZIP() []byte {
 	return file_abysstract_admin_v1_log_proto_rawDescData
 }
 
-var file_abysstract_admin_v1_log_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_abysstract_admin_v1_log_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_abysstract_admin_v1_log_proto_goTypes = []any{
-	(*OperLog)(nil),                // 0: abysstract.admin.v1.OperLog
-	(*LoginLog)(nil),               // 1: abysstract.admin.v1.LoginLog
-	(*ListOperLogsRequest)(nil),    // 2: abysstract.admin.v1.ListOperLogsRequest
-	(*ListOperLogsResponse)(nil),   // 3: abysstract.admin.v1.ListOperLogsResponse
-	(*CleanOperLogsRequest)(nil),   // 4: abysstract.admin.v1.CleanOperLogsRequest
-	(*CleanOperLogsResponse)(nil),  // 5: abysstract.admin.v1.CleanOperLogsResponse
-	(*ListLoginLogsRequest)(nil),   // 6: abysstract.admin.v1.ListLoginLogsRequest
-	(*ListLoginLogsResponse)(nil),  // 7: abysstract.admin.v1.ListLoginLogsResponse
-	(*CleanLoginLogsRequest)(nil),  // 8: abysstract.admin.v1.CleanLoginLogsRequest
-	(*CleanLoginLogsResponse)(nil), // 9: abysstract.admin.v1.CleanLoginLogsResponse
-	(*timestamppb.Timestamp)(nil),  // 10: google.protobuf.Timestamp
-	(*PageRequest)(nil),            // 11: abysstract.admin.v1.PageRequest
-	(*PageInfo)(nil),               // 12: abysstract.admin.v1.PageInfo
+	(*OperLog)(nil),                    // 0: abysstract.admin.v1.OperLog
+	(*LoginLog)(nil),                   // 1: abysstract.admin.v1.LoginLog
+	(*ListOperLogsRequest)(nil),        // 2: abysstract.admin.v1.ListOperLogsRequest
+	(*ListOperLogsResponse)(nil),       // 3: abysstract.admin.v1.ListOperLogsResponse
+	(*CleanOperLogsRequest)(nil),       // 4: abysstract.admin.v1.CleanOperLogsRequest
+	(*CleanOperLogsResponse)(nil),      // 5: abysstract.admin.v1.CleanOperLogsResponse
+	(*ListLoginLogsRequest)(nil),       // 6: abysstract.admin.v1.ListLoginLogsRequest
+	(*ListLoginLogsResponse)(nil),      // 7: abysstract.admin.v1.ListLoginLogsResponse
+	(*CleanLoginLogsRequest)(nil),      // 8: abysstract.admin.v1.CleanLoginLogsRequest
+	(*CleanLoginLogsResponse)(nil),     // 9: abysstract.admin.v1.CleanLoginLogsResponse
+	(*AccessLog)(nil),                  // 10: abysstract.admin.v1.AccessLog
+	(*ListAccessLogsRequest)(nil),      // 11: abysstract.admin.v1.ListAccessLogsRequest
+	(*ListAccessLogsResponse)(nil),     // 12: abysstract.admin.v1.ListAccessLogsResponse
+	(*GetAccessLogStatusRequest)(nil),  // 13: abysstract.admin.v1.GetAccessLogStatusRequest
+	(*AccessLogSinkStatus)(nil),        // 14: abysstract.admin.v1.AccessLogSinkStatus
+	(*GetAccessLogStatusResponse)(nil), // 15: abysstract.admin.v1.GetAccessLogStatusResponse
+	(*timestamppb.Timestamp)(nil),      // 16: google.protobuf.Timestamp
+	(*PageRequest)(nil),                // 17: abysstract.admin.v1.PageRequest
+	(*PageInfo)(nil),                   // 18: abysstract.admin.v1.PageInfo
 }
 var file_abysstract_admin_v1_log_proto_depIdxs = []int32{
-	10, // 0: abysstract.admin.v1.OperLog.oper_time:type_name -> google.protobuf.Timestamp
-	10, // 1: abysstract.admin.v1.LoginLog.login_time:type_name -> google.protobuf.Timestamp
-	11, // 2: abysstract.admin.v1.ListOperLogsRequest.page:type_name -> abysstract.admin.v1.PageRequest
+	16, // 0: abysstract.admin.v1.OperLog.oper_time:type_name -> google.protobuf.Timestamp
+	16, // 1: abysstract.admin.v1.LoginLog.login_time:type_name -> google.protobuf.Timestamp
+	17, // 2: abysstract.admin.v1.ListOperLogsRequest.page:type_name -> abysstract.admin.v1.PageRequest
 	0,  // 3: abysstract.admin.v1.ListOperLogsResponse.items:type_name -> abysstract.admin.v1.OperLog
-	12, // 4: abysstract.admin.v1.ListOperLogsResponse.page:type_name -> abysstract.admin.v1.PageInfo
-	11, // 5: abysstract.admin.v1.ListLoginLogsRequest.page:type_name -> abysstract.admin.v1.PageRequest
+	18, // 4: abysstract.admin.v1.ListOperLogsResponse.page:type_name -> abysstract.admin.v1.PageInfo
+	17, // 5: abysstract.admin.v1.ListLoginLogsRequest.page:type_name -> abysstract.admin.v1.PageRequest
 	1,  // 6: abysstract.admin.v1.ListLoginLogsResponse.items:type_name -> abysstract.admin.v1.LoginLog
-	12, // 7: abysstract.admin.v1.ListLoginLogsResponse.page:type_name -> abysstract.admin.v1.PageInfo
-	2,  // 8: abysstract.admin.v1.LogService.ListOperLogs:input_type -> abysstract.admin.v1.ListOperLogsRequest
-	4,  // 9: abysstract.admin.v1.LogService.CleanOperLogs:input_type -> abysstract.admin.v1.CleanOperLogsRequest
-	6,  // 10: abysstract.admin.v1.LogService.ListLoginLogs:input_type -> abysstract.admin.v1.ListLoginLogsRequest
-	8,  // 11: abysstract.admin.v1.LogService.CleanLoginLogs:input_type -> abysstract.admin.v1.CleanLoginLogsRequest
-	3,  // 12: abysstract.admin.v1.LogService.ListOperLogs:output_type -> abysstract.admin.v1.ListOperLogsResponse
-	5,  // 13: abysstract.admin.v1.LogService.CleanOperLogs:output_type -> abysstract.admin.v1.CleanOperLogsResponse
-	7,  // 14: abysstract.admin.v1.LogService.ListLoginLogs:output_type -> abysstract.admin.v1.ListLoginLogsResponse
-	9,  // 15: abysstract.admin.v1.LogService.CleanLoginLogs:output_type -> abysstract.admin.v1.CleanLoginLogsResponse
-	12, // [12:16] is the sub-list for method output_type
-	8,  // [8:12] is the sub-list for method input_type
-	8,  // [8:8] is the sub-list for extension type_name
-	8,  // [8:8] is the sub-list for extension extendee
-	0,  // [0:8] is the sub-list for field type_name
+	18, // 7: abysstract.admin.v1.ListLoginLogsResponse.page:type_name -> abysstract.admin.v1.PageInfo
+	16, // 8: abysstract.admin.v1.AccessLog.time:type_name -> google.protobuf.Timestamp
+	17, // 9: abysstract.admin.v1.ListAccessLogsRequest.page:type_name -> abysstract.admin.v1.PageRequest
+	16, // 10: abysstract.admin.v1.ListAccessLogsRequest.start_time:type_name -> google.protobuf.Timestamp
+	16, // 11: abysstract.admin.v1.ListAccessLogsRequest.end_time:type_name -> google.protobuf.Timestamp
+	10, // 12: abysstract.admin.v1.ListAccessLogsResponse.items:type_name -> abysstract.admin.v1.AccessLog
+	18, // 13: abysstract.admin.v1.ListAccessLogsResponse.page:type_name -> abysstract.admin.v1.PageInfo
+	14, // 14: abysstract.admin.v1.GetAccessLogStatusResponse.sinks:type_name -> abysstract.admin.v1.AccessLogSinkStatus
+	2,  // 15: abysstract.admin.v1.LogService.ListOperLogs:input_type -> abysstract.admin.v1.ListOperLogsRequest
+	4,  // 16: abysstract.admin.v1.LogService.CleanOperLogs:input_type -> abysstract.admin.v1.CleanOperLogsRequest
+	6,  // 17: abysstract.admin.v1.LogService.ListLoginLogs:input_type -> abysstract.admin.v1.ListLoginLogsRequest
+	8,  // 18: abysstract.admin.v1.LogService.CleanLoginLogs:input_type -> abysstract.admin.v1.CleanLoginLogsRequest
+	11, // 19: abysstract.admin.v1.LogService.ListAccessLogs:input_type -> abysstract.admin.v1.ListAccessLogsRequest
+	13, // 20: abysstract.admin.v1.LogService.GetAccessLogStatus:input_type -> abysstract.admin.v1.GetAccessLogStatusRequest
+	3,  // 21: abysstract.admin.v1.LogService.ListOperLogs:output_type -> abysstract.admin.v1.ListOperLogsResponse
+	5,  // 22: abysstract.admin.v1.LogService.CleanOperLogs:output_type -> abysstract.admin.v1.CleanOperLogsResponse
+	7,  // 23: abysstract.admin.v1.LogService.ListLoginLogs:output_type -> abysstract.admin.v1.ListLoginLogsResponse
+	9,  // 24: abysstract.admin.v1.LogService.CleanLoginLogs:output_type -> abysstract.admin.v1.CleanLoginLogsResponse
+	12, // 25: abysstract.admin.v1.LogService.ListAccessLogs:output_type -> abysstract.admin.v1.ListAccessLogsResponse
+	15, // 26: abysstract.admin.v1.LogService.GetAccessLogStatus:output_type -> abysstract.admin.v1.GetAccessLogStatusResponse
+	21, // [21:27] is the sub-list for method output_type
+	15, // [15:21] is the sub-list for method input_type
+	15, // [15:15] is the sub-list for extension type_name
+	15, // [15:15] is the sub-list for extension extendee
+	0,  // [0:15] is the sub-list for field type_name
 }
 
 func init() { file_abysstract_admin_v1_log_proto_init() }
@@ -699,7 +1355,7 @@ func file_abysstract_admin_v1_log_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_abysstract_admin_v1_log_proto_rawDesc), len(file_abysstract_admin_v1_log_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   10,
+			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

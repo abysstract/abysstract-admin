@@ -107,6 +107,10 @@ scrape_configs:
 
 `/static/` 下的上传文件不校验登录，持有链接的人都可以下载。服务端关闭目录列表，并通过 `X-Content-Type-Options: nosniff` 和 CSP 沙箱阻止上传的 HTML、SVG 在后台域名下执行脚本。PDF 不加沙箱，以便浏览器内置阅读器正常显示。
 
+### 请求日志
+
+后端为每个请求记录一条请求日志，默认同时写入 `sys_access_log` 表（后台「系统管理 → 请求日志」）和标准输出（每行一个 JSON）。`ADMIN_ACCESS_LOG_SINKS` 选择 sink，设置为空或 `none` 关闭；`db` sink 默认保留 30 天。队列、批量和保留相关的全部 `ADMIN_ACCESS_LOG_*` 变量见[请求日志](access-log.md#2-配置)。
+
 ### 生产环境
 
 设置 `ADMIN_ENV=prod`，并提供以下配置，启动时会检查这些要求：
@@ -115,9 +119,10 @@ scrape_configs:
 - `ADMIN_DB_DSN`：填写实际部署数据库的连接串。
 - `ADMIN_CORS_ORIGINS`：显式列出允许的前端来源。
 - 使用 `s3` 存储驱动时，`ADMIN_STORAGE_S3_BUCKET` 和 `ADMIN_STORAGE_S3_REGION` 必填（开发模式同样检查）。
+- `ADMIN_ACCESS_LOG_SINKS` 中的每个名称都必须是已注册的 sink（开发模式同样检查）。
 
 本地示例密钥、示例 PostgreSQL 连接串和通配 CORS 来源仅用于开发环境。开发模式会为这些配置打印告警。
 
 ### 客户端 IP 与审计
 
-操作日志默认记录直连客户端的 IP。通过可信反向代理（如 Nginx）部署时，设置 `ADMIN_TRUST_PROXY=true`，应用将使用 `X-Forwarded-For` 中最左侧的地址作为客户端 IP。
+操作日志和请求日志默认记录直连客户端的 IP。通过可信反向代理（如 Nginx）部署时，设置 `ADMIN_TRUST_PROXY=true`，应用将使用 `X-Forwarded-For` 中最左侧的地址作为客户端 IP。

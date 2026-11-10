@@ -15,6 +15,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"gorm.io/gorm"
 
+	"github.com/abysstract/abysstract-admin/backend/accesslog"
 	"github.com/abysstract/abysstract-admin/backend/adminconfig"
 	"github.com/abysstract/abysstract-admin/backend/internal/dal/model"
 	"github.com/abysstract/abysstract-admin/backend/internal/interceptor"
@@ -36,6 +37,15 @@ type Options struct {
 	// application. When nil, Start opens the driver selected by
 	// Config.StorageDriver (see OpenStorage) and closes it on shutdown.
 	Storage storage.Storage
+	// AccessLog, when non-nil, receives the request log of the application
+	// instead of a dispatcher opened from Config.AccessLogSinks. It is
+	// borrowed: the caller closes it after the application has stopped.
+	// Use it to share one dispatcher with the application's own API server
+	// (see OpenAccessLog).
+	AccessLog *accesslog.Logger
+	// AccessLogSinks are added to the sinks named by Config.AccessLogSinks
+	// when AccessLog is nil. The application closes them on shutdown.
+	AccessLogSinks []accesslog.Sink
 }
 
 type appState int
@@ -58,6 +68,8 @@ type App struct {
 	borrowedDB     *gorm.DB
 	logger         *slog.Logger
 	borrowedStore  storage.Storage
+	borrowedAccess *accesslog.Logger
+	accessSinks    []accesslog.Sink
 
 	mu          sync.Mutex
 	state       appState
@@ -72,6 +84,8 @@ type App struct {
 	closeDB       bool
 	store         storage.Storage
 	closeStore    bool
+	access        *accesslog.Logger
+	closeAccess   bool
 	startCancel   context.CancelFunc
 	startFinished bool
 	runtimeCancel context.CancelFunc
@@ -89,6 +103,19 @@ func (a *App) Storage() storage.Storage {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	return a.store
+}
+
+// AccessLog returns the request log dispatcher after Start or Run has
+// initialized the modules, or nil before that and when access logging is
+// disabled. Use it with accesslog.Interceptor in another Connect server of the
+// same process; do not close it.
+func (a *App) AccessLog() *accesslog.Logger {
+	if a == nil {
+		return nil
+	}
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.access
 }
 
 // ListenerAddr returns the bound address after Run has started listening.
@@ -139,6 +166,17 @@ func New(options Options) (*App, error) {
 		return nil, fmt.Errorf("adminapp: storage driver %q is not registered (available: %v); import its package or pass Options.Storage",
 			cfg.StorageDriverOrDefault(), storage.Drivers())
 	}
+	if options.AccessLog != nil && len(options.AccessLogSinks) > 0 {
+		return nil, errors.New("adminapp: Options.AccessLog and Options.AccessLogSinks are exclusive; add the sinks when opening the shared Logger")
+	}
+	if options.AccessLog == nil {
+		for _, name := range cfg.AccessLogSinks {
+			if !accesslog.Registered(name) {
+				return nil, fmt.Errorf("adminapp: access log sink %q is not registered (available: %v); import its package or pass Options.AccessLog",
+					name, accesslog.Sinks())
+			}
+		}
+	}
 	return &App{
 		cfg:            cfg,
 		modules:        ordered,
@@ -147,6 +185,8 @@ func New(options Options) (*App, error) {
 		allowedMethods: allowed,
 		borrowedDB:     options.DB,
 		borrowedStore:  options.Storage,
+		borrowedAccess: options.AccessLog,
+		accessSinks:    append([]accesslog.Sink(nil), options.AccessLogSinks...),
 		logger:         defaultLogger(options.Logger),
 		stopCh:         make(chan struct{}),
 		stoppedCh:      make(chan struct{}),
@@ -274,8 +314,18 @@ func (a *App) start(ctx context.Context) (http.Handler, error) {
 		objects = opened
 		a.closeStore = true
 	}
+	access := a.borrowedAccess
+	if access == nil {
+		opened, err := OpenAccessLog(ctx, a.cfg, gdb, a.logger, a.accessSinks...)
+		if err != nil {
+			return nil, err
+		}
+		access = opened
+		a.closeAccess = true
+	}
 	a.mu.Lock()
 	a.store = objects
+	a.access = access
 	a.mu.Unlock()
 	store := repo.New(gdb)
 	jwtMgr := jwt.NewManager(a.cfg.JWTSecret, a.cfg.JWTExpiresIn)
@@ -288,6 +338,7 @@ func (a *App) start(ctx context.Context) (http.Handler, error) {
 		Context:   runtimeCtx,
 		DataScope: dataScopeAdapter{repo: store},
 		Storage:   objects,
+		AccessLog: access,
 	}
 	created := make([]createdInstance, 0, len(a.modules))
 	for _, def := range a.modules {
@@ -314,7 +365,9 @@ func (a *App) start(ctx context.Context) (http.Handler, error) {
 			_ = store.AddOperLog(context.Background(), operLogModel(entry))
 		},
 	}
+	capture := AccessLogCapture(a.cfg)
 	server := connect.NewServer(
+		accesslog.Interceptor(access, capture),
 		interceptor.NewAuthInterceptor(a.registry, jwtMgr, store.TokenVersion, store.PwdResetRequired),
 		interceptor.NewPermissionInterceptor(a.registry, store.PermsOf),
 		interceptor.NewOperLogInterceptor(func(ctx context.Context, entry interceptor.OperLogEntry) {
@@ -328,7 +381,7 @@ func (a *App) start(ctx context.Context) (http.Handler, error) {
 		return nil, err
 	}
 	metricsReg := prometheus.NewRegistry()
-	handler, err := buildHandler(a.cfg, a.logger, a.allowedMethods, a.routes, a.instances, server, connectOpts, sec, objects, sqlDB, metricsReg, metricsReg)
+	handler, err := buildHandler(a.cfg, a.logger, a.allowedMethods, a.routes, a.instances, server, connectOpts, sec, objects, accesslog.Middleware(access, capture), sqlDB, metricsReg, metricsReg)
 	if err != nil {
 		return nil, err
 	}
@@ -418,6 +471,22 @@ func (a *App) cleanup(ctx context.Context, forceHTTP bool) error {
 		}
 		if err := entry.close(ctx); err != nil {
 			errs = append(errs, fmt.Errorf("module %q close: %w", entry.name, err))
+		}
+	}
+	if a.closeAccess {
+		// Flush queued entries before the database closes; the db sink
+		// writes through it.
+		if err := a.access.Close(ctx); err != nil {
+			errs = append(errs, fmt.Errorf("access log close: %w", err))
+		}
+	} else if len(a.accessSinks) > 0 && a.access == nil {
+		// Start failed before the dispatcher took ownership of the sinks.
+		for _, sink := range a.accessSinks {
+			if sink != nil {
+				if err := sink.Close(ctx); err != nil {
+					errs = append(errs, fmt.Errorf("access log sink close: %w", err))
+				}
+			}
 		}
 	}
 	if a.closeStore {

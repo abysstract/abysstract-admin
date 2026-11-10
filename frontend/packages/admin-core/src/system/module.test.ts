@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import { CORE_SYSTEM_PAGE_KEYS, coreSystemModule } from "./module";
 
 describe("coreSystemModule", () => {
-  it("exposes the 11 system component keys as static lazy pages", () => {
+  it("exposes the 12 system component keys as static lazy pages", () => {
     expect(coreSystemModule.name).toBe("system");
     expect(Object.keys(coreSystemModule.pages ?? {})).toEqual([...CORE_SYSTEM_PAGE_KEYS]);
-    expect(CORE_SYSTEM_PAGE_KEYS).toHaveLength(11);
+    expect(CORE_SYSTEM_PAGE_KEYS).toHaveLength(12);
     for (const key of CORE_SYSTEM_PAGE_KEYS) {
       const page = coreSystemModule.pages?.[key];
       expect(page).toBeTypeOf("object");
@@ -16,6 +16,7 @@ describe("coreSystemModule", () => {
   it("registers the current system menu icons", () => {
     expect(Object.keys(coreSystemModule.icons ?? {}).sort()).toEqual(
       [
+        "api",
         "apartment",
         "book",
         "login",

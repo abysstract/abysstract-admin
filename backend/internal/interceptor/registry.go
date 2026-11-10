@@ -218,6 +218,8 @@ var builtinPermissionEntries = []PermissionEntry{
 	{Procedure: adminv1connect.LogServiceCleanOperLogsProcedure, Permission: "system:operlog:remove"},
 	{Procedure: adminv1connect.LogServiceListLoginLogsProcedure, Permission: "system:logininfor:list"},
 	{Procedure: adminv1connect.LogServiceCleanLoginLogsProcedure, Permission: "system:logininfor:remove"},
+	{Procedure: adminv1connect.LogServiceListAccessLogsProcedure, Permission: "system:accesslog:list"},
+	{Procedure: adminv1connect.LogServiceGetAccessLogStatusProcedure, Permission: "system:accesslog:list"},
 	{Procedure: adminv1connect.UploadServiceUploadFileProcedure, Permission: AuthSentinel},
 	{Procedure: adminv1connect.UploadServiceUploadAvatarProcedure, Permission: AuthSentinel},
 	{Procedure: adminv1connect.UploadServiceCreateUploadProcedure, Permission: AuthSentinel},

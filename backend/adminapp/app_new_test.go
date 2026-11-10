@@ -10,6 +10,8 @@ import (
 
 	"gorm.io/gorm"
 
+	"github.com/abysstract/abysstract-admin/backend/accesslog"
+	"github.com/abysstract/abysstract-admin/backend/accesslog/stdoutsink"
 	"github.com/abysstract/abysstract-admin/backend/adminconfig"
 	"github.com/abysstract/abysstract-admin/backend/module"
 )
@@ -81,5 +83,29 @@ func TestShutdownBeforeRun(t *testing.T) {
 	}
 	if err := app.Shutdown(t.Context()); !errors.Is(err, ErrNotStarted) {
 		t.Fatalf("err = %v", err)
+	}
+}
+
+func TestNewRejectsUnknownAccessLogSink(t *testing.T) {
+	cfg := testConfig(t)
+	cfg.AccessLogSinks = []string{"db", "no-such-sink"}
+	_, err := New(Options{Config: cfg, Logger: silentLogger(), Modules: []module.Definition{{Name: "system", Create: countingCreate(new(atomic.Int32))}}})
+	if err == nil || !strings.Contains(err.Error(), `access log sink "no-such-sink" is not registered`) {
+		t.Fatalf("New = %v", err)
+	}
+}
+
+func TestNewRejectsAccessLogWithExtraSinks(t *testing.T) {
+	shared := accesslog.New(accesslog.Options{})
+	defer shared.Close(context.Background())
+	_, err := New(Options{
+		Config:         testConfig(t),
+		Logger:         silentLogger(),
+		Modules:        []module.Definition{{Name: "system", Create: countingCreate(new(atomic.Int32))}},
+		AccessLog:      shared,
+		AccessLogSinks: []accesslog.Sink{stdoutsink.New(nil)},
+	})
+	if err == nil || !strings.Contains(err.Error(), "exclusive") {
+		t.Fatalf("New = %v", err)
 	}
 }

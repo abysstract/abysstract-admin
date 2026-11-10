@@ -28,7 +28,7 @@ from typing import Sequence
 
 SYSTEM_MODULE = "github.com/abysstract/abysstract-admin"
 PACKAGE_PREFIX = f"{SYSTEM_MODULE}/backend"
-TARGET_PACKAGES = ("resource", "module", "permission", "resourcegen", "coremigrations", "database", "system", "adminconfig", "identity", "adminapp", "moduleseed", "storage", "storage/localstorage", "storage/s3storage")
+TARGET_PACKAGES = ("resource", "module", "permission", "resourcegen", "coremigrations", "database", "system", "adminconfig", "identity", "adminapp", "moduleseed", "storage", "storage/localstorage", "storage/s3storage", "accesslog", "accesslog/stdoutsink", "accesslog/dbsink")
 
 
 class ProbeInputError(Exception):

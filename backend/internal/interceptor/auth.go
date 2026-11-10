@@ -4,10 +4,12 @@ package interceptor
 import (
 	"context"
 	"errors"
+	"strconv"
 	"strings"
 
 	"connectrpc.com/connect/v2"
 
+	"github.com/abysstract/abysstract-admin/backend/accesslog"
 	"github.com/abysstract/abysstract-admin/backend/internal/identityctx"
 	"github.com/abysstract/abysstract-admin/backend/internal/jwt"
 )
@@ -146,12 +148,19 @@ func ClaimsFromContext(ctx context.Context) (*jwt.Claims, bool) {
 	return c, ok
 }
 
+// UserPrincipal is the request log principal of an admin user.
+func UserPrincipal(userID int64, username string) accesslog.Principal {
+	return accesslog.Principal{Type: accesslog.PrincipalUser, ID: strconv.FormatInt(userID, 10), Name: username}
+}
+
 // WithClaims 把 Claims 注入 context。供 service 测试模拟拦截器上下文使用。
 // 业务代码不应直接调用（应通过拦截器链）。系统测试入口同步写入公共 identity。
 func WithClaims(ctx context.Context, c *jwt.Claims) context.Context {
 	ctx = context.WithValue(ctx, claimsKey, c)
 	if c != nil {
 		ctx = identityctx.Store(ctx, c.UserID, c.Username)
+		// The request log records the verified user of RPC and HTTP routes.
+		accesslog.SetPrincipal(ctx, UserPrincipal(c.UserID, c.Username))
 	}
 	return ctx
 }

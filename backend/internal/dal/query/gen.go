@@ -18,6 +18,7 @@ import (
 func Use(db *gorm.DB, opts ...gen.DOOption) *Query {
 	return &Query{
 		db:               db,
+		SysAccessLog:     newSysAccessLog(db, opts...),
 		SysConfig:        newSysConfig(db, opts...),
 		SysDept:          newSysDept(db, opts...),
 		SysDictDatum:     newSysDictDatum(db, opts...),
@@ -40,6 +41,7 @@ func Use(db *gorm.DB, opts ...gen.DOOption) *Query {
 type Query struct {
 	db *gorm.DB
 
+	SysAccessLog     sysAccessLog
 	SysConfig        sysConfig
 	SysDept          sysDept
 	SysDictDatum     sysDictDatum
@@ -65,6 +67,7 @@ func (q *Query) UnderlyingDB() *gorm.DB { return q.db }
 func (q *Query) clone(db *gorm.DB) *Query {
 	return &Query{
 		db:               db,
+		SysAccessLog:     q.SysAccessLog.clone(db),
 		SysConfig:        q.SysConfig.clone(db),
 		SysDept:          q.SysDept.clone(db),
 		SysDictDatum:     q.SysDictDatum.clone(db),
@@ -95,6 +98,7 @@ func (q *Query) WriteDB() *Query {
 func (q *Query) ReplaceDB(db *gorm.DB) *Query {
 	return &Query{
 		db:               db,
+		SysAccessLog:     q.SysAccessLog.replaceDB(db),
 		SysConfig:        q.SysConfig.replaceDB(db),
 		SysDept:          q.SysDept.replaceDB(db),
 		SysDictDatum:     q.SysDictDatum.replaceDB(db),
@@ -115,6 +119,7 @@ func (q *Query) ReplaceDB(db *gorm.DB) *Query {
 }
 
 type queryCtx struct {
+	SysAccessLog     *sysAccessLogDo
 	SysConfig        *sysConfigDo
 	SysDept          *sysDeptDo
 	SysDictDatum     *sysDictDatumDo
@@ -135,6 +140,7 @@ type queryCtx struct {
 
 func (q *Query) WithContext(ctx context.Context) *queryCtx {
 	return &queryCtx{
+		SysAccessLog:     q.SysAccessLog.WithContext(ctx),
 		SysConfig:        q.SysConfig.WithContext(ctx),
 		SysDept:          q.SysDept.WithContext(ctx),
 		SysDictDatum:     q.SysDictDatum.WithContext(ctx),

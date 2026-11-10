@@ -153,6 +153,7 @@ cd "$repo_root"
 - [项目理解教程](docs/project-guide.md) — 项目组成、常用概念、接口调用与开发入口
 - [配置说明](docs/configuration.md) — 环境变量、运行模式、安全检查
 - [文件存储](docs/storage.md) — 本地与 S3 存储、预签名直传、上传组件
+- [请求日志](docs/access-log.md) — 每个请求的访问记录、可替换的 sink、业务字段与独立 API 服务接入
 - [本地开发](docs/development.md) — 迁移、完整生成、局部生成与开发检查
 - [权限模型](docs/permission.md) — RBAC、权限标识、数据范围、内置账号保护
 - [模块指南](docs/module-guide.md) — 新增功能模块的推荐步骤
