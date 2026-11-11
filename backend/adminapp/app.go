@@ -446,24 +446,50 @@ func (a *App) completeStop(parent context.Context, forceHTTP bool) error {
 	return a.closeErr
 }
 
+// cleanup releases resources in dependency order: stop HTTP, cancel module
+// background work and close modules, flush the access log while the database
+// is still open, then close storage and the database.
 func (a *App) cleanup(ctx context.Context, forceHTTP bool) error {
 	var errs []error
-	if a.server != nil {
-		if forceHTTP {
-			if err := a.server.Close(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-				errs = append(errs, err)
-			}
-		} else if err := a.server.Shutdown(ctx); err != nil {
-			errs = append(errs, err)
-			if errors.Is(err, context.DeadlineExceeded) || errors.Is(ctx.Err(), context.DeadlineExceeded) {
-				errs = append(errs, ErrShutdownTimeout)
-				_ = a.server.Close()
-			}
-		}
-	}
+	errs = append(errs, a.stopHTTP(ctx, forceHTTP)...)
 	if a.runtimeCancel != nil {
 		a.runtimeCancel()
 	}
+	errs = append(errs, a.closeModules(ctx)...)
+	errs = append(errs, a.closeAccessLog(ctx)...)
+	errs = append(errs, a.closeOwnedStorage()...)
+	if a.closeDB {
+		if err := closeGorm(a.db); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return errors.Join(errs...)
+}
+
+func (a *App) stopHTTP(ctx context.Context, force bool) []error {
+	if a.server == nil {
+		return nil
+	}
+	if force {
+		if err := a.server.Close(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			return []error{err}
+		}
+		return nil
+	}
+	err := a.server.Shutdown(ctx)
+	if err == nil {
+		return nil
+	}
+	errs := []error{err}
+	if errors.Is(err, context.DeadlineExceeded) || errors.Is(ctx.Err(), context.DeadlineExceeded) {
+		errs = append(errs, ErrShutdownTimeout)
+		_ = a.server.Close()
+	}
+	return errs
+}
+
+func (a *App) closeModules(ctx context.Context) []error {
+	var errs []error
 	for i := len(a.instances) - 1; i >= 0; i-- {
 		entry := a.instances[i]
 		if entry.close == nil {
@@ -473,35 +499,44 @@ func (a *App) cleanup(ctx context.Context, forceHTTP bool) error {
 			errs = append(errs, fmt.Errorf("module %q close: %w", entry.name, err))
 		}
 	}
+	return errs
+}
+
+// closeAccessLog flushes queued entries before the database closes; the db
+// sink writes through it.
+func (a *App) closeAccessLog(ctx context.Context) []error {
 	if a.closeAccess {
-		// Flush queued entries before the database closes; the db sink
-		// writes through it.
 		if err := a.access.Close(ctx); err != nil {
-			errs = append(errs, fmt.Errorf("access log close: %w", err))
+			return []error{fmt.Errorf("access log close: %w", err)}
 		}
-	} else if len(a.accessSinks) > 0 && a.access == nil {
-		// Start failed before the dispatcher took ownership of the sinks.
-		for _, sink := range a.accessSinks {
-			if sink != nil {
-				if err := sink.Close(ctx); err != nil {
-					errs = append(errs, fmt.Errorf("access log sink close: %w", err))
-				}
-			}
+		return nil
+	}
+	if a.access != nil {
+		return nil
+	}
+	// Start failed before the dispatcher took ownership of the sinks.
+	var errs []error
+	for _, sink := range a.accessSinks {
+		if sink == nil {
+			continue
+		}
+		if err := sink.Close(ctx); err != nil {
+			errs = append(errs, fmt.Errorf("access log sink close: %w", err))
 		}
 	}
-	if a.closeStore {
-		if closer, ok := a.store.(io.Closer); ok {
-			if err := closer.Close(); err != nil {
-				errs = append(errs, fmt.Errorf("storage close: %w", err))
-			}
+	return errs
+}
+
+func (a *App) closeOwnedStorage() []error {
+	if !a.closeStore {
+		return nil
+	}
+	if closer, ok := a.store.(io.Closer); ok {
+		if err := closer.Close(); err != nil {
+			return []error{fmt.Errorf("storage close: %w", err)}
 		}
 	}
-	if a.closeDB {
-		if err := closeGorm(a.db); err != nil {
-			errs = append(errs, err)
-		}
-	}
-	return errors.Join(errs...)
+	return nil
 }
 
 func operLogModel(entry interceptor.OperLogEntry) *model.SysOperLog {

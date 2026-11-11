@@ -14,21 +14,21 @@ const TableNameSysAccessLog = "sys_access_log"
 type SysAccessLog struct {
 	ID            int64     `gorm:"column:id;primaryKey;autoIncrement:true;not null" json:"id"`
 	LogTime       time.Time `gorm:"column:log_time;not null" json:"log_time"`
-	RequestID     string    `gorm:"column:request_id;not null;default:''" json:"request_id"`
-	Kind          string    `gorm:"column:kind;not null;default:''" json:"kind"`
-	Service       string    `gorm:"column:service;not null;default:''" json:"service"`
-	ProcedureName string    `gorm:"column:procedure_name;not null;default:''" json:"procedure_name"`
-	HTTPMethod    string    `gorm:"column:http_method;not null;default:''" json:"http_method"`
-	Path          string    `gorm:"column:path;not null;default:''" json:"path"`
-	PrincipalType string    `gorm:"column:principal_type;not null;default:''" json:"principal_type"`
-	PrincipalID   string    `gorm:"column:principal_id;not null;default:''" json:"principal_id"`
-	PrincipalName string    `gorm:"column:principal_name;not null;default:''" json:"principal_name"`
-	ClientIP      string    `gorm:"column:client_ip;not null;default:''" json:"client_ip"`
-	UserAgent     string    `gorm:"column:user_agent;not null;default:''" json:"user_agent"`
-	Code          string    `gorm:"column:code;not null;default:''" json:"code"`
+	RequestID     string    `gorm:"column:request_id;not null" json:"request_id"`
+	Kind          string    `gorm:"column:kind;not null" json:"kind"`
+	Service       string    `gorm:"column:service;not null" json:"service"`
+	ProcedureName string    `gorm:"column:procedure_name;not null" json:"procedure_name"`
+	HTTPMethod    string    `gorm:"column:http_method;not null" json:"http_method"`
+	Path          string    `gorm:"column:path;not null" json:"path"`
+	PrincipalType string    `gorm:"column:principal_type;not null" json:"principal_type"`
+	PrincipalID   string    `gorm:"column:principal_id;not null" json:"principal_id"`
+	PrincipalName string    `gorm:"column:principal_name;not null" json:"principal_name"`
+	ClientIP      string    `gorm:"column:client_ip;not null" json:"client_ip"`
+	UserAgent     string    `gorm:"column:user_agent;not null" json:"user_agent"`
+	Code          string    `gorm:"column:code;not null" json:"code"`
 	HTTPStatus    int32     `gorm:"column:http_status;not null;default:0" json:"http_status"`
 	Status        int16     `gorm:"column:status;not null;default:1" json:"status"`
-	ErrorMsg      string    `gorm:"column:error_msg;not null;default:''" json:"error_msg"`
+	ErrorMsg      string    `gorm:"column:error_msg;not null" json:"error_msg"`
 	DurationUs    int64     `gorm:"column:duration_us;not null;default:0" json:"duration_us"`
 	Attrs         string    `gorm:"column:attrs;not null" json:"attrs"`
 }
