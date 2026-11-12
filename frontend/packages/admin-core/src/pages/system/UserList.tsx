@@ -809,21 +809,21 @@ function userRowActions(
       // The editor performs a dedicated GetUser and loads role/dept options.
       // Do not expose a button that is guaranteed to fail in a partial role.
       hidden: !canOpenEditor,
-      render: (context) => <UserEditAction {...context} />,
+      render: ({ entity, reload }) => <UserEditAction entity={entity} reload={reload} />,
     },
     {
       action: "custom",
       name: "resetPassword",
       permission: `${userSchema.permPrefix}:resetPwd`,
       merge: "append",
-      render: (context) => <UserResetPasswordAction {...context} />,
+      render: ({ entity, reload }) => <UserResetPasswordAction entity={entity} reload={reload} />,
     },
     {
       action: "custom",
       name: "delete",
       permission: userDeletePermission,
       merge: "append",
-      render: (context) => <UserDeleteAction {...context} />,
+      render: ({ entity, reload }) => <UserDeleteAction entity={entity} reload={reload} />,
     },
   ];
 }
