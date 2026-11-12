@@ -20,6 +20,7 @@ const expected = [
   "../pages/system/NoticeList",
   "../pages/system/OperLogList",
   "../pages/system/LoginLogList",
+  "../pages/system/AccessLogList",
   "../pages/dashboard",
   "../pages/profile",
 ];

@@ -220,7 +220,7 @@ go tool admin module sync
 go mod tidy
 ```
 
-`admin-migrations sync` 按 `ADMIN_DB_DRIVER` 在 `backend/migrations/postgres/` 下创建 3 个 `*_core_*` 文件，并打印它们的路径。`module sync` 打印写入的文件：
+`admin-migrations sync` 按 `ADMIN_DB_DRIVER` 在 `backend/migrations/postgres/` 下创建 4 个 `*_core_*` 文件，并打印它们的路径。`module sync` 打印写入的文件：
 
 ```
 backend/internal/app/modules.gen.go

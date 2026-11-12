@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file abysstract/admin/v1/log.proto.
  */
 export const file_abysstract_admin_v1_log: GenFile = /*@__PURE__*/
-  fileDesc("Ch1hYnlzc3RyYWN0L2FkbWluL3YxL2xvZy5wcm90bxITYWJ5c3N0cmFjdC5hZG1pbi52MSLiAQoHT3BlckxvZxIKCgJpZBgBIAEoAxINCgV0aXRsZRgCIAEoCRIOCgZtZXRob2QYAyABKAkSEQoJb3Blcl9uYW1lGAQgASgJEg8KB29wZXJfaWQYBSABKAMSDwoHb3Blcl9pcBgGIAEoCRIOCgZzdGF0dXMYByABKAUSEQoJZXJyb3JfbXNnGAggASgJEhEKCWNvc3RfdGltZRgJIAEoAxItCglvcGVyX3RpbWUYCiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhIKCm9wZXJfcGFyYW0YCyABKAkigQEKCExvZ2luTG9nEgoKAmlkGAEgASgDEhAKCHVzZXJuYW1lGAIgASgJEg4KBnN0YXR1cxgDIAEoBRIKCgJpcBgEIAEoCRILCgNtc2cYBSABKAkSLgoKbG9naW5fdGltZRgGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiVgoTTGlzdE9wZXJMb2dzUmVxdWVzdBIuCgRwYWdlGAEgASgLMiAuYWJ5c3N0cmFjdC5hZG1pbi52MS5QYWdlUmVxdWVzdBIPCgdrZXl3b3JkGAIgASgJInAKFExpc3RPcGVyTG9nc1Jlc3BvbnNlEisKBWl0ZW1zGAEgAygLMhwuYWJ5c3N0cmFjdC5hZG1pbi52MS5PcGVyTG9nEisKBHBhZ2UYAiABKAsyHS5hYnlzc3RyYWN0LmFkbWluLnYxLlBhZ2VJbmZvIhYKFENsZWFuT3BlckxvZ3NSZXF1ZXN0IhcKFUNsZWFuT3BlckxvZ3NSZXNwb25zZSJXChRMaXN0TG9naW5Mb2dzUmVxdWVzdBIuCgRwYWdlGAEgASgLMiAuYWJ5c3N0cmFjdC5hZG1pbi52MS5QYWdlUmVxdWVzdBIPCgdrZXl3b3JkGAIgASgJInIKFUxpc3RMb2dpbkxvZ3NSZXNwb25zZRIsCgVpdGVtcxgBIAMoCzIdLmFieXNzdHJhY3QuYWRtaW4udjEuTG9naW5Mb2cSKwoEcGFnZRgCIAEoCzIdLmFieXNzdHJhY3QuYWRtaW4udjEuUGFnZUluZm8iFwoVQ2xlYW5Mb2dpbkxvZ3NSZXF1ZXN0IhgKFkNsZWFuTG9naW5Mb2dzUmVzcG9uc2UyrAMKCkxvZ1NlcnZpY2USYwoMTGlzdE9wZXJMb2dzEiguYWJ5c3N0cmFjdC5hZG1pbi52MS5MaXN0T3BlckxvZ3NSZXF1ZXN0GikuYWJ5c3N0cmFjdC5hZG1pbi52MS5MaXN0T3BlckxvZ3NSZXNwb25zZRJmCg1DbGVhbk9wZXJMb2dzEikuYWJ5c3N0cmFjdC5hZG1pbi52MS5DbGVhbk9wZXJMb2dzUmVxdWVzdBoqLmFieXNzdHJhY3QuYWRtaW4udjEuQ2xlYW5PcGVyTG9nc1Jlc3BvbnNlEmYKDUxpc3RMb2dpbkxvZ3MSKS5hYnlzc3RyYWN0LmFkbWluLnYxLkxpc3RMb2dpbkxvZ3NSZXF1ZXN0GiouYWJ5c3N0cmFjdC5hZG1pbi52MS5MaXN0TG9naW5Mb2dzUmVzcG9uc2USaQoOQ2xlYW5Mb2dpbkxvZ3MSKi5hYnlzc3RyYWN0LmFkbWluLnYxLkNsZWFuTG9naW5Mb2dzUmVxdWVzdBorLmFieXNzdHJhY3QuYWRtaW4udjEuQ2xlYW5Mb2dpbkxvZ3NSZXNwb25zZULhAQoXY29tLmFieXNzdHJhY3QuYWRtaW4udjFCCExvZ1Byb3RvUAFaTmdpdGh1Yi5jb20vYWJ5c3N0cmFjdC9hYnlzc3RyYWN0LWFkbWluL2JhY2tlbmQvZ2VuL2FieXNzdHJhY3QvYWRtaW4vdjE7YWRtaW52MaICA0FBWKoCE0FieXNzdHJhY3QuQWRtaW4uVjHKAhNBYnlzc3RyYWN0XEFkbWluXFYx4gIfQWJ5c3N0cmFjdFxBZG1pblxWMVxHUEJNZXRhZGF0YeoCFUFieXNzdHJhY3Q6OkFkbWluOjpWMWIGcHJvdG8z", [file_abysstract_admin_v1_common, file_google_protobuf_timestamp]);
+  fileDesc("Ch1hYnlzc3RyYWN0L2FkbWluL3YxL2xvZy5wcm90bxITYWJ5c3N0cmFjdC5hZG1pbi52MSLiAQoHT3BlckxvZxIKCgJpZBgBIAEoAxINCgV0aXRsZRgCIAEoCRIOCgZtZXRob2QYAyABKAkSEQoJb3Blcl9uYW1lGAQgASgJEg8KB29wZXJfaWQYBSABKAMSDwoHb3Blcl9pcBgGIAEoCRIOCgZzdGF0dXMYByABKAUSEQoJZXJyb3JfbXNnGAggASgJEhEKCWNvc3RfdGltZRgJIAEoAxItCglvcGVyX3RpbWUYCiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhIKCm9wZXJfcGFyYW0YCyABKAkigQEKCExvZ2luTG9nEgoKAmlkGAEgASgDEhAKCHVzZXJuYW1lGAIgASgJEg4KBnN0YXR1cxgDIAEoBRIKCgJpcBgEIAEoCRILCgNtc2cYBSABKAkSLgoKbG9naW5fdGltZRgGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiVgoTTGlzdE9wZXJMb2dzUmVxdWVzdBIuCgRwYWdlGAEgASgLMiAuYWJ5c3N0cmFjdC5hZG1pbi52MS5QYWdlUmVxdWVzdBIPCgdrZXl3b3JkGAIgASgJInAKFExpc3RPcGVyTG9nc1Jlc3BvbnNlEisKBWl0ZW1zGAEgAygLMhwuYWJ5c3N0cmFjdC5hZG1pbi52MS5PcGVyTG9nEisKBHBhZ2UYAiABKAsyHS5hYnlzc3RyYWN0LmFkbWluLnYxLlBhZ2VJbmZvIhYKFENsZWFuT3BlckxvZ3NSZXF1ZXN0IhcKFUNsZWFuT3BlckxvZ3NSZXNwb25zZSJXChRMaXN0TG9naW5Mb2dzUmVxdWVzdBIuCgRwYWdlGAEgASgLMiAuYWJ5c3N0cmFjdC5hZG1pbi52MS5QYWdlUmVxdWVzdBIPCgdrZXl3b3JkGAIgASgJInIKFUxpc3RMb2dpbkxvZ3NSZXNwb25zZRIsCgVpdGVtcxgBIAMoCzIdLmFieXNzdHJhY3QuYWRtaW4udjEuTG9naW5Mb2cSKwoEcGFnZRgCIAEoCzIdLmFieXNzdHJhY3QuYWRtaW4udjEuUGFnZUluZm8iFwoVQ2xlYW5Mb2dpbkxvZ3NSZXF1ZXN0IhgKFkNsZWFuTG9naW5Mb2dzUmVzcG9uc2Ui+QIKCUFjY2Vzc0xvZxIKCgJpZBgBIAEoCRIoCgR0aW1lGAIgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBISCgpyZXF1ZXN0X2lkGAMgASgJEgwKBGtpbmQYBCABKAkSDwoHc2VydmljZRgFIAEoCRIRCglwcm9jZWR1cmUYBiABKAkSDgoGbWV0aG9kGAcgASgJEgwKBHBhdGgYCCABKAkSFgoOcHJpbmNpcGFsX3R5cGUYCSABKAkSFAoMcHJpbmNpcGFsX2lkGAogASgJEhYKDnByaW5jaXBhbF9uYW1lGAsgASgJEhEKCWNsaWVudF9pcBgMIAEoCRISCgp1c2VyX2FnZW50GA0gASgJEgwKBGNvZGUYDiABKAkSDgoGc3RhdHVzGA8gASgFEg8KB3N1Y2Nlc3MYECABKAgSDQoFZXJyb3IYESABKAkSEwoLZHVyYXRpb25fdXMYEiABKAMSEgoKYXR0cnNfanNvbhgTIAEoCSKVAgoVTGlzdEFjY2Vzc0xvZ3NSZXF1ZXN0Ei4KBHBhZ2UYASABKAsyIC5hYnlzc3RyYWN0LmFkbWluLnYxLlBhZ2VSZXF1ZXN0Ei4KCnN0YXJ0X3RpbWUYAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEiwKCGVuZF90aW1lGAMgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIRCglwcmluY2lwYWwYBCABKAkSEQoJcHJvY2VkdXJlGAUgASgJEg4KBnJlc3VsdBgGIAEoCRIMCgRjb2RlGAcgASgJEhIKCnJlcXVlc3RfaWQYCCABKAkSFgoOcHJpbmNpcGFsX3R5cGUYCSABKAkidAoWTGlzdEFjY2Vzc0xvZ3NSZXNwb25zZRItCgVpdGVtcxgBIAMoCzIeLmFieXNzdHJhY3QuYWRtaW4udjEuQWNjZXNzTG9nEisKBHBhZ2UYAiABKAsyHS5hYnlzc3RyYWN0LmFkbWluLnYxLlBhZ2VJbmZvIhsKGUdldEFjY2Vzc0xvZ1N0YXR1c1JlcXVlc3QiiQEKE0FjY2Vzc0xvZ1NpbmtTdGF0dXMSDAoEbmFtZRgBIAEoCRIOCgZyZWFkZXIYAiABKAgSDwoHd3JpdHRlbhgDIAEoAxIOCgZmYWlsZWQYBCABKAMSDwoHZHJvcHBlZBgFIAEoAxIOCgZlcnJvcnMYBiABKAMSEgoKbGFzdF9lcnJvchgHIAEoCSLVAQoaR2V0QWNjZXNzTG9nU3RhdHVzUmVzcG9uc2USDwoHZW5hYmxlZBgBIAEoCBIQCghyZWFkYWJsZRgCIAEoCBI3CgVzaW5rcxgDIAMoCzIoLmFieXNzdHJhY3QuYWRtaW4udjEuQWNjZXNzTG9nU2lua1N0YXR1cxIOCgZxdWV1ZWQYBCABKAMSEgoKcXVldWVfc2l6ZRgFIAEoAxIQCghlbnF1ZXVlZBgGIAEoAxIPCgdkcm9wcGVkGAcgASgDEhQKDHdyaXRlX2Vycm9ycxgIIAEoAzKOBQoKTG9nU2VydmljZRJjCgxMaXN0T3BlckxvZ3MSKC5hYnlzc3RyYWN0LmFkbWluLnYxLkxpc3RPcGVyTG9nc1JlcXVlc3QaKS5hYnlzc3RyYWN0LmFkbWluLnYxLkxpc3RPcGVyTG9nc1Jlc3BvbnNlEmYKDUNsZWFuT3BlckxvZ3MSKS5hYnlzc3RyYWN0LmFkbWluLnYxLkNsZWFuT3BlckxvZ3NSZXF1ZXN0GiouYWJ5c3N0cmFjdC5hZG1pbi52MS5DbGVhbk9wZXJMb2dzUmVzcG9uc2USZgoNTGlzdExvZ2luTG9ncxIpLmFieXNzdHJhY3QuYWRtaW4udjEuTGlzdExvZ2luTG9nc1JlcXVlc3QaKi5hYnlzc3RyYWN0LmFkbWluLnYxLkxpc3RMb2dpbkxvZ3NSZXNwb25zZRJpCg5DbGVhbkxvZ2luTG9ncxIqLmFieXNzdHJhY3QuYWRtaW4udjEuQ2xlYW5Mb2dpbkxvZ3NSZXF1ZXN0GisuYWJ5c3N0cmFjdC5hZG1pbi52MS5DbGVhbkxvZ2luTG9nc1Jlc3BvbnNlEmkKDkxpc3RBY2Nlc3NMb2dzEiouYWJ5c3N0cmFjdC5hZG1pbi52MS5MaXN0QWNjZXNzTG9nc1JlcXVlc3QaKy5hYnlzc3RyYWN0LmFkbWluLnYxLkxpc3RBY2Nlc3NMb2dzUmVzcG9uc2USdQoSR2V0QWNjZXNzTG9nU3RhdHVzEi4uYWJ5c3N0cmFjdC5hZG1pbi52MS5HZXRBY2Nlc3NMb2dTdGF0dXNSZXF1ZXN0Gi8uYWJ5c3N0cmFjdC5hZG1pbi52MS5HZXRBY2Nlc3NMb2dTdGF0dXNSZXNwb25zZULhAQoXY29tLmFieXNzdHJhY3QuYWRtaW4udjFCCExvZ1Byb3RvUAFaTmdpdGh1Yi5jb20vYWJ5c3N0cmFjdC9hYnlzc3RyYWN0LWFkbWluL2JhY2tlbmQvZ2VuL2FieXNzdHJhY3QvYWRtaW4vdjE7YWRtaW52MaICA0FBWKoCE0FieXNzdHJhY3QuQWRtaW4uVjHKAhNBYnlzc3RyYWN0XEFkbWluXFYx4gIfQWJ5c3N0cmFjdFxBZG1pblxWMVxHUEJNZXRhZGF0YeoCFUFieXNzdHJhY3Q6OkFkbWluOjpWMWIGcHJvdG8z", [file_abysstract_admin_v1_common, file_google_protobuf_timestamp]);
 
 /**
  * 操作日志
@@ -282,6 +282,352 @@ export const CleanLoginLogsResponseSchema: GenMessage<CleanLoginLogsResponse> = 
   messageDesc(file_abysstract_admin_v1_log, 9);
 
 /**
+ * 请求日志（每个请求一条，由可替换的 sink 异步写入；队列满时丢弃）
+ *
+ * @generated from message abysstract.admin.v1.AccessLog
+ */
+export type AccessLog = Message<"abysstract.admin.v1.AccessLog"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * 请求开始时间
+   *
+   * @generated from field: google.protobuf.Timestamp time = 2;
+   */
+  time?: Timestamp | undefined;
+
+  /**
+   * @generated from field: string request_id = 3;
+   */
+  requestId: string;
+
+  /**
+   * rpc | http
+   *
+   * @generated from field: string kind = 4;
+   */
+  kind: string;
+
+  /**
+   * Connect 服务全名
+   *
+   * @generated from field: string service = 5;
+   */
+  service: string;
+
+  /**
+   * Connect 过程，如 /abysstract.admin.v1.UserService/ListUsers
+   *
+   * @generated from field: string procedure = 6;
+   */
+  procedure: string;
+
+  /**
+   * HTTP 方法
+   *
+   * @generated from field: string method = 7;
+   */
+  method: string;
+
+  /**
+   * HTTP 路径
+   *
+   * @generated from field: string path = 8;
+   */
+  path: string;
+
+  /**
+   * user | api_credential | 应用自定义；匿名为空
+   *
+   * @generated from field: string principal_type = 9;
+   */
+  principalType: string;
+
+  /**
+   * @generated from field: string principal_id = 10;
+   */
+  principalId: string;
+
+  /**
+   * @generated from field: string principal_name = 11;
+   */
+  principalName: string;
+
+  /**
+   * @generated from field: string client_ip = 12;
+   */
+  clientIp: string;
+
+  /**
+   * @generated from field: string user_agent = 13;
+   */
+  userAgent: string;
+
+  /**
+   * Connect 错误码（ok、not_found 等）；普通 HTTP 请求为空
+   *
+   * @generated from field: string code = 14;
+   */
+  code: string;
+
+  /**
+   * HTTP 状态码；未知为 0
+   *
+   * @generated from field: int32 status = 15;
+   */
+  status: number;
+
+  /**
+   * @generated from field: bool success = 16;
+   */
+  success: boolean;
+
+  /**
+   * 错误信息（已截断）
+   *
+   * @generated from field: string error = 17;
+   */
+  error: string;
+
+  /**
+   * 耗时（微秒）
+   *
+   * @generated from field: int64 duration_us = 18;
+   */
+  durationUs: bigint;
+
+  /**
+   * 业务字段的 JSON 对象文本；无业务字段时为空
+   *
+   * @generated from field: string attrs_json = 19;
+   */
+  attrsJson: string;
+};
+
+/**
+ * Describes the message abysstract.admin.v1.AccessLog.
+ * Use `create(AccessLogSchema)` to create a new message.
+ */
+export const AccessLogSchema: GenMessage<AccessLog> = /*@__PURE__*/
+  messageDesc(file_abysstract_admin_v1_log, 10);
+
+/**
+ * @generated from message abysstract.admin.v1.ListAccessLogsRequest
+ */
+export type ListAccessLogsRequest = Message<"abysstract.admin.v1.ListAccessLogsRequest"> & {
+  /**
+   * @generated from field: abysstract.admin.v1.PageRequest page = 1;
+   */
+  page?: PageRequest | undefined;
+
+  /**
+   * 含
+   *
+   * @generated from field: google.protobuf.Timestamp start_time = 2;
+   */
+  startTime?: Timestamp | undefined;
+
+  /**
+   * 不含
+   *
+   * @generated from field: google.protobuf.Timestamp end_time = 3;
+   */
+  endTime?: Timestamp | undefined;
+
+  /**
+   * 精确匹配调用方 ID 或名称
+   *
+   * @generated from field: string principal = 4;
+   */
+  principal: string;
+
+  /**
+   * 以 / 开头为前缀匹配，否则为包含匹配；同时匹配 HTTP 路径
+   *
+   * @generated from field: string procedure = 5;
+   */
+  procedure: string;
+
+  /**
+   * 空 | success | failure
+   *
+   * @generated from field: string result = 6;
+   */
+  result: string;
+
+  /**
+   * 精确匹配 Connect 错误码
+   *
+   * @generated from field: string code = 7;
+   */
+  code: string;
+
+  /**
+   * @generated from field: string request_id = 8;
+   */
+  requestId: string;
+
+  /**
+   * @generated from field: string principal_type = 9;
+   */
+  principalType: string;
+};
+
+/**
+ * Describes the message abysstract.admin.v1.ListAccessLogsRequest.
+ * Use `create(ListAccessLogsRequestSchema)` to create a new message.
+ */
+export const ListAccessLogsRequestSchema: GenMessage<ListAccessLogsRequest> = /*@__PURE__*/
+  messageDesc(file_abysstract_admin_v1_log, 11);
+
+/**
+ * @generated from message abysstract.admin.v1.ListAccessLogsResponse
+ */
+export type ListAccessLogsResponse = Message<"abysstract.admin.v1.ListAccessLogsResponse"> & {
+  /**
+   * @generated from field: repeated abysstract.admin.v1.AccessLog items = 1;
+   */
+  items: AccessLog[];
+
+  /**
+   * @generated from field: abysstract.admin.v1.PageInfo page = 2;
+   */
+  page?: PageInfo | undefined;
+};
+
+/**
+ * Describes the message abysstract.admin.v1.ListAccessLogsResponse.
+ * Use `create(ListAccessLogsResponseSchema)` to create a new message.
+ */
+export const ListAccessLogsResponseSchema: GenMessage<ListAccessLogsResponse> = /*@__PURE__*/
+  messageDesc(file_abysstract_admin_v1_log, 12);
+
+/**
+ * @generated from message abysstract.admin.v1.GetAccessLogStatusRequest
+ */
+export type GetAccessLogStatusRequest = Message<"abysstract.admin.v1.GetAccessLogStatusRequest"> & {
+};
+
+/**
+ * Describes the message abysstract.admin.v1.GetAccessLogStatusRequest.
+ * Use `create(GetAccessLogStatusRequestSchema)` to create a new message.
+ */
+export const GetAccessLogStatusRequestSchema: GenMessage<GetAccessLogStatusRequest> = /*@__PURE__*/
+  messageDesc(file_abysstract_admin_v1_log, 13);
+
+/**
+ * @generated from message abysstract.admin.v1.AccessLogSinkStatus
+ */
+export type AccessLogSinkStatus = Message<"abysstract.admin.v1.AccessLogSinkStatus"> & {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name: string;
+
+  /**
+   * 支持查询（请求日志页面需要至少一个）
+   *
+   * @generated from field: bool reader = 2;
+   */
+  reader: boolean;
+
+  /**
+   * @generated from field: int64 written = 3;
+   */
+  written: bigint;
+
+  /**
+   * @generated from field: int64 failed = 4;
+   */
+  failed: bigint;
+
+  /**
+   * sink 积压时跳过的条数
+   *
+   * @generated from field: int64 dropped = 5;
+   */
+  dropped: bigint;
+
+  /**
+   * @generated from field: int64 errors = 6;
+   */
+  errors: bigint;
+
+  /**
+   * @generated from field: string last_error = 7;
+   */
+  lastError: string;
+};
+
+/**
+ * Describes the message abysstract.admin.v1.AccessLogSinkStatus.
+ * Use `create(AccessLogSinkStatusSchema)` to create a new message.
+ */
+export const AccessLogSinkStatusSchema: GenMessage<AccessLogSinkStatus> = /*@__PURE__*/
+  messageDesc(file_abysstract_admin_v1_log, 14);
+
+/**
+ * @generated from message abysstract.admin.v1.GetAccessLogStatusResponse
+ */
+export type GetAccessLogStatusResponse = Message<"abysstract.admin.v1.GetAccessLogStatusResponse"> & {
+  /**
+   * 已配置至少一个 sink
+   *
+   * @generated from field: bool enabled = 1;
+   */
+  enabled: boolean;
+
+  /**
+   * 有支持查询的 sink；为 false 时 ListAccessLogs 返回 FailedPrecondition
+   *
+   * @generated from field: bool readable = 2;
+   */
+  readable: boolean;
+
+  /**
+   * @generated from field: repeated abysstract.admin.v1.AccessLogSinkStatus sinks = 3;
+   */
+  sinks: AccessLogSinkStatus[];
+
+  /**
+   * @generated from field: int64 queued = 4;
+   */
+  queued: bigint;
+
+  /**
+   * @generated from field: int64 queue_size = 5;
+   */
+  queueSize: bigint;
+
+  /**
+   * @generated from field: int64 enqueued = 6;
+   */
+  enqueued: bigint;
+
+  /**
+   * 队列满或关闭时丢弃的条数
+   *
+   * @generated from field: int64 dropped = 7;
+   */
+  dropped: bigint;
+
+  /**
+   * @generated from field: int64 write_errors = 8;
+   */
+  writeErrors: bigint;
+};
+
+/**
+ * Describes the message abysstract.admin.v1.GetAccessLogStatusResponse.
+ * Use `create(GetAccessLogStatusResponseSchema)` to create a new message.
+ */
+export const GetAccessLogStatusResponseSchema: GenMessage<GetAccessLogStatusResponse> = /*@__PURE__*/
+  messageDesc(file_abysstract_admin_v1_log, 15);
+
+/**
  * 日志服务
  *
  * @generated from service abysstract.admin.v1.LogService
@@ -318,6 +664,22 @@ export const LogService: GenService<{
     methodKind: "unary";
     input: typeof CleanLoginLogsRequestSchema;
     output: typeof CleanLoginLogsResponseSchema;
+  },
+  /**
+   * @generated from rpc abysstract.admin.v1.LogService.ListAccessLogs
+   */
+  listAccessLogs: {
+    methodKind: "unary";
+    input: typeof ListAccessLogsRequestSchema;
+    output: typeof ListAccessLogsResponseSchema;
+  },
+  /**
+   * @generated from rpc abysstract.admin.v1.LogService.GetAccessLogStatus
+   */
+  getAccessLogStatus: {
+    methodKind: "unary";
+    input: typeof GetAccessLogStatusRequestSchema;
+    output: typeof GetAccessLogStatusResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_abysstract_admin_v1_log, 0);

@@ -121,7 +121,7 @@ func TestProductSyncOfflineAndGoVersion(t *testing.T) {
 		t.Run(driver, func(t *testing.T) {
 			root := t.TempDir()
 			files, err := Sync(root, driver)
-			if err != nil || len(files) != 3 {
+			if err != nil || len(files) != 4 {
 				t.Fatalf("sync: %v %v", files, err)
 			}
 			for _, name := range files {

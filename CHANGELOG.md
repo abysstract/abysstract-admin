@@ -7,6 +7,23 @@
 
 ## [Unreleased]
 
+新增可替换的请求日志。执行迁移前，业务应用先用 `admin-migrations sync` 导入新的系统迁移（`sys_access_log` 表与「请求日志」菜单）。
+
+### Added
+
+- 请求日志：公共包 `backend/accesslog` 为每个请求记录时间、请求 ID、接口、调用方、客户端 IP、Connect 错误码或 HTTP 状态、错误信息、耗时和业务字段 `Attrs`。请求只把记录放入有界队列，由后台批量写入；队列满时丢弃并计数，不阻塞也不影响请求。见[请求日志](docs/access-log.md)。
+- 可替换的 sink：`accesslog.Sink`（`Write`、`Close`）与可选的 `accesslog.Reader`，通过 `accesslog.Register` 按名称注册。多个 sink 各自独立写入，一个失败、变慢或 panic 不影响其他 sink。内置 `accesslog/stdoutsink`（`stdout`，每行一个字段稳定的 JSON）和 `accesslog/dbsink`（`db`，写入 `sys_access_log`，按保留天数定期清理，实现 `Reader`）。
+- 采集：`accesslog.Middleware` 与 `accesslog.Interceptor`，以及 `SetPrincipal`、`SetAttr`、`AddAttrs`、`SetError`、`Skip` 等上下文函数。应用自己的 Connect 服务（例如用 API 凭证认证的同步接口）可以直接使用同一拦截器并在认证中设置调用方。
+- 系统迁移 `sys_access_log`（PostgreSQL、MySQL、MariaDB、SQLite），索引覆盖时间、调用方和接口；「系统管理 → 请求日志」菜单与权限 `system:accesslog:list`。
+- `LogService.ListAccessLogs`（时间范围、调用方、接口、结果、错误码、请求 ID 筛选）与 `LogService.GetAccessLogStatus`（sink 列表、队列与丢弃统计）；前端「请求日志」页面，详情中显示业务字段。没有可查询的 sink 时菜单隐藏，接口返回 `failed_precondition`。
+- 配置项 `ADMIN_ACCESS_LOG_SINKS`（默认 `db,stdout`，空或 `none` 关闭）、`ADMIN_ACCESS_LOG_QUEUE_SIZE`、`ADMIN_ACCESS_LOG_BATCH_SIZE`、`ADMIN_ACCESS_LOG_FLUSH_INTERVAL_MS`、`ADMIN_ACCESS_LOG_RETENTION_DAYS`（默认 30），启动时校验 sink 是否已注册。
+- `adminapp.Options.AccessLog`（共享应用打开的分发器）与 `adminapp.Options.AccessLogSinks`（追加应用自己的 sink）；`adminapp.OpenAccessLog`、`adminapp.AccessLogCapture`、`App.AccessLog()` 与 `module.Runtime.AccessLog`。
+
+### Changed
+
+- 自带后台默认启用请求日志，写入 `sys_access_log` 并输出到标准输出。关闭时在关闭数据库前写完队列中的记录。启用 `db` sink 但数据库缺少 `sys_access_log` 时启动失败并提示执行迁移；暂不迁移的部署可设置 `ADMIN_ACCESS_LOG_SINKS=stdout`。
+- `adminconfig.Load` 在未设置 `ADMIN_ACCESS_LOG_SINKS` 时使用 `db,stdout`；直接构造的 `adminconfig.Config` 默认不启用请求日志。
+
 ## [0.4.0] - 2026-11-09
 
 Go 模块与 `@abysstract/admin-core`、`@abysstract/admin-proto` 同步发布 0.4.0。新增可替换的文件存储与前端直传；直接调用系统模块 `Create` 的代码需要提供 `module.Runtime.Storage`（见 Changed）。

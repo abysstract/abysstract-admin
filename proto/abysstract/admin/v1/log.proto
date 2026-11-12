@@ -52,10 +52,72 @@ message ListLoginLogsResponse {
 message CleanLoginLogsRequest {}
 message CleanLoginLogsResponse {}
 
+// 请求日志（每个请求一条，由可替换的 sink 异步写入；队列满时丢弃）
+message AccessLog {
+  string id = 1;
+  google.protobuf.Timestamp time = 2; // 请求开始时间
+  string request_id = 3;
+  string kind = 4; // rpc | http
+  string service = 5; // Connect 服务全名
+  string procedure = 6; // Connect 过程，如 /abysstract.admin.v1.UserService/ListUsers
+  string method = 7; // HTTP 方法
+  string path = 8; // HTTP 路径
+  string principal_type = 9; // user | api_credential | 应用自定义；匿名为空
+  string principal_id = 10;
+  string principal_name = 11;
+  string client_ip = 12;
+  string user_agent = 13;
+  string code = 14; // Connect 错误码（ok、not_found 等）；普通 HTTP 请求为空
+  int32 status = 15; // HTTP 状态码；未知为 0
+  bool success = 16;
+  string error = 17; // 错误信息（已截断）
+  int64 duration_us = 18; // 耗时（微秒）
+  string attrs_json = 19; // 业务字段的 JSON 对象文本；无业务字段时为空
+}
+
+message ListAccessLogsRequest {
+  PageRequest page = 1;
+  google.protobuf.Timestamp start_time = 2; // 含
+  google.protobuf.Timestamp end_time = 3; // 不含
+  string principal = 4; // 精确匹配调用方 ID 或名称
+  string procedure = 5; // 以 / 开头为前缀匹配，否则为包含匹配；同时匹配 HTTP 路径
+  string result = 6; // 空 | success | failure
+  string code = 7; // 精确匹配 Connect 错误码
+  string request_id = 8;
+  string principal_type = 9;
+}
+message ListAccessLogsResponse {
+  repeated AccessLog items = 1;
+  PageInfo page = 2;
+}
+
+message GetAccessLogStatusRequest {}
+message AccessLogSinkStatus {
+  string name = 1;
+  bool reader = 2; // 支持查询（请求日志页面需要至少一个）
+  int64 written = 3;
+  int64 failed = 4;
+  int64 dropped = 5; // sink 积压时跳过的条数
+  int64 errors = 6;
+  string last_error = 7;
+}
+message GetAccessLogStatusResponse {
+  bool enabled = 1; // 已配置至少一个 sink
+  bool readable = 2; // 有支持查询的 sink；为 false 时 ListAccessLogs 返回 FailedPrecondition
+  repeated AccessLogSinkStatus sinks = 3;
+  int64 queued = 4;
+  int64 queue_size = 5;
+  int64 enqueued = 6;
+  int64 dropped = 7; // 队列满或关闭时丢弃的条数
+  int64 write_errors = 8;
+}
+
 // 日志服务
 service LogService {
   rpc ListOperLogs(ListOperLogsRequest) returns (ListOperLogsResponse);
   rpc CleanOperLogs(CleanOperLogsRequest) returns (CleanOperLogsResponse);
   rpc ListLoginLogs(ListLoginLogsRequest) returns (ListLoginLogsResponse);
   rpc CleanLoginLogs(CleanLoginLogsRequest) returns (CleanLoginLogsResponse);
+  rpc ListAccessLogs(ListAccessLogsRequest) returns (ListAccessLogsResponse);
+  rpc GetAccessLogStatus(GetAccessLogStatusRequest) returns (GetAccessLogStatusResponse);
 }

@@ -9,6 +9,7 @@ import (
 
 	"gorm.io/gorm"
 
+	"github.com/abysstract/abysstract-admin/backend/accesslog"
 	"github.com/abysstract/abysstract-admin/backend/adminconfig"
 	"github.com/abysstract/abysstract-admin/backend/permission"
 	"github.com/abysstract/abysstract-admin/backend/resource"
@@ -27,6 +28,11 @@ type Runtime struct {
 	// Storage is the application's object storage, shared by every module.
 	// It is borrowed: modules must not close it.
 	Storage storage.Storage
+	// AccessLog is the request log dispatcher, or nil when access logging
+	// is disabled. Modules read stored entries through AccessLog.Reader() and
+	// enrich the current request with accesslog.SetAttr. It is borrowed:
+	// modules must not close it.
+	AccessLog *accesslog.Logger
 }
 
 // Definition declares one module. Static Services, Permissions, HTTP, and

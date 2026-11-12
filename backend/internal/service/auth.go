@@ -13,6 +13,7 @@ import (
 
 	"connectrpc.com/connect/v2"
 
+	"github.com/abysstract/abysstract-admin/backend/accesslog"
 	adminv1 "github.com/abysstract/abysstract-admin/backend/gen/abysstract/admin/v1"
 	"github.com/abysstract/abysstract-admin/backend/internal/dal/model"
 	"github.com/abysstract/abysstract-admin/backend/internal/interceptor"
@@ -32,6 +33,23 @@ type AuthService struct {
 	refreshExpiresIn time.Duration
 	trustProxy       bool
 	now              func() time.Time
+	// hiddenMenuPerms 中的菜单不出现在 GetUserInfo 的菜单树中（如未配置可查询 sink 时的请求日志）。
+	hiddenMenuPerms map[string]bool
+}
+
+// HideMenus 让带有给定权限标识的菜单不出现在 GetUserInfo 返回的菜单树中，
+// 用于隐藏当前部署不可用的页面。须在服务开始处理请求前调用。
+func (s *AuthService) HideMenus(perms ...string) *AuthService {
+	if len(perms) == 0 {
+		return s
+	}
+	if s.hiddenMenuPerms == nil {
+		s.hiddenMenuPerms = make(map[string]bool, len(perms))
+	}
+	for _, perm := range perms {
+		s.hiddenMenuPerms[perm] = true
+	}
+	return s
 }
 
 // NewAuthService 构造 AuthService。若 refreshEnabled=false，RefreshToken/refresh_token 字段被禁用。
@@ -146,6 +164,7 @@ func (s *AuthService) Login(
 		resp.RefreshToken = raw
 	}
 
+	accesslog.SetPrincipal(ctx, interceptor.UserPrincipal(u.ID, u.Username))
 	_ = s.repo.AddLoginLog(ctx, &model.SysLoginLog{Username: username, Status: 1, IP: ip, Msg: "登录成功"})
 	return resp, nil
 }
@@ -302,6 +321,15 @@ func (s *AuthService) GetUserInfo(
 	menus, err := s.repo.MenusOf(ctx, u.ID)
 	if err != nil {
 		return nil, toConnectError(err)
+	}
+	if len(s.hiddenMenuPerms) > 0 {
+		visible := menus[:0:0]
+		for _, m := range menus {
+			if !s.hiddenMenuPerms[m.Perms] {
+				visible = append(visible, m)
+			}
+		}
+		menus = visible
 	}
 	return &adminv1.GetUserInfoResponse{
 		User:             toProtoUser(u, roleIDs),

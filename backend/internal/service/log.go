@@ -5,16 +5,22 @@ import (
 
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/abysstract/abysstract-admin/backend/accesslog"
 	adminv1 "github.com/abysstract/abysstract-admin/backend/gen/abysstract/admin/v1"
 	"github.com/abysstract/abysstract-admin/backend/internal/dal/model"
 	"github.com/abysstract/abysstract-admin/backend/internal/repo"
 )
 
 type LogService struct {
-	repo *repo.Repo
+	repo   *repo.Repo
+	access *accesslog.Logger
 }
 
-func NewLogService(r *repo.Repo) *LogService { return &LogService{repo: r} }
+// NewLogService serves the operation, login and request logs. access may be
+// nil when request logging is disabled.
+func NewLogService(r *repo.Repo, access *accesslog.Logger) *LogService {
+	return &LogService{repo: r, access: access}
+}
 
 func toProtoOperLog(l *model.SysOperLog) *adminv1.OperLog {
 	return &adminv1.OperLog{

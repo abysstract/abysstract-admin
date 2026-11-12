@@ -18,6 +18,8 @@ repo_root="$(git rev-parse --show-toplevel)"
 
 在反向代理或网关配置 HTTPS，并将前端请求转发至后端监听地址。
 
+请求日志默认写入数据库并输出到标准输出，数据库中保留 30 天。日志量大或已有日志平台时，按[请求日志](access-log.md#2-配置)调整 `ADMIN_ACCESS_LOG_SINKS` 和保留天数。
+
 使用默认本地存储时，持久化 `ADMIN_UPLOAD_DIR` 目录，多实例部署共享该目录或改用 S3。使用 S3 时为存储桶配置跨域上传，见[文件存储](storage.md#2-切换到-s3-或兼容服务)。
 
 ## 3. 执行迁移并启动

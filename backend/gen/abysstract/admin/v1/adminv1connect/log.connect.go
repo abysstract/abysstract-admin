@@ -32,6 +32,11 @@ const (
 	LogServiceListLoginLogsProcedure = "/abysstract.admin.v1.LogService/ListLoginLogs"
 	// LogServiceCleanLoginLogsProcedure is the procedure name of the LogService's CleanLoginLogs RPC.
 	LogServiceCleanLoginLogsProcedure = "/abysstract.admin.v1.LogService/CleanLoginLogs"
+	// LogServiceListAccessLogsProcedure is the procedure name of the LogService's ListAccessLogs RPC.
+	LogServiceListAccessLogsProcedure = "/abysstract.admin.v1.LogService/ListAccessLogs"
+	// LogServiceGetAccessLogStatusProcedure is the procedure name of the LogService's
+	// GetAccessLogStatus RPC.
+	LogServiceGetAccessLogStatusProcedure = "/abysstract.admin.v1.LogService/GetAccessLogStatus"
 )
 
 var (
@@ -63,6 +68,20 @@ var (
 			Procedure:  LogServiceCleanLoginLogsProcedure,
 		}
 	})
+	logServiceListAccessLogsSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_abysstract_admin_v1_log_proto.Services().ByName("LogService").Methods().ByName("ListAccessLogs"),
+			Procedure:  LogServiceListAccessLogsProcedure,
+		}
+	})
+	logServiceGetAccessLogStatusSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_abysstract_admin_v1_log_proto.Services().ByName("LogService").Methods().ByName("GetAccessLogStatus"),
+			Procedure:  LogServiceGetAccessLogStatusProcedure,
+		}
+	})
 )
 
 // LogServiceClient is a client for the abysstract.admin.v1.LogService service.
@@ -71,6 +90,8 @@ type LogServiceClient interface {
 	CleanOperLogs(context.Context, *v1.CleanOperLogsRequest) (*v1.CleanOperLogsResponse, error)
 	ListLoginLogs(context.Context, *v1.ListLoginLogsRequest) (*v1.ListLoginLogsResponse, error)
 	CleanLoginLogs(context.Context, *v1.CleanLoginLogsRequest) (*v1.CleanLoginLogsResponse, error)
+	ListAccessLogs(context.Context, *v1.ListAccessLogsRequest) (*v1.ListAccessLogsResponse, error)
+	GetAccessLogStatus(context.Context, *v1.GetAccessLogStatusRequest) (*v1.GetAccessLogStatusResponse, error)
 }
 
 // NewLogServiceClient constructs a client for the abysstract.admin.v1.LogService service. Multiple
@@ -85,6 +106,8 @@ type LogServiceHandler interface {
 	CleanOperLogs(context.Context, *v1.CleanOperLogsRequest) (*v1.CleanOperLogsResponse, error)
 	ListLoginLogs(context.Context, *v1.ListLoginLogsRequest) (*v1.ListLoginLogsResponse, error)
 	CleanLoginLogs(context.Context, *v1.CleanLoginLogsRequest) (*v1.CleanLoginLogsResponse, error)
+	ListAccessLogs(context.Context, *v1.ListAccessLogsRequest) (*v1.ListAccessLogsResponse, error)
+	GetAccessLogStatus(context.Context, *v1.GetAccessLogStatusRequest) (*v1.GetAccessLogStatusResponse, error)
 }
 
 // RegisterLogServiceHandler registers svc as the abysstract.admin.v1.LogService implementation on
@@ -96,6 +119,8 @@ func RegisterLogServiceHandler(server *connect.Server, svc LogServiceHandler) {
 		connect.Method{Spec: logServiceCleanOperLogsSpec(), Handler: adapter.cleanOperLogs},
 		connect.Method{Spec: logServiceListLoginLogsSpec(), Handler: adapter.listLoginLogs},
 		connect.Method{Spec: logServiceCleanLoginLogsSpec(), Handler: adapter.cleanLoginLogs},
+		connect.Method{Spec: logServiceListAccessLogsSpec(), Handler: adapter.listAccessLogs},
+		connect.Method{Spec: logServiceGetAccessLogStatusSpec(), Handler: adapter.getAccessLogStatus},
 	)
 }
 
@@ -116,6 +141,14 @@ func (UnimplementedLogServiceHandler) ListLoginLogs(context.Context, *v1.ListLog
 
 func (UnimplementedLogServiceHandler) CleanLoginLogs(context.Context, *v1.CleanLoginLogsRequest) (*v1.CleanLoginLogsResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, "abysstract.admin.v1.LogService.CleanLoginLogs is not implemented")
+}
+
+func (UnimplementedLogServiceHandler) ListAccessLogs(context.Context, *v1.ListAccessLogsRequest) (*v1.ListAccessLogsResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "abysstract.admin.v1.LogService.ListAccessLogs is not implemented")
+}
+
+func (UnimplementedLogServiceHandler) GetAccessLogStatus(context.Context, *v1.GetAccessLogStatusRequest) (*v1.GetAccessLogStatusResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "abysstract.admin.v1.LogService.GetAccessLogStatus is not implemented")
 }
 
 type logServiceClient struct {
@@ -149,6 +182,22 @@ func (c *logServiceClient) ListLoginLogs(ctx context.Context, req *v1.ListLoginL
 func (c *logServiceClient) CleanLoginLogs(ctx context.Context, req *v1.CleanLoginLogsRequest) (*v1.CleanLoginLogsResponse, error) {
 	var res v1.CleanLoginLogsResponse
 	if err := c.client.CallUnary(ctx, logServiceCleanLoginLogsSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *logServiceClient) ListAccessLogs(ctx context.Context, req *v1.ListAccessLogsRequest) (*v1.ListAccessLogsResponse, error) {
+	var res v1.ListAccessLogsResponse
+	if err := c.client.CallUnary(ctx, logServiceListAccessLogsSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *logServiceClient) GetAccessLogStatus(ctx context.Context, req *v1.GetAccessLogStatusRequest) (*v1.GetAccessLogStatusResponse, error) {
+	var res v1.GetAccessLogStatusResponse
+	if err := c.client.CallUnary(ctx, logServiceGetAccessLogStatusSpec(), req, &res); err != nil {
 		return nil, err
 	}
 	return &res, nil
@@ -198,6 +247,30 @@ func (h logServiceHandler) cleanLoginLogs(ctx context.Context, _ connect.Spec, s
 		return err
 	}
 	res, err := h.svc.CleanLoginLogs(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h logServiceHandler) listAccessLogs(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.ListAccessLogsRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.ListAccessLogs(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h logServiceHandler) getAccessLogStatus(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.GetAccessLogStatusRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.GetAccessLogStatus(ctx, &req)
 	if err != nil {
 		return err
 	}

@@ -36,6 +36,7 @@ func buildHandler(
 	connectOpts connecthttp.Option,
 	sec httpSecurity,
 	objects storage.Storage,
+	accessLog func(http.Handler) http.Handler,
 	pinger observ.Pinger,
 	registerer prometheus.Registerer,
 	gatherer prometheus.Gatherer,
@@ -91,7 +92,12 @@ func buildHandler(
 	}).Handler(mux)
 
 	metrics := observ.NewMetricsWithRegistry(registerer)
+	if accessLog == nil {
+		accessLog = func(next http.Handler) http.Handler { return next }
+	}
+	// The access log sits inside RequestIDMiddleware so entries carry the
+	// request ID, and outside CORS so rejected requests are recorded too.
 	return observ.RequestIDMiddleware(
-		observ.LoggerMiddleware(logger, metrics.MetricsMiddleware(corsHandler)),
+		observ.LoggerMiddleware(logger, metrics.MetricsMiddleware(accessLog(corsHandler))),
 	), nil
 }

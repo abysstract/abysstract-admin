@@ -104,13 +104,18 @@ func newSystemHandlers(rt module.Runtime) (*systemHandlers, error) {
 	if err != nil {
 		return nil, err
 	}
+	authSvc := service.NewAuthService(
+		store, loginSec, refresh, jwtMgr,
+		cfg.JWTExpiresIn,
+		cfg.RefreshTokenEnabled, cfg.JWTRefreshExpiresIn,
+		cfg.TrustProxy,
+	)
+	if !service.AccessLogReadable(rt.AccessLog) {
+		// Without a Reader the request log page cannot show anything.
+		authSvc.HideMenus(service.AccessLogListPerm)
+	}
 	return &systemHandlers{
-		auth: service.NewAuthService(
-			store, loginSec, refresh, jwtMgr,
-			cfg.JWTExpiresIn,
-			cfg.RefreshTokenEnabled, cfg.JWTRefreshExpiresIn,
-			cfg.TrustProxy,
-		),
+		auth:   authSvc,
 		user:   userSvc,
 		role:   roleSvc,
 		menu:   menuSvc,
@@ -118,7 +123,7 @@ func newSystemHandlers(rt module.Runtime) (*systemHandlers, error) {
 		dict:   dictSvc,
 		config: configSvc,
 		notice: noticeSvc,
-		log:    service.NewLogService(store),
+		log:    service.NewLogService(store, rt.AccessLog),
 		upload: service.NewUploadService(store, rt.Storage, service.UploadConfig{
 			FileMaxBytes:   cfg.UploadMaxBytes,
 			AvatarMaxBytes: cfg.AvatarMaxBytes,
