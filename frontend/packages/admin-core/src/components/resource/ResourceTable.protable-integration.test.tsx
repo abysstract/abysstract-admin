@@ -144,7 +144,8 @@ describe("ResourceTable real ProTable integration", () => {
     expect(initialListCalls).toBe(1);
     expect(screen.getByRole("columnheader", { name: "label" })).toBeInTheDocument();
     expect(screen.getByText(entity.id.toString())).toBeInTheDocument();
-    expect(screen.getByRole("cell", { name: "1" })).toBeInTheDocument();
+    // pro-components 3 lazily loads non-text value types; digit cells render after a tick.
+    expect(await screen.findByRole("cell", { name: "1" }, { timeout: 5000 })).toBeInTheDocument();
     expect(screen.queryByText("[object Object]")).not.toBeInTheDocument();
 
     fireEvent.change(screen.getByRole("textbox", { name: /keyword|关键词/i }), {
@@ -158,13 +159,13 @@ describe("ResourceTable real ProTable integration", () => {
       );
     });
 
-    fireEvent.click(screen.getByTitle("下一页"));
+    fireEvent.click(screen.getByRole("button", { name: "下一页" }));
     await waitFor(() => {
       expect(list).toHaveBeenCalledTimes(initialListCalls + 2);
       expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ pageNum: 2 }));
     });
 
-    fireEvent.click(screen.getByTitle("下一页"));
+    fireEvent.click(screen.getByRole("button", { name: "下一页" }));
     await waitFor(() => {
       expect(list).toHaveBeenCalledTimes(initialListCalls + 3);
       expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ pageNum: 3 }));
@@ -212,7 +213,7 @@ describe("ResourceTable real ProTable integration", () => {
 
     await screen.findByText("real protable");
     expect(list).toHaveBeenCalledTimes(1);
-    fireEvent.click(screen.getByTitle("下一页"));
+    fireEvent.click(screen.getByRole("button", { name: "下一页" }));
     await waitFor(() => {
       expect(list).toHaveBeenCalledTimes(2);
       expect(list).toHaveBeenLastCalledWith({

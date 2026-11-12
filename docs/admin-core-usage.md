@@ -117,11 +117,11 @@ import { coreSystemModule } from "@abysstract/admin-core/system";
 ```bash
 npm install @abysstract/admin-core @abysstract/admin-proto \
   @bufbuild/protobuf@^2 @connectrpc/connect@^2 @connectrpc/connect-web@^2 \
-  antd@^5 @ant-design/icons@^5 @ant-design/pro-components@^2 \
-  react@^18 react-dom@^18 react-router-dom@^6
+  antd@^6 @ant-design/icons@^6 @ant-design/pro-components@3.1.15-9 \
+  react@^19 react-dom@^19 react-router-dom@^6
 ```
 
-peer 依赖要带上大版本号。admin-core 目前要求 React 18、React Router 6 和 antd 5；不写版本时 npm 会装最新的 React 19，安装会因 `ERESOLVE` 失败。精确的版本范围以 `@abysstract/admin-core` 的 `package.json` 中 `peerDependencies` 为准。
+peer 依赖要带上版本号。admin-core 要求 antd 6、`@ant-design/icons` 6、React 18 或 19、React Router 6。`@ant-design/pro-components` 3 目前只有预发布版，admin-core 精确锁定一个版本，不写版本时 npm 会装 2.x，安装会因 `ERESOLVE` 失败；pro-components 3 要求 Node.js 22.12+。精确的版本范围以 `@abysstract/admin-core` 的 `package.json` 中 `peerDependencies` 为准。
 
 `@abysstract/admin-core` 固定依赖同版本的 `@abysstract/admin-proto`，升级时两个包一起升级。
 

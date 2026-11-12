@@ -21,6 +21,19 @@ Object.defineProperty(window, "matchMedia", {
   }),
 });
 
+// antd 6 的 @rc-component/resize-observer 不再自带 polyfill，jsdom 没有 ResizeObserver。
+class NoopResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+if (!("ResizeObserver" in globalThis)) {
+  Object.defineProperty(globalThis, "ResizeObserver", {
+    writable: true,
+    value: NoopResizeObserver,
+  });
+}
+
 const originalGetComputedStyle = window.getComputedStyle;
 window.getComputedStyle = (elt, pseudoElt) => {
   const style = originalGetComputedStyle(elt, pseudoElt);
@@ -325,6 +338,8 @@ vi.mock("@ant-design/icons", () => {
   const Icon = () => <span />;
   return {
     default: Icon,
+    // ProLayout（pro-components 3）在模块加载时调用 createFromIconfontCN。
+    createFromIconfontCN: () => Icon,
     DeleteOutlined: Icon,
     DownloadOutlined: Icon,
     KeyOutlined: Icon,

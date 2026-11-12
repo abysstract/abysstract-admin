@@ -71,7 +71,9 @@ export default function AccessLogList() {
     logClient
       .getAccessLogStatus({})
       .then((res) => active && setStatus(res))
-      .catch((e: unknown) => active && setStatusError(formatErrorMessage(e, "读取请求日志状态失败")));
+      .catch(
+        (e: unknown) => active && setStatusError(formatErrorMessage(e, "读取请求日志状态失败")),
+      );
     return () => {
       active = false;
     };
@@ -117,7 +119,7 @@ export default function AccessLogList() {
     {
       title: "时间",
       dataIndex: "time",
-      hideInSearch: true,
+      search: false,
       width: 180,
       render: (_, r) => fmtTime(r.time),
     },
@@ -146,11 +148,11 @@ export default function AccessLogList() {
     },
     { title: "错误码", dataIndex: "code", hideInTable: true },
     { title: "请求 ID", dataIndex: "requestId", hideInTable: true },
-    { title: "IP", dataIndex: "clientIp", hideInSearch: true },
+    { title: "IP", dataIndex: "clientIp", search: false },
     {
       title: "耗时(ms)",
       dataIndex: "durationUs",
-      hideInSearch: true,
+      search: false,
       render: (_, r) => durationText(r.durationUs),
     },
     {
@@ -171,7 +173,7 @@ export default function AccessLogList() {
           type="warning"
           showIcon
           style={{ marginBottom: 16 }}
-          message={`自启动以来因队列已满丢弃了 ${status.dropped} 条请求日志`}
+          title={`自启动以来因队列已满丢弃了 ${status.dropped} 条请求日志`}
         />
       )}
       <ProTable<AccessLog, SearchParams>
@@ -193,34 +195,50 @@ export default function AccessLogList() {
           return { data: res.items, total: Number(res.page?.total ?? 0n), success: true };
         }}
       />
-      <Drawer title="请求详情" width={640} open={!!detail} onClose={() => setDetail(undefined)}>
+      <Drawer title="请求详情" size={640} open={!!detail} onClose={() => setDetail(undefined)}>
         {detail && (
-          <Descriptions column={1} bordered size="small">
-            <Descriptions.Item label="时间">{fmtTime(detail.time)}</Descriptions.Item>
-            <Descriptions.Item label="请求 ID">{detail.requestId || "-"}</Descriptions.Item>
-            <Descriptions.Item label="类型">{detail.kind}</Descriptions.Item>
-            {detail.service && <Descriptions.Item label="服务">{detail.service}</Descriptions.Item>}
-            <Descriptions.Item label="接口">{target(detail)}</Descriptions.Item>
-            <Descriptions.Item label="HTTP">
-              {[detail.method, detail.path, detail.status ? String(detail.status) : ""].filter(Boolean).join(" ") || "-"}
-            </Descriptions.Item>
-            <Descriptions.Item label="调用方">{principalText(detail)}</Descriptions.Item>
-            {detail.principalId && <Descriptions.Item label="调用方 ID">{detail.principalId}</Descriptions.Item>}
-            <Descriptions.Item label="IP">{detail.clientIp || "-"}</Descriptions.Item>
-            <Descriptions.Item label="User-Agent">{detail.userAgent || "-"}</Descriptions.Item>
-            <Descriptions.Item label="结果">{resultTag(detail)}</Descriptions.Item>
-            {detail.error && <Descriptions.Item label="错误">{detail.error}</Descriptions.Item>}
-            <Descriptions.Item label="耗时(ms)">{durationText(detail.durationUs)}</Descriptions.Item>
-            <Descriptions.Item label="业务字段">
-              {detail.attrsJson ? (
-                <pre data-testid="access-log-attrs" style={{ margin: 0, whiteSpace: "pre-wrap" }}>
-                  {prettyAttrs(detail.attrsJson)}
-                </pre>
-              ) : (
-                "-"
-              )}
-            </Descriptions.Item>
-          </Descriptions>
+          <Descriptions
+            column={1}
+            bordered
+            size="small"
+            items={[
+              { key: "time", label: "时间", children: fmtTime(detail.time) },
+              { key: "requestId", label: "请求 ID", children: detail.requestId || "-" },
+              { key: "kind", label: "类型", children: detail.kind },
+              ...(detail.service
+                ? [{ key: "service", label: "服务", children: detail.service }]
+                : []),
+              { key: "target", label: "接口", children: target(detail) },
+              {
+                key: "http",
+                label: "HTTP",
+                children:
+                  [detail.method, detail.path, detail.status ? String(detail.status) : ""]
+                    .filter(Boolean)
+                    .join(" ") || "-",
+              },
+              { key: "principal", label: "调用方", children: principalText(detail) },
+              ...(detail.principalId
+                ? [{ key: "principalId", label: "调用方 ID", children: detail.principalId }]
+                : []),
+              { key: "clientIp", label: "IP", children: detail.clientIp || "-" },
+              { key: "userAgent", label: "User-Agent", children: detail.userAgent || "-" },
+              { key: "result", label: "结果", children: resultTag(detail) },
+              ...(detail.error ? [{ key: "error", label: "错误", children: detail.error }] : []),
+              { key: "duration", label: "耗时(ms)", children: durationText(detail.durationUs) },
+              {
+                key: "attrs",
+                label: "业务字段",
+                children: detail.attrsJson ? (
+                  <pre data-testid="access-log-attrs" style={{ margin: 0, whiteSpace: "pre-wrap" }}>
+                    {prettyAttrs(detail.attrsJson)}
+                  </pre>
+                ) : (
+                  "-"
+                ),
+              },
+            ]}
+          />
         )}
       </Drawer>
     </PageContainer>

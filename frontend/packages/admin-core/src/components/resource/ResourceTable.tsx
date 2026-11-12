@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactElement,
+  type ReactNode,
+} from "react";
 import { Button, Input, Modal, Space, type ButtonProps } from "antd";
 import { ProTable, type ProColumns } from "@ant-design/pro-components";
 import type { FilterValue, SorterResult, TablePaginationConfig } from "antd/es/table/interface";
@@ -129,7 +137,7 @@ function CreateFormModal<
   TFilters,
   TCreateValues,
   TUpdateValues
->): JSX.Element {
+>): ReactElement {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -239,7 +247,7 @@ function EditFormModal<
   TFilters,
   TCreateValues,
   TUpdateValues
->): JSX.Element {
+>): ReactElement {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const initialValues = {
@@ -319,7 +327,7 @@ function ActionButton({
   disabled,
   buttonType = "link",
   danger,
-}: ActionButtonProps): JSX.Element {
+}: ActionButtonProps): ReactElement {
   return (
     <Button
       type={buttonType}
@@ -376,7 +384,7 @@ function ProductionResourceTable<
   props:
     | ResourceTableProductionProps<TSchema, TEntity, TKey, TFilters, TCreateValues, TUpdateValues>
     | ResourceTableReadOnlyProps<TSchema, TEntity, TKey, TFilters>,
-): JSX.Element {
+): ReactElement {
   const {
     schema,
     operations,
@@ -932,13 +940,13 @@ function ProductionResourceTable<
 }
 
 /** ResourceTable renders only generated listable fields and never coerces bigint to number. */
-export function ResourceTable(props: ResourceTablePrototypeProps): JSX.Element;
+export function ResourceTable(props: ResourceTablePrototypeProps): ReactElement;
 export function ResourceTable<
   TSchema extends ResourceSchema,
   TEntity,
   TKey extends ResourceKey,
   TFilters extends object,
->(props: ResourceTableReadOnlyProps<TSchema, TEntity, TKey, TFilters>): JSX.Element;
+>(props: ResourceTableReadOnlyProps<TSchema, TEntity, TKey, TFilters>): ReactElement;
 export function ResourceTable<
   TSchema extends ResourceSchema,
   TEntity,
@@ -955,13 +963,13 @@ export function ResourceTable<
     TCreateValues,
     TUpdateValues
   >,
-): JSX.Element;
+): ReactElement;
 export function ResourceTable(
   props:
     | ResourceTablePrototypeProps
     | ResourceTableProductionProps<ResourceSchema, object, ResourceKey, object, object, object>
     | ResourceTableReadOnlyProps<ResourceSchema, object, ResourceKey, object>,
-): JSX.Element {
+): ReactElement {
   if (!("rows" in props)) {
     return <ProductionResourceTable {...props} />;
   }

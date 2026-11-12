@@ -8,7 +8,7 @@
 
 ## 准备
 
-- Go 1.26+、Node.js 20+。
+- Go 1.26+、Node.js 22.12+。
 - [buf](https://buf.build/docs/installation)：`module generate` 用它生成协议代码，需要在 `PATH` 中。
 - 一个空数据库。新建本地数据库的方法见[本地数据库准备](database-setup.md)。
 
@@ -277,9 +277,9 @@ curl --fail http://localhost:8080/readyz
 cd frontend
 npm install @abysstract/admin-core@^0.5.0 @abysstract/admin-proto@^0.5.0 \
   @bufbuild/protobuf@^2 @connectrpc/connect@^2 @connectrpc/connect-web@^2 \
-  antd@^5 @ant-design/icons@^5 @ant-design/pro-components@^2 \
-  react@^18 react-dom@^18 react-router-dom@^6
-npm install -D typescript@^5 vite@^5 @vitejs/plugin-react@^4 @types/react@^18 @types/react-dom@^18
+  antd@^6 @ant-design/icons@^6 @ant-design/pro-components@3.1.15-9 \
+  react@^19 react-dom@^19 react-router-dom@^6
+npm install -D typescript@^5 vite@^5 @vitejs/plugin-react@^4 @types/react@^19 @types/react-dom@^19
 cd ..
 ```
 

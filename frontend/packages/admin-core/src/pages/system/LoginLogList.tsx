@@ -15,7 +15,7 @@ import { formatErrorMessage, useAppMessage } from "../../runtime/message";
 export default function LoginLogList() {
   const { log: logClient } = useSystemClients();
   const message = useAppMessage();
-  const actionRef = useRef<ActionType>();
+  const actionRef = useRef<ActionType | undefined>(undefined);
   const { has } = useAccess();
 
   const clean = async () => {

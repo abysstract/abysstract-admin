@@ -78,7 +78,7 @@ export default function DictDataDrawer({ dictType, open, onClose }: Props) {
   ];
 
   return (
-    <Drawer title={`字典数据 - ${dictType}`} open={open} onClose={onClose} width={640}>
+    <Drawer title={`字典数据 - ${dictType}`} open={open} onClose={onClose} size={640}>
       {open ? (
         <ResourceTable<
           typeof dictDataSchema,

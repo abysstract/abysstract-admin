@@ -1,3 +1,4 @@
+import type { ReactElement } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import Login from "./pages/Login";
 import NoAccess from "./pages/NoAccess";
@@ -7,7 +8,7 @@ import { useModuleRegistry, useSessionSnapshot } from "./runtime/context";
 import { compileMenuPages } from "./module/routes";
 import { renderRegisteredPage, renderRouteConflicts } from "./module/pages";
 
-function RequireAuth({ children }: { children: JSX.Element }) {
+function RequireAuth({ children }: { children: ReactElement }) {
   const session = useSessionSnapshot();
   if (!session.token) return <Navigate to="/login" replace />;
   return <AccessProvider>{children}</AccessProvider>;

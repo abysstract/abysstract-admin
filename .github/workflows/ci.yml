@@ -34,7 +34,7 @@ env:
   GOWORK: "off"
   GO_VERSION: "1.26.4"
   CGO_ENABLED: "1"
-  NODE_VERSION: "20"
+  NODE_VERSION: "22"
   BUF_VERSION: "1.71.0"
 
 jobs:

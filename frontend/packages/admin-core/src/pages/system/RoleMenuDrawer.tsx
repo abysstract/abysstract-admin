@@ -118,7 +118,7 @@ export default function RoleMenuDrawer({ role, open, onClose }: Props) {
       title={role ? `分配菜单权限 - ${role.roleName}` : "分配菜单权限"}
       open={open}
       onClose={onClose}
-      width={420}
+      size={420}
       loading={loading}
       extra={
         <Space>

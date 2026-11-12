@@ -5,6 +5,7 @@ import {
   useState,
   type ComponentType,
   type FormEvent,
+  type ReactElement,
   type ReactNode,
 } from "react";
 import { Button, Form, Input, InputNumber, Select, Space, Switch } from "antd";
@@ -169,7 +170,7 @@ function RelationOptions({
   }, [loader]);
 
   return (
-    <Space direction="vertical" size="small" style={{ width: "100%" }}>
+    <Space orientation="vertical" size="small" style={{ width: "100%" }}>
       {loader.remoteSearchEnabled && (
         <Input
           aria-label={`${fieldName} search`}
@@ -271,7 +272,7 @@ function RelationSelect({
 
   const searchEnabled = loader?.remoteSearchEnabled === true;
   return (
-    <Space direction="vertical" size="small" style={{ width: "100%" }}>
+    <Space orientation="vertical" size="small" style={{ width: "100%" }}>
       <Select
         aria-label={fieldName}
         value={value as RelationValue | undefined}
@@ -306,7 +307,7 @@ function RelationSelect({
   );
 }
 
-function LegacyResourceForm({ props }: { props: ResourceFormPrototypeProps }): JSX.Element {
+function LegacyResourceForm({ props }: { props: ResourceFormPrototypeProps }): ReactElement {
   const schema = props.schema;
   const mode = props.mode;
   const initialValues = (props.initialValues ?? emptyInitialValues) as ResourceValues;
@@ -396,7 +397,7 @@ function LegacyResourceForm({ props }: { props: ResourceFormPrototypeProps }): J
   );
 }
 
-function ProductionResourceForm({ props }: { props: ProductionProps }): JSX.Element {
+function ProductionResourceForm({ props }: { props: ProductionProps }): ReactElement {
   const { schema, mode, resetKey, initialValues: suppliedInitialValues } = props;
   const relationLoaders = (props.relationLoaders ?? {}) as Readonly<
     Record<string, AnyRelationOptionLoader>
@@ -786,9 +787,9 @@ export function ResourceForm<
     TUpdateField,
     TEntity
   >,
-): JSX.Element;
-export function ResourceForm(props: ResourceFormPrototypeProps): JSX.Element;
-export function ResourceForm(props: object): JSX.Element {
+): ReactElement;
+export function ResourceForm(props: ResourceFormPrototypeProps): ReactElement;
+export function ResourceForm(props: object): ReactElement {
   if ("onSubmit" in props)
     return <LegacyResourceForm props={props as ResourceFormPrototypeProps} />;
   return <ProductionResourceForm props={props as ProductionProps} />;
