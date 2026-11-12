@@ -9,7 +9,7 @@
 
 ### Changed
 
-- **破坏性**：`@abysstract/admin-core` 迁移到 antd 6。peer 依赖改为 `antd ^6.7.0`、`@ant-design/icons ^6.3.4`、`@ant-design/pro-components 3.1.15-9`（pro-components 3 尚无正式版，精确锁定）；React 放宽为 `^18.3.0 || ^19.0.0`，自带应用改用 React 19。前端开发与 CI 需要 Node.js 22.12+（pro-components 3 的要求）。
+- **破坏性**：`@abysstract/admin-core` 迁移到 antd 6。peer 依赖改为 `antd ^6.7.0`、`@ant-design/icons ^6.3.4`、`@ant-design/pro-components 3.1.15-9`（pro-components 3 尚无正式版，精确锁定）；React 放宽为 `^18.3.0 || ^19.0.0`，自带应用改用 React 19。前端开发与 CI 需要 Node.js 22.12+（pro-components 3 的要求）；仓库根目录新增 `.node-version`，CI 改为读取该文件。
 - 业务应用升级时同时升级 antd、icons 和 pro-components，并按 [antd v6 迁移指南](https://ant.design/docs/react/migration-v6-cn) 处理自己页面中的弃用 API；pro-components 3 中 `ProColumns.hideInSearch` 改为 `search: false`。antd 6 默认启用 CSS 变量，自定义主题和依赖内部 DOM 的样式需要复查。
 - admin-core 内部改用 antd 6 的新写法（Drawer `size`、Space `orientation`、Alert `title`、Modal `mask.closable`、Descriptions `items`），公共组件的返回类型由全局 `JSX.Element` 改为 `ReactElement`。
 

@@ -2,7 +2,7 @@
 
 ## 工具与首次启动
 
-安装 Go 1.26+、Node.js 22.12+；修改协议时还需要 [buf](https://buf.build/docs/installation)。数据库要求及本地准备方法见[数据库配置](configuration.md#数据库配置)和[数据库准备](database-setup.md)。
+安装 Go 1.26+、Node.js 22.12+（仓库根目录的 `.node-version` 指定 Node 大版本，fnm 和 CI 都读取它）；修改协议时还需要 [buf](https://buf.build/docs/installation)。数据库要求及本地准备方法见[数据库配置](configuration.md#数据库配置)和[数据库准备](database-setup.md)。
 
 首次运行按 [README 快速开始](../README.md#快速开始体验自带后台)操作。仓库已包含生成文件，首次启动可以直接使用。
 
