@@ -3,7 +3,6 @@ package adminapp
 import (
 	"context"
 	"log/slog"
-	"net/http"
 
 	"gorm.io/gorm"
 
@@ -35,7 +34,10 @@ func AccessLogConfig(cfg adminconfig.Config, db *gorm.DB, logger *slog.Logger) a
 //
 // Applications that run their own API server next to the admin application
 // open one Logger here, pass it as Options.AccessLog and use it with
-// accesslog.Interceptor in their server.
+// accesslog.Interceptor in their server. When that server runs as a separate
+// process writing the same database, set cfg.AccessLogPurgeDisabled
+// (ADMIN_ACCESS_LOG_PURGE=false) in all but one process so only one purges
+// expired entries.
 func OpenAccessLog(ctx context.Context, cfg adminconfig.Config, db *gorm.DB, logger *slog.Logger, extra ...accesslog.Sink) (*accesslog.Logger, error) {
 	sinks, err := accesslog.Open(ctx, cfg.AccessLogSinks, AccessLogConfig(cfg, db, logger))
 	if err != nil {
@@ -60,23 +62,16 @@ func OpenAccessLog(ctx context.Context, cfg adminconfig.Config, db *gorm.DB, log
 
 // AccessLogCapture returns the capture options of the admin application:
 // ADMIN_TRUST_PROXY and ADMIN_TRUSTED_PROXIES for the client IP, the X-Request-Id assigned by the
-// application, and no entries for health probes, metrics or CORS preflight.
+// application's request ID middleware, and accesslog.DefaultSkip, which
+// skips health probes, metrics and CORS preflight.
+//
+// A separate API process has no such middleware; it sets
+// CaptureOptions.AssignRequestID instead (see docs/access-log.md).
 func AccessLogCapture(cfg adminconfig.Config) accesslog.CaptureOptions {
 	return accesslog.CaptureOptions{
 		TrustProxy:     cfg.TrustProxy,
 		TrustedProxies: cfg.TrustedProxies,
 		RequestID:      observ.RequestIDFromContext,
-		Skip:           skipAccessLog,
+		Skip:           accesslog.DefaultSkip,
 	}
-}
-
-func skipAccessLog(r *http.Request) bool {
-	if r.Method == http.MethodOptions {
-		return true
-	}
-	switch r.URL.Path {
-	case "/healthz", "/readyz", "/metrics", "/version":
-		return true
-	}
-	return false
 }

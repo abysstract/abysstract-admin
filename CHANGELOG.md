@@ -16,6 +16,9 @@
 - 登录失败后要求验证码，并按来源 IP 计数（IPv6 按 /64）。`ADMIN_CAPTCHA_PROVIDER` 可选内置滑块 `slide`（`captcha/slidecaptcha`，基于 go-captcha，不依赖外部服务）、`turnstile`、`hcaptcha`；其他服务实现 `captcha.Verifier` 后传给 `adminapp.Options.Captcha`。新增 `AuthService.GetCaptcha`、`LoginRequest.captcha_id/captcha` 和错误详情 `LoginChallenge`；前端内置滑块，第三方组件通过 `AdminHost.login.captcha` 提供。未启用验证码时，同一 IP 失败过多会暂时拒绝登录。新增迁移 `20261116090000_login_guard`（`sys_login_ip_attempt`、`sys_captcha_used`），升级后执行 `admin-migrations sync` 和 `migrate`。见[登录安全](docs/configuration.md#登录安全)。
 - `ADMIN_TRUSTED_PROXIES`：多层反向代理时列出可信代理网段，客户端 IP 从 `X-Forwarded-For` 右侧跳过这些网段取得。`accesslog.ProxyPolicy` 是对应的公开 API。
 - `ResourceTable` 新增 `query.syncUrl`、列的 `numeric`、自定义行操作的 `danger`、自定义工具栏项的 `placement: "selection"`。
+- `accesslog.CaptureOptions.AssignRequestID`：没有请求 ID 中间件的服务（如单独进程中的 API 服务）一行配置即可获得请求 ID。合法的客户端 `X-Request-Id`（8–128 个字符，字母、数字和 `-_.:+/=@`）沿用，否则生成 96 位随机 ID；写入响应头、context 和 `request_id`。新增 `RequestIDFromContext`、`WithRequestID`、`ValidRequestID`、`NewRequestID`。见[请求 ID 与跳过的请求](docs/access-log.md#64-请求-id-与跳过的请求)。
+- `accesslog.DefaultSkip` 与 `accesslog.SkipPaths`：后台跳过的健康检查、指标和 CORS 预检请求可在自己的服务中复用，并可追加路径或路径前缀（如 `/static/`）。
+- `ADMIN_ACCESS_LOG_PURGE` 与 `adminconfig.Config.AccessLogPurgeDisabled`：多个进程写同一个 `sys_access_log` 表时，只写的进程关闭过期清理，sink、队列、批量与保留天数保持不变。见[单独的进程](docs/access-log.md#62-单独的进程)。
 
 ### Changed
 
@@ -38,6 +41,8 @@
 - `module new` 生成的列表页不再自己弹成功、失败消息，也不再覆盖批量删除的文案。
 - **安全修复**：`ADMIN_TRUST_PROXY=true` 时客户端 IP 改取 `X-Forwarded-For` **最右侧**的地址（原为最左侧，客户端可以伪造）。操作日志、请求日志、登录日志和 `accesslog.ClientIP` 都受影响。多层代理的部署需要设置 `ADMIN_TRUSTED_PROXIES`，否则记录到的是上一层代理的地址。自定义 HTTP 路由的操作日志记录 IPv6 客户端地址时不再被截断。
 - `ADMIN_LOGIN_MAX_FAILURES` 不设置时自动取值：未启用验证码为 5（与原默认相同），启用验证码为 20。`adminconfig.Config.LoginMaxFailures` 为 0 表示自动，用 `LoginMaxFailuresFor` 取实际阈值。`.env.example` 不再写死 5。
+- 未设置 `CaptureOptions.RequestID` 时，`request_id` 先取 context 中的请求 ID，再取 `X-Request-Id` 请求头；取自请求头的值截断到 128 个字符。
+- `adminapp.AccessLogCapture` 改用 `accesslog.DefaultSkip`，跳过的请求不变。
 
 ## [0.6.0] - 2026-11-12
 

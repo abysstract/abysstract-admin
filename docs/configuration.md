@@ -111,7 +111,7 @@ scrape_configs:
 
 ### 请求日志
 
-后端为每个请求记录一条请求日志，默认同时写入 `sys_access_log` 表（后台「系统管理 → 请求日志」）和标准输出（每行一个 JSON）。`ADMIN_ACCESS_LOG_SINKS` 选择 sink，设置为空或 `none` 关闭；`db` sink 默认保留 30 天。队列、批量和保留相关的全部 `ADMIN_ACCESS_LOG_*` 变量见[请求日志](access-log.md#2-配置)。
+后端为每个请求记录一条请求日志，默认同时写入 `sys_access_log` 表（后台「系统管理 → 请求日志」）和标准输出（每行一个 JSON）。`ADMIN_ACCESS_LOG_SINKS` 选择 sink，设置为空或 `none` 关闭；`db` sink 默认保留 30 天，`ADMIN_ACCESS_LOG_PURGE=false` 让本进程只写不清理（多个进程写同一个表时使用）。队列、批量和保留相关的全部 `ADMIN_ACCESS_LOG_*` 变量见[请求日志](access-log.md#2-配置)。
 
 ### 生产环境
 

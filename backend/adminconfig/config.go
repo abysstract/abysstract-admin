@@ -129,6 +129,7 @@ type Config struct {
 	AccessLogBatchSize     int           // 每批写入条数；0 使用默认 200
 	AccessLogFlushInterval time.Duration // 批次最长等待；0 使用默认 1s
 	AccessLogRetentionDays int           // db sink 保留天数；0 永久保留（Load 默认 30）
+	AccessLogPurgeDisabled bool          // 只写不清理：多个进程写同一张表时，除一个进程外都应设置（ADMIN_ACCESS_LOG_PURGE=false）
 
 	// 解析错误按校验边界保留；Validate 汇总应用与数据库错误，
 	// ValidateDatabase 汇总数据库错误，ValidateDatabaseDriver 校验离线类型。
@@ -201,6 +202,7 @@ func Load() *Config {
 	c.AccessLogBatchSize = c.getInt("ADMIN_ACCESS_LOG_BATCH_SIZE", defaultAccessLogBatchSize)
 	c.AccessLogFlushInterval = time.Duration(c.getInt("ADMIN_ACCESS_LOG_FLUSH_INTERVAL_MS", int(defaultAccessLogFlushInterval/time.Millisecond))) * time.Millisecond
 	c.AccessLogRetentionDays = c.getInt("ADMIN_ACCESS_LOG_RETENTION_DAYS", defaultAccessLogRetentionDays)
+	c.AccessLogPurgeDisabled = !c.getBool("ADMIN_ACCESS_LOG_PURGE", true)
 
 	return c
 }
@@ -223,6 +225,21 @@ func (c *Config) getInt(key string, def int) int {
 		return def
 	}
 	return n
+}
+
+// getBool 解析布尔值（true/false、1/0 等，见 strconv.ParseBool）并保存解析错误；
+// 未设置时返回 def。
+func (c *Config) getBool(key string, def bool) bool {
+	v := strings.TrimSpace(os.Getenv(key))
+	if v == "" {
+		return def
+	}
+	b, err := strconv.ParseBool(v)
+	if err != nil {
+		c.parseErrs = append(c.parseErrs, fmt.Sprintf("%s 非法布尔值（got=%q）", key, v))
+		return def
+	}
+	return b
 }
 
 // getInt64 同 getInt，返回 int64（用于字节数等大值场景）。
@@ -361,9 +378,10 @@ func parseAccessLogSinks() []string {
 	return out
 }
 
-// AccessLogRetention 返回 db sink 的保留时长；0 表示永久保留。
+// AccessLogRetention 返回 db sink 的保留时长；0 表示永久保留或本进程不清理
+// （AccessLogPurgeDisabled）。
 func (c *Config) AccessLogRetention() time.Duration {
-	if c.AccessLogRetentionDays <= 0 {
+	if c.AccessLogPurgeDisabled || c.AccessLogRetentionDays <= 0 {
 		return 0
 	}
 	return time.Duration(c.AccessLogRetentionDays) * 24 * time.Hour
@@ -624,5 +642,6 @@ func (c Config) LogValue() slog.Value {
 		slog.Int("access_log_batch_size", c.AccessLogBatchSize),
 		slog.Duration("access_log_flush_interval", c.AccessLogFlushInterval),
 		slog.Int("access_log_retention_days", c.AccessLogRetentionDays),
+		slog.Bool("access_log_purge", !c.AccessLogPurgeDisabled),
 	)
 }

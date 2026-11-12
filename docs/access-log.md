@@ -60,6 +60,7 @@ curl -s http://localhost:8080/abysstract.admin.v1.LogService/ListAccessLogs \
 | `ADMIN_ACCESS_LOG_BATCH_SIZE` | 每批交给 sink 的最大条数，1–10000 | `200` |
 | `ADMIN_ACCESS_LOG_FLUSH_INTERVAL_MS` | 不足一批时的最长等待（毫秒），10–60000 | `1000` |
 | `ADMIN_ACCESS_LOG_RETENTION_DAYS` | `db` sink 保留天数，0 为永久保留，最大 3650 | `30` |
+| `ADMIN_ACCESS_LOG_PURGE` | 本进程是否清理过期记录。多个进程写同一个表时，只在一个进程中保留 `true`，其他设为 `false`（见 [6.2](#62-单独的进程)） | `true` |
 
 客户端 IP 与操作日志一致，规则见[客户端 IP 与审计](configuration.md#客户端-ip-与审计)。自建 API 服务时，`CaptureOptions` 的 `TrustProxy`、`TrustedProxies` 与 `ADMIN_TRUST_PROXY`、`ADMIN_TRUSTED_PROXIES` 对应，`adminapp.AccessLogCapture(cfg)` 已经填好。
 
@@ -152,7 +153,12 @@ defer access.Close(context.Background()) // 在两个服务都停止之后
 admin, err := adminapp.New(adminapp.Options{Config: *cfg, DB: db, Modules: modules, AccessLog: access})
 // ...
 
-capture := accesslog.CaptureOptions{TrustProxy: cfg.TrustProxy}
+capture := accesslog.CaptureOptions{
+	TrustProxy:      cfg.TrustProxy,
+	TrustedProxies:  cfg.TrustedProxies,
+	AssignRequestID: true,                             // 见 6.4
+	Skip:            accesslog.SkipPaths("/static/"), // 健康检查、CORS 预检和 /static/ 下的请求不记录
+}
 api := connect.NewServer(
 	accesslog.Interceptor(access, capture), // 放在最前面，认证失败也会记录
 	apiKeyInterceptor(keys),
@@ -184,7 +190,19 @@ access := accesslog.New(accesslog.Options{Sinks: sinks})
 defer access.Close(context.Background())
 ```
 
-也可以继续用 `adminapp.OpenAccessLog(ctx, *cfg, db, logger)` 按 `ADMIN_ACCESS_LOG_*` 配置打开。多个进程写同一个 `sys_access_log` 表时，只需要其中一个启用保留清理（其他进程把 `Retention` 设为 0）。
+也可以继续用 `adminapp.OpenAccessLog(ctx, *cfg, db, logger)` 按 `ADMIN_ACCESS_LOG_*` 配置打开，sink、队列和批量与后台一致。
+
+多个进程写同一个 `sys_access_log` 表时，只需要其中一个清理过期记录。两个进程读同一份 `.env` 时，在只写的进程中关闭清理，保留天数等其他配置不变：
+
+```go
+cfg := adminconfig.Load()
+cfg.AccessLogPurgeDisabled = true // 只写不清理；由后台进程按 ADMIN_ACCESS_LOG_RETENTION_DAYS 清理
+access, err := adminapp.OpenAccessLog(ctx, *cfg, db, logger)
+```
+
+也可以在该进程的环境中设置 `ADMIN_ACCESS_LOG_PURGE=false`，效果相同。直接调用 `accesslog.Open` 时，把 `accesslog.Config.Retention` 设为 0 即不清理。
+
+HTTP 服务的接线与 6.1 中的 `apiServer` 相同。单独的进程没有后台的请求 ID 中间件，需要设置 `AssignRequestID`（见 6.4）。
 
 ### 6.3 认证拦截器
 
@@ -208,7 +226,21 @@ func apiKeyInterceptor(keys KeyStore) connect.ServerInterceptor {
 }
 ```
 
-只使用 `Interceptor`、不包裹 `Middleware` 时也会记录每个调用，此时 `status` 为 0，客户端 IP 取自 Connect 的对端地址。包裹 `Middleware` 后同一个请求只产生一条记录，并带上 HTTP 状态码和非 Connect 路由。`CaptureOptions.RequestID` 可以接入应用自己的请求 ID；未设置时读取 `X-Request-Id` 请求头。
+只使用 `Interceptor`、不包裹 `Middleware` 时也会记录每个调用，此时 `status` 为 0，客户端 IP 取自 Connect 的对端地址。包裹 `Middleware` 后同一个请求只产生一条记录，并带上 HTTP 状态码和非 Connect 路由。
+
+### 6.4 请求 ID 与跳过的请求
+
+后台的请求 ID 来自内部的请求 ID 中间件，`adminapp.AccessLogCapture` 从中读取。自己的服务设置 `CaptureOptions.AssignRequestID: true` 后得到同样的行为：
+
+- 客户端传入的 `X-Request-Id` 合法时沿用：8–128 个字符，只含字母、数字和 `-_.:+/=@`；
+- 否则生成 96 位随机 ID（24 个十六进制字符）；
+- 写入 `X-Request-Id` 响应头，放入 context（`accesslog.RequestIDFromContext(ctx)`，可用于业务日志或转发给下游），并记录到 `request_id`。
+
+`Middleware` 为每个请求分配 ID，包括被 `Skip` 跳过的请求；只使用 `Interceptor` 时由它在 Connect 响应头中返回。`ADMIN_ACCESS_LOG_SINKS` 为空、分发器为 `nil` 时仍然分配请求 ID，只是不记录。
+
+已有请求 ID 中间件的应用不设置 `AssignRequestID`，而是把读取函数交给 `CaptureOptions.RequestID`。两者都未设置时，`request_id` 依次取 context 中的 ID（`accesslog.WithRequestID`）和 `X-Request-Id` 请求头，不写响应头。
+
+`CaptureOptions.Skip` 为 `nil` 时记录所有请求。后台使用 `accesslog.DefaultSkip`：跳过 CORS 预检（`OPTIONS`）以及 `/healthz`、`/readyz`、`/metrics`、`/version`。`accesslog.SkipPaths(paths...)` 在此基础上再跳过给定路径，以 `/` 结尾的路径按前缀匹配（如 `/static/`），其余精确匹配。需要按方法或请求头判断时，传入自己的函数并在其中调用 `DefaultSkip`。
 
 ## 7. 自定义 sink
 
