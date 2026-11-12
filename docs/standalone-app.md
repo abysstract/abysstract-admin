@@ -38,7 +38,7 @@ shop/
 ```bash
 mkdir shop && cd shop
 go mod init example.com/shop
-go get github.com/abysstract/abysstract-admin@v0.5.0
+go get github.com/abysstract/abysstract-admin@v0.6.0
 go get -tool github.com/abysstract/abysstract-admin/backend/cmd/admin github.com/abysstract/abysstract-admin/backend/cmd/admin-migrations
 ```
 
@@ -275,7 +275,7 @@ curl --fail http://localhost:8080/readyz
 
 ```bash
 cd frontend
-npm install @abysstract/admin-core@^0.5.0 @abysstract/admin-proto@^0.5.0 \
+npm install @abysstract/admin-core@^0.6.0 @abysstract/admin-proto@^0.6.0 \
   @bufbuild/protobuf@^2 @connectrpc/connect@^2 @connectrpc/connect-web@^2 \
   antd@^6 @ant-design/icons@^6 @ant-design/pro-components@3.1.15-9 \
   react@^19 react-dom@^19 react-router-dom@^6
