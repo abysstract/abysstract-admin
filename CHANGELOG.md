@@ -7,7 +7,15 @@
 
 ## [Unreleased]
 
+### Added
+
+- `ResourceSearchBar`（`@abysstract/admin-core/resource`）：`ResourceTable` 顶部的搜索卡片，手写列表页可直接使用；支持回车查询、可选的刷新按钮和额外筛选控件。见[自定义列表页的搜索栏](docs/admin-core-usage.md#自定义列表页的搜索栏)。
+- `AdminHost.configProvider`：透传给根 `ConfigProvider` 的其余全局配置（`button`、`form`、`componentSize` 等）。见[全局 antd 配置](docs/admin-core-usage.md#全局-antd-配置)。
+
 ### Changed
+
+- Resource 页面的搜索卡片和表格卡片、登录页与加载页背景改用 antd token（原为固定的 `#fff`、`#f0f0f0`、`#f0f2f5`），跟随应用主题和暗色算法。
+- 「不在两个汉字的按钮间插空格」改为在根 `ConfigProvider` 上默认设置，作用于整个后台（包括业务页面和 antd 默认的「取消」「确定」），宿主可通过 `host.configProvider.button.autoInsertSpace` 改回；admin-core 不再在单个按钮上设置 `autoInsertSpace`。
 
 - **破坏性**：`@abysstract/admin-core` 迁移到 antd 6。peer 依赖改为 `antd ^6.7.0`、`@ant-design/icons ^6.3.4`、`@ant-design/pro-components 3.1.15-9`（pro-components 3 尚无正式版，精确锁定）；React 放宽为 `^18.3.0 || ^19.0.0`，自带应用改用 React 19。前端开发与 CI 需要 Node.js 22.12+（pro-components 3 的要求）；仓库根目录新增 `.node-version`，CI 改为读取该文件。
 - 业务应用升级时同时升级 antd、icons 和 pro-components，并按 [antd v6 迁移指南](https://ant.design/docs/react/migration-v6-cn) 处理自己页面中的弃用 API；pro-components 3 中 `ProColumns.hideInSearch` 改为 `search: false`。antd 6 默认启用 CSS 变量，自定义主题和依赖内部 DOM 的样式需要复查。

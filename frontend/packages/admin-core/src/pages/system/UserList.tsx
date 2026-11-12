@@ -559,7 +559,7 @@ function UserEditAction({ entity, reload }: UserEditActionProps) {
 
   return (
     <>
-      <Button type="link" autoInsertSpace={false} onClick={openEditor}>
+      <Button type="link" onClick={openEditor}>
         编辑
       </Button>
       <Modal
@@ -644,7 +644,7 @@ function UserResetPasswordAction({ entity }: UserEditActionProps) {
     <>
       <Button
         type="link"
-        autoInsertSpace={false}
+
         onClick={() => {
           setPassword("");
           setOpen(true);
@@ -697,7 +697,7 @@ function UserDeleteAction({ entity, reload }: UserEditActionProps) {
 
   return (
     <Popconfirm title="确认删除该用户？" onConfirm={() => void remove()}>
-      <Button type="link" danger loading={loading} autoInsertSpace={false}>
+      <Button type="link" danger loading={loading}>
         删除
       </Button>
     </Popconfirm>

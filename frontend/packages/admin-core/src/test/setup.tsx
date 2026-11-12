@@ -5,6 +5,7 @@ import { afterEach, vi } from "vitest";
 afterEach(() => {
   cleanup();
 });
+import { createContext } from "react";
 import type { ChangeEvent, ComponentType, ReactNode } from "react";
 
 Object.defineProperty(window, "matchMedia", {
@@ -205,7 +206,22 @@ vi.mock("antd", () => {
       <div data-testid="tree">{props.children as ReactNode}</div>
     ),
     Card: passThrough,
-    ConfigProvider: passThrough,
+    ConfigProvider: Object.assign(passThrough, {
+      ConfigContext: createContext<Record<string, unknown>>({}),
+    }),
+    theme: {
+      useToken: () => ({
+        token: {
+          colorBgContainer: "#ffffff",
+          colorBgLayout: "#f5f5f5",
+          colorBorderSecondary: "#f0f0f0",
+          borderRadiusLG: 8,
+          lineWidth: 1,
+          lineType: "solid",
+          boxShadowTertiary: "none",
+        },
+      }),
+    },
     Result: ({
       title,
       subTitle,

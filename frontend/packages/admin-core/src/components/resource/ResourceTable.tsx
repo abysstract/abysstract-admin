@@ -7,7 +7,7 @@ import {
   type ReactElement,
   type ReactNode,
 } from "react";
-import { Button, Input, Modal, Space, type ButtonProps } from "antd";
+import { Button, Modal, type ButtonProps } from "antd";
 import { ProTable, type ProColumns } from "@ant-design/pro-components";
 import type { FilterValue, SorterResult, TablePaginationConfig } from "antd/es/table/interface";
 
@@ -42,6 +42,8 @@ import type {
 import type { ResourceTableCreateFormConfig, ResourceTableEditFormConfig } from "./table-contract";
 import type { ResourceSchema, SortableFieldName } from "./schema";
 import { formatErrorMessage } from "../../runtime/message";
+import { AdminButtonSpacing } from "../AdminButtonSpacing";
+import { ResourceSearchBar, useResourceSurfaceStyle } from "./ResourceSearchBar";
 import "./ResourceTable.css";
 
 export type { ResourceTableProps } from "./table-contract";
@@ -166,7 +168,7 @@ function CreateFormModal<
 
   return (
     <>
-      <Button type="primary" autoInsertSpace={false} onClick={() => setOpen(true)}>
+      <Button type="primary" onClick={() => setOpen(true)}>
         {title}
       </Button>
       <Modal
@@ -287,7 +289,7 @@ function EditFormModal<
 
   return (
     <>
-      <Button type="link" autoInsertSpace={false} onClick={() => setOpen(true)}>
+      <Button type="link" onClick={() => setOpen(true)}>
         {title}
       </Button>
       <Modal
@@ -332,7 +334,7 @@ function ActionButton({
     <Button
       type={buttonType}
       danger={danger}
-      autoInsertSpace={false}
+
       disabled={disabled}
       onClick={onClick}
     >
@@ -450,6 +452,7 @@ function ProductionResourceTable<
 
   const [currentQuery, setCurrentQuery] = useState<TQuery>(initialQuery);
   const [keyword, setKeyword] = useState(initialQuery.keyword ?? "");
+  const surfaceStyle = useResourceSurfaceStyle();
   const [rows, setRows] = useState<readonly TEntity[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -800,7 +803,7 @@ function ProductionResourceTable<
     ? (renderError?.(error, reload) ?? (
         <div role="alert">
           {formatErrorMessage(error)}
-          <Button type="link" autoInsertSpace={false} onClick={() => void reload()}>
+          <Button type="link" onClick={() => void reload()}>
             重试
           </Button>
         </div>
@@ -857,23 +860,13 @@ function ProductionResourceTable<
 
   return (
     <div data-resource-table={schema.name} className="resource-table">
-      <div className="resource-table__search">
-        <Space role="search">
-          <Input
-            aria-label="关键词"
-            placeholder="请输入关键词"
-            value={keyword}
-            onChange={(event) => setKeyword(event.currentTarget.value)}
-          />
-          <Button type="primary" autoInsertSpace={false} onClick={() => queryAction("search")}>
-            查询
-          </Button>
-          <Button autoInsertSpace={false} onClick={() => queryAction("reload")}>
-            刷新
-          </Button>
-        </Space>
-      </div>
-      <div className="resource-table__content">
+      <ResourceSearchBar
+        keyword={keyword}
+        onKeywordChange={setKeyword}
+        onSearch={() => queryAction("search")}
+        onReload={() => queryAction("reload")}
+      />
+      <div className="resource-table__content" style={surfaceStyle}>
         {errorContent ?? (
           <ProTable<TEntity & Record<string, unknown>, TQuery>
             columns={actionColumn ? [...proColumns, actionColumn] : proColumns}
@@ -918,14 +911,14 @@ function ProductionResourceTable<
           title={pending.kind === "batchDelete" ? "确认批量删除" : "确认删除"}
           onCancel={() => setPending(undefined)}
           footer={[
-            <Button key="cancel" autoInsertSpace={false} onClick={() => setPending(undefined)}>
+            <Button key="cancel" onClick={() => setPending(undefined)}>
               取消
             </Button>,
             <Button
               key="confirm"
               type="primary"
               danger
-              autoInsertSpace={false}
+
               onClick={() => void confirmPending()}
             >
               {pending.kind === "batchDelete" ? "确认批量删除" : "确认删除"}
@@ -971,7 +964,11 @@ export function ResourceTable(
     | ResourceTableReadOnlyProps<ResourceSchema, object, ResourceKey, object>,
 ): ReactElement {
   if (!("rows" in props)) {
-    return <ProductionResourceTable {...props} />;
+    return (
+      <AdminButtonSpacing>
+        <ProductionResourceTable {...props} />
+      </AdminButtonSpacing>
+    );
   }
 
   const { schema, rows, rowKey } = props;

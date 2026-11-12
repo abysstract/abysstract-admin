@@ -23,6 +23,7 @@ import type {
   ResourceFormProps,
   ResourceValues,
 } from "./form-contract";
+import { AdminButtonSpacing } from "../AdminButtonSpacing";
 import "./ResourceForm.css";
 
 export type {
@@ -197,7 +198,7 @@ function RelationOptions({
         <Button
           type="link"
           size="small"
-          autoInsertSpace={false}
+
           onClick={() => void load(nextPage, keyword, true)}
         >
           加载更多
@@ -297,7 +298,7 @@ function RelationSelect({
         <Button
           type="link"
           size="small"
-          autoInsertSpace={false}
+
           onClick={() => void load(nextPage, keyword, true)}
         >
           加载更多
@@ -739,13 +740,13 @@ function ProductionResourceForm({ props }: { props: ProductionProps }): ReactEle
       {fields.map(renderField)}
       {props.extraFields}
       <Space>
-        <Button htmlType="button" autoInsertSpace={false} disabled={props.loading} onClick={reset}>
+        <Button htmlType="button" disabled={props.loading} onClick={reset}>
           重置
         </Button>
         <Button
           type="primary"
           htmlType="submit"
-          autoInsertSpace={false}
+
           loading={props.loading}
           onClick={(event) => {
             // ResourceForm owns validation and the controlled values. Handle
@@ -792,5 +793,9 @@ export function ResourceForm(props: ResourceFormPrototypeProps): ReactElement;
 export function ResourceForm(props: object): ReactElement {
   if ("onSubmit" in props)
     return <LegacyResourceForm props={props as ResourceFormPrototypeProps} />;
-  return <ProductionResourceForm props={props as ProductionProps} />;
+  return (
+    <AdminButtonSpacing>
+      <ProductionResourceForm props={props as ProductionProps} />
+    </AdminButtonSpacing>
+  );
 }

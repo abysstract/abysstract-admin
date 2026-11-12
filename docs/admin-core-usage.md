@@ -175,6 +175,43 @@ npm install /absolute/path/to/abysstract-admin-proto-VERSION.tgz /absolute/path/
 
 需要特殊展示时，使用列的 `hidden`、`render`、`title`；需要特殊输入时，使用表单的 `component`、`valueType`、`label`、`fieldProps`、`rules`、`visible`、`disabled`。附加 `rules` 在 `Required()` 和 `MaxLen()` 标准校验之后执行，长度按 Unicode 码点计数；bigint 保持完整精度。
 
+## 全局 antd 配置
+
+`createAdminApp` 的 Root 用一个 antd `ConfigProvider` 包住整个后台。`host.theme` 和 `host.locale` 传给它的同名属性；其余全局配置放在 `host.configProvider`，例如：
+
+```tsx
+const application = createAdminApp({
+  host: {
+    // apiBaseUrl、mode、authStorage、title …
+    theme: { token: { colorPrimary: "#0f766e" } },
+    locale: zhCN,
+    configProvider: { componentSize: "middle", form: { requiredMark: "optional" } },
+  },
+  modules,
+});
+```
+
+admin-core 默认设置 `button: { autoInsertSpace: false }`，「查询」「取消」等两个汉字的按钮中间不插空格，这一设置同时作用于业务页面的按钮。需要 antd 的默认行为时，传入 `configProvider: { button: { autoInsertSpace: true } }`；`button` 的其他字段与默认值合并。
+
+## 自定义列表页的搜索栏
+
+`ResourceTable` 顶部的搜索卡片以 `ResourceSearchBar` 导出，手写的列表页可以直接使用，与 Resource 页面保持一致：
+
+```tsx
+import { ResourceSearchBar } from "@abysstract/admin-core/resource";
+
+<ResourceSearchBar
+  keyword={keyword}
+  onKeywordChange={setKeyword}
+  onSearch={() => void load(keyword)}
+  onReload={() => void load(keyword)}
+>
+  {/* 可选：关键词之后、按钮之前的额外筛选控件 */}
+</ResourceSearchBar>;
+```
+
+回车或点击「查询」调用 `onSearch`；不传 `onReload` 时不显示「刷新」。卡片的背景、边框、圆角和阴影取自 antd token（`colorBgContainer`、`colorBorderSecondary`、`borderRadiusLG`、`boxShadowTertiary`），跟随 `host.theme` 和暗色算法。
+
 ## 故障说明
 
 | 现象 | 处理 |

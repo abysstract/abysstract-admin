@@ -16,6 +16,12 @@ export interface AdminHost {
   title: string;
   theme?: ThemeConfig;
   locale?: ConfigProviderProps["locale"];
+  /**
+   * 透传给根 ConfigProvider 的其余全局配置，例如 `button`、`form`、`componentSize`。
+   * theme 与 locale 使用上面的同名字段。admin-core 默认 `button.autoInsertSpace: false`，
+   * 这里的 `button` 与默认值合并。
+   */
+  configProvider?: Omit<ConfigProviderProps, "children" | "theme" | "locale">;
   reportError?: (error: unknown, context: { operation: string }) => void;
   developmentLogin?: Readonly<{ username: string; password: string }>;
 }

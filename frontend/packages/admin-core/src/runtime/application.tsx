@@ -67,7 +67,12 @@ export function createAdminApp(input: {
     }, []);
     const memo = useMemo(() => runtime, []);
     return (
-      <ConfigProvider theme={host.theme} locale={host.locale}>
+      <ConfigProvider
+        {...host.configProvider}
+        button={{ autoInsertSpace: false, ...host.configProvider?.button }}
+        theme={host.theme}
+        locale={host.locale}
+      >
         <AntdApp>
           <AdminRuntimeProvider value={memo}>
             <AppErrorBoundary
