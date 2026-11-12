@@ -7,7 +7,9 @@
 
 ## [Unreleased]
 
-新增可替换的请求日志。执行迁移前，业务应用先用 `admin-migrations sync` 导入新的系统迁移（`sys_access_log` 表与「请求日志」菜单）。
+## [0.5.0] - 2026-11-12
+
+Go 模块与 `@abysstract/admin-core`、`@abysstract/admin-proto` 同步发布 0.5.0。新增可替换的请求日志。执行迁移前，业务应用先用 `admin-migrations sync` 导入新的系统迁移（`sys_access_log` 表与「请求日志」菜单）。
 
 ### Added
 
@@ -101,7 +103,8 @@ Go 模块与 `@abysstract/admin-core`、`@abysstract/admin-proto` 同步发布 0
 
 - `modelgen` 按 `<前缀>_` 边界选择模块表，`tablePrefix` 不带下划线时不再选中其他模块的表。
 
-[Unreleased]: https://github.com/abysstract/abysstract-admin/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/abysstract/abysstract-admin/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/abysstract/abysstract-admin/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/abysstract/abysstract-admin/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/abysstract/abysstract-admin/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/abysstract/abysstract-admin/compare/v0.1.0...v0.2.0
