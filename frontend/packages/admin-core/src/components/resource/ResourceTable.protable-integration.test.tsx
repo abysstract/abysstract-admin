@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
 // This suite deliberately exercises the real ProTable/antd renderer. The
 // behavior gate uses the lightweight pass-through renderer for speed, while
@@ -8,6 +8,7 @@ vi.unmock("@ant-design/pro-components");
 vi.unmock("antd");
 vi.unmock("@ant-design/icons");
 
+import { preloadAllProFieldValueTypes } from "@ant-design/pro-components/field";
 import { ResourceTable } from "./ResourceTable";
 import type { ResourceOperations } from "./operations";
 import type { ResourceSchema } from "./schema";
@@ -113,6 +114,13 @@ function makeOperations(
 }
 
 describe("ResourceTable real ProTable integration", () => {
+  // pro-components 3 loads non-text value types (digit, select, ...) through
+  // React.lazy. Load them up front so cells render without a Suspense round
+  // trip whose length depends on the machine.
+  beforeAll(async () => {
+    await preloadAllProFieldValueTypes();
+  });
+
   it("renders dataSource/columns and routes search, pagination, and sorting to operations.list", async () => {
     const list = vi
       .fn<
@@ -144,7 +152,7 @@ describe("ResourceTable real ProTable integration", () => {
     expect(initialListCalls).toBe(1);
     expect(screen.getByRole("columnheader", { name: "label" })).toBeInTheDocument();
     expect(screen.getByText(entity.id.toString())).toBeInTheDocument();
-    expect(screen.getByRole("cell", { name: "1" })).toBeInTheDocument();
+    expect(await screen.findByRole("cell", { name: "1" })).toBeInTheDocument();
     expect(screen.queryByText("[object Object]")).not.toBeInTheDocument();
 
     fireEvent.change(screen.getByRole("textbox", { name: /keyword|关键词/i }), {
@@ -158,13 +166,13 @@ describe("ResourceTable real ProTable integration", () => {
       );
     });
 
-    fireEvent.click(screen.getByTitle("下一页"));
+    fireEvent.click(screen.getByRole("button", { name: "下一页" }));
     await waitFor(() => {
       expect(list).toHaveBeenCalledTimes(initialListCalls + 2);
       expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ pageNum: 2 }));
     });
 
-    fireEvent.click(screen.getByTitle("下一页"));
+    fireEvent.click(screen.getByRole("button", { name: "下一页" }));
     await waitFor(() => {
       expect(list).toHaveBeenCalledTimes(initialListCalls + 3);
       expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ pageNum: 3 }));
@@ -212,7 +220,7 @@ describe("ResourceTable real ProTable integration", () => {
 
     await screen.findByText("real protable");
     expect(list).toHaveBeenCalledTimes(1);
-    fireEvent.click(screen.getByTitle("下一页"));
+    fireEvent.click(screen.getByRole("button", { name: "下一页" }));
     await waitFor(() => {
       expect(list).toHaveBeenCalledTimes(2);
       expect(list).toHaveBeenLastCalledWith({

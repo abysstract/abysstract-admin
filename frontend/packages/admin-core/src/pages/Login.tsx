@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
-import { Button, Card, Form, Input, Typography } from "antd";
+import { Button, Card, Form, Input, Typography, theme } from "antd";
 import { UserOutlined, LockOutlined } from "@ant-design/icons";
 import { useAdminHost, useAdminRuntimeState, useSessionSnapshot } from "../runtime/context";
 import { formatErrorMessage, useAppMessage } from "../runtime/message";
 
 export default function Login() {
   const message = useAppMessage();
+  const { token } = theme.useToken();
   const navigate = useNavigate();
   const host = useAdminHost();
   const runtime = useAdminRuntimeState();
@@ -52,7 +53,7 @@ export default function Login() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "#f0f2f5",
+        background: token.colorBgLayout,
       }}
     >
       <Card style={{ width: 380 }}>

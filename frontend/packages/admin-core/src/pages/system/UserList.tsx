@@ -559,7 +559,7 @@ function UserEditAction({ entity, reload }: UserEditActionProps) {
 
   return (
     <>
-      <Button type="link" autoInsertSpace={false} onClick={openEditor}>
+      <Button type="link" onClick={openEditor}>
         编辑
       </Button>
       <Modal
@@ -644,7 +644,7 @@ function UserResetPasswordAction({ entity }: UserEditActionProps) {
     <>
       <Button
         type="link"
-        autoInsertSpace={false}
+
         onClick={() => {
           setPassword("");
           setOpen(true);
@@ -697,7 +697,7 @@ function UserDeleteAction({ entity, reload }: UserEditActionProps) {
 
   return (
     <Popconfirm title="确认删除该用户？" onConfirm={() => void remove()}>
-      <Button type="link" danger loading={loading} autoInsertSpace={false}>
+      <Button type="link" danger loading={loading}>
         删除
       </Button>
     </Popconfirm>
@@ -809,21 +809,21 @@ function userRowActions(
       // The editor performs a dedicated GetUser and loads role/dept options.
       // Do not expose a button that is guaranteed to fail in a partial role.
       hidden: !canOpenEditor,
-      render: (context) => <UserEditAction {...context} />,
+      render: ({ entity, reload }) => <UserEditAction entity={entity} reload={reload} />,
     },
     {
       action: "custom",
       name: "resetPassword",
       permission: `${userSchema.permPrefix}:resetPwd`,
       merge: "append",
-      render: (context) => <UserResetPasswordAction {...context} />,
+      render: ({ entity, reload }) => <UserResetPasswordAction entity={entity} reload={reload} />,
     },
     {
       action: "custom",
       name: "delete",
       permission: userDeletePermission,
       merge: "append",
-      render: (context) => <UserDeleteAction {...context} />,
+      render: ({ entity, reload }) => <UserDeleteAction entity={entity} reload={reload} />,
     },
   ];
 }

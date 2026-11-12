@@ -69,7 +69,7 @@ export default function ChangePasswordModal({ open, forced, onClose, onSuccess }
       onCancel={forced ? undefined : onClose}
       confirmLoading={loading}
       closable={!forced}
-      maskClosable={!forced}
+      mask={{ closable: !forced }}
       keyboard={!forced}
       okText="确认修改"
     >

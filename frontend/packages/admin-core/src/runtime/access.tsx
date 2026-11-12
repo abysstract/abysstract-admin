@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button, Card, Result, Spin, Typography } from "antd";
+import { Button, Card, Result, Spin, Typography, theme } from "antd";
 import { Code, ConnectError } from "@connectrpc/connect";
 import type { Menu } from "@abysstract/admin-proto/abysstract/admin/v1/menu_pb";
 import { useAdminRuntimeState } from "./context";
@@ -107,6 +107,8 @@ export function AccessProvider({ children }: { children: ReactNode }) {
     });
   }, [runtime.session]);
 
+  const { token } = theme.useToken();
+
   if (loadError) {
     return (
       <Result
@@ -132,7 +134,7 @@ export function AccessProvider({ children }: { children: ReactNode }) {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "#f0f2f5",
+          background: token.colorBgLayout,
         }}
       >
         <Card style={{ width: 380, textAlign: "center" }}>

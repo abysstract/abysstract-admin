@@ -5,6 +5,7 @@ import { afterEach, vi } from "vitest";
 afterEach(() => {
   cleanup();
 });
+import { createContext } from "react";
 import type { ChangeEvent, ComponentType, ReactNode } from "react";
 
 Object.defineProperty(window, "matchMedia", {
@@ -20,6 +21,19 @@ Object.defineProperty(window, "matchMedia", {
     dispatchEvent: () => false,
   }),
 });
+
+// antd 6 的 @rc-component/resize-observer 不再自带 polyfill，jsdom 没有 ResizeObserver。
+class NoopResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+if (!("ResizeObserver" in globalThis)) {
+  Object.defineProperty(globalThis, "ResizeObserver", {
+    writable: true,
+    value: NoopResizeObserver,
+  });
+}
 
 const originalGetComputedStyle = window.getComputedStyle;
 window.getComputedStyle = (elt, pseudoElt) => {
@@ -192,7 +206,22 @@ vi.mock("antd", () => {
       <div data-testid="tree">{props.children as ReactNode}</div>
     ),
     Card: passThrough,
-    ConfigProvider: passThrough,
+    ConfigProvider: Object.assign(passThrough, {
+      ConfigContext: createContext<Record<string, unknown>>({}),
+    }),
+    theme: {
+      useToken: () => ({
+        token: {
+          colorBgContainer: "#ffffff",
+          colorBgLayout: "#f5f5f5",
+          colorBorderSecondary: "#f0f0f0",
+          borderRadiusLG: 8,
+          lineWidth: 1,
+          lineType: "solid",
+          boxShadowTertiary: "none",
+        },
+      }),
+    },
     Result: ({
       title,
       subTitle,
@@ -210,14 +239,20 @@ vi.mock("antd", () => {
     ),
     Dropdown: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
     Tag: passThrough,
-    Descriptions: Object.assign(passThrough, {
-      Item: ({ label, children }: { label?: ReactNode; children?: ReactNode }) => (
-        <div>
-          <span>{label}</span>
-          <span>{children}</span>
-        </div>
-      ),
-    }),
+    Descriptions: ({
+      items,
+    }: {
+      items?: { key?: string; label?: ReactNode; children?: ReactNode }[];
+    }) => (
+      <div>
+        {items?.map((item, index) => (
+          <div key={item.key ?? index}>
+            <span>{item.label}</span>
+            <span>{item.children}</span>
+          </div>
+        ))}
+      </div>
+    ),
     Form,
     Input,
     Popconfirm: (props: Record<string, unknown>) => <>{props.children as ReactNode}</>,
@@ -333,6 +368,8 @@ vi.mock("@ant-design/icons", () => {
   const Icon = () => <span />;
   return {
     default: Icon,
+    // ProLayout（pro-components 3）在模块加载时调用 createFromIconfontCN。
+    createFromIconfontCN: () => Icon,
     DeleteOutlined: Icon,
     DownloadOutlined: Icon,
     KeyOutlined: Icon,

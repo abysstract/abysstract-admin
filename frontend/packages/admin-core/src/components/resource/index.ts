@@ -68,6 +68,8 @@ export type {
 } from "./table-contract";
 export type { ResourceTableProps as ResourceTableComponentProps } from "./ResourceTable";
 export { ResourceTable } from "./ResourceTable";
+export type { ResourceSearchBarProps } from "./ResourceSearchBar";
+export { ResourceSearchBar } from "./ResourceSearchBar";
 
 export type {
   CreatableFieldName,

@@ -117,11 +117,11 @@ import { coreSystemModule } from "@abysstract/admin-core/system";
 ```bash
 npm install @abysstract/admin-core @abysstract/admin-proto \
   @bufbuild/protobuf@^2 @connectrpc/connect@^2 @connectrpc/connect-web@^2 \
-  antd@^5 @ant-design/icons@^5 @ant-design/pro-components@^2 \
-  react@^18 react-dom@^18 react-router-dom@^6
+  antd@^6 @ant-design/icons@^6 @ant-design/pro-components@3.1.15-9 \
+  react@^19 react-dom@^19 react-router-dom@^6
 ```
 
-peer 依赖要带上大版本号。admin-core 目前要求 React 18、React Router 6 和 antd 5；不写版本时 npm 会装最新的 React 19，安装会因 `ERESOLVE` 失败。精确的版本范围以 `@abysstract/admin-core` 的 `package.json` 中 `peerDependencies` 为准。
+peer 依赖要带上版本号。admin-core 要求 antd 6、`@ant-design/icons` 6、React 18 或 19、React Router 6。`@ant-design/pro-components` 3 目前只有预发布版，admin-core 精确锁定一个版本，不写版本时 npm 会装 2.x，安装会因 `ERESOLVE` 失败；pro-components 3 要求 Node.js 22.12+。精确的版本范围以 `@abysstract/admin-core` 的 `package.json` 中 `peerDependencies` 为准。
 
 `@abysstract/admin-core` 固定依赖同版本的 `@abysstract/admin-proto`，升级时两个包一起升级。
 
@@ -174,6 +174,43 @@ npm install /absolute/path/to/abysstract-admin-proto-VERSION.tgz /absolute/path/
 `CreateOnly()` 字段仅在创建表单填写；`NotListable()` 控制列表展示。数据库默认值由迁移定义，业务表单初值通过页面配置。
 
 需要特殊展示时，使用列的 `hidden`、`render`、`title`；需要特殊输入时，使用表单的 `component`、`valueType`、`label`、`fieldProps`、`rules`、`visible`、`disabled`。附加 `rules` 在 `Required()` 和 `MaxLen()` 标准校验之后执行，长度按 Unicode 码点计数；bigint 保持完整精度。
+
+## 全局 antd 配置
+
+`createAdminApp` 的 Root 用一个 antd `ConfigProvider` 包住整个后台。`host.theme` 和 `host.locale` 传给它的同名属性；其余全局配置放在 `host.configProvider`，例如：
+
+```tsx
+const application = createAdminApp({
+  host: {
+    // apiBaseUrl、mode、authStorage、title …
+    theme: { token: { colorPrimary: "#0f766e" } },
+    locale: zhCN,
+    configProvider: { componentSize: "middle", form: { requiredMark: "optional" } },
+  },
+  modules,
+});
+```
+
+admin-core 默认设置 `button: { autoInsertSpace: false }`，「查询」「取消」等两个汉字的按钮中间不插空格，这一设置同时作用于业务页面的按钮。需要 antd 的默认行为时，传入 `configProvider: { button: { autoInsertSpace: true } }`；`button` 的其他字段与默认值合并。
+
+## 自定义列表页的搜索栏
+
+`ResourceTable` 顶部的搜索卡片以 `ResourceSearchBar` 导出，手写的列表页可以直接使用，与 Resource 页面保持一致：
+
+```tsx
+import { ResourceSearchBar } from "@abysstract/admin-core/resource";
+
+<ResourceSearchBar
+  keyword={keyword}
+  onKeywordChange={setKeyword}
+  onSearch={() => void load(keyword)}
+  onReload={() => void load(keyword)}
+>
+  {/* 可选：关键词之后、按钮之前的额外筛选控件 */}
+</ResourceSearchBar>;
+```
+
+回车或点击「查询」调用 `onSearch`；不传 `onReload` 时不显示「刷新」。卡片的背景、边框、圆角和阴影取自 antd token（`colorBgContainer`、`colorBorderSecondary`、`borderRadiusLG`、`boxShadowTertiary`），跟随 `host.theme` 和暗色算法。
 
 ## 故障说明
 

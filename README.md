@@ -38,7 +38,7 @@ frontend/apps/reference/src/modules/product/ # 商品页面、协议与 Resource
 
 完成下面的步骤后，你可以登录自带后台，查看用户、角色、菜单和部门。业务接入请继续阅读 [模块开发教程](docs/new-module-tutorial.md)。
 
-先安装 **Go 1.26+ 和 Node.js 20+**。仓库已包含生成的代码，首次启动可以直接使用。修改接口时，再安装协议生成工具 [buf](https://buf.build/docs/installation)。
+先安装 **Go 1.26+ 和 Node.js 22.12+**。仓库已包含生成的代码，首次启动可以直接使用。修改接口时，再安装协议生成工具 [buf](https://buf.build/docs/installation)。
 
 先克隆仓库，并进入仓库目录。下面每个命令块都会回到仓库根目录。
 

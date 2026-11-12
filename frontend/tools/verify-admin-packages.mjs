@@ -108,12 +108,12 @@ writeFileSync(
       dependencies: {
         "@abysstract/admin-core": `file:${corePackName}`,
         "@abysstract/admin-proto": `file:${protoPackName}`,
-        "@ant-design/icons": "5.4.0",
-        "@ant-design/pro-components": "2.7.19",
+        "@ant-design/icons": "6.3.4",
+        "@ant-design/pro-components": "3.1.15-9",
         "@bufbuild/protobuf": "2.2.0",
         "@connectrpc/connect": "2.0.0",
         "@connectrpc/connect-web": "2.0.0",
-        antd: "5.21.6",
+        antd: "6.7.0",
         react: "18.3.1",
         "react-dom": "18.3.1",
         "react-router-dom": "6.27.0",
@@ -132,7 +132,7 @@ mkdirSync(path.join(isolated, "src"));
 writeFileSync(
   path.join(isolated, "src/consumer.ts"),
   `import { bindAdminAppPageLifecycle, createAdminApp, createMemoryAuthStorage, formatErrorMessage } from "@abysstract/admin-core";
-import { ResourceTable } from "@abysstract/admin-core/resource";
+import { ResourceSearchBar, ResourceTable } from "@abysstract/admin-core/resource";
 import type { ResourceSchema } from "@abysstract/admin-core/resource/schema";
 import type { ResourceOperations } from "@abysstract/admin-core/resource/operations";
 import { createRelationOptionLoader } from "@abysstract/admin-core/resource/relation";
@@ -143,6 +143,7 @@ export const schema = { name: "demo" } as ResourceSchema;
 export type Ops = ResourceOperations<unknown, string>;
 export const loader = createRelationOptionLoader;
 export const table = ResourceTable;
+export const searchBar = ResourceSearchBar;
 export const systemHooks = { useSystemClients, useSystemOperations };
 export const upload = { DirectImageUpload, useDirectUpload };
 export const app = createAdminApp({
