@@ -69,6 +69,7 @@
 | 接入业务模块 | [模块教程](new-module-tutorial.md)、[模块指南](module-guide.md) |
 | 新增字段或调整 CRUD | [Resource 手册](ai-cookbook.md) |
 | 配置公共包和前端页面 | [API 用法](admin-core-usage.md) |
+| 设计和整改后台页面 | [后台设计规范](../frontend/packages/admin-core/DESIGN.md) |
 | 选择 Hook、Repository 或专用接口 | [扩展方式](resource-migration.md) |
 | 执行迁移和生成 | [开发说明](development.md) |
 | 发布应用 | [部署说明](deployment.md) |

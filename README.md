@@ -10,6 +10,7 @@ Abysstract 后台管理系统。前端使用 React、TypeScript 和 Ant Design /
 - 接入业务功能：按[模块开发教程](docs/new-module-tutorial.md)创建并持续扩展业务模块。
 - 在自己的仓库中使用框架：按[新建独立应用](docs/standalone-app.md)创建应用，通过 `go get` 和 npm 依赖框架。
 - 修改项目源码：从 [开发说明](docs/development.md) 和 [Resource 开发手册](docs/ai-cookbook.md) 开始。
+- 设计和整改后台页面：按[后台设计规范](frontend/packages/admin-core/DESIGN.md)。
 
 本系统的接口供后台前端使用。业务前台使用自己的接口，可以与后台共用从数据库生成的 Go 模型。Go 模型用结构体表示数据表。
 

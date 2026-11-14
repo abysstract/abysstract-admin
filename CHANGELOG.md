@@ -7,6 +7,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- 后台设计规范 `frontend/packages/admin-core/DESIGN.md`：布局与间距、字体、颜色、反馈、表单、数据列表、按钮、文案、数据格式、详情与概览页模板、空状态与异常状态。随 `@abysstract/admin-core` 一起发布（`node_modules/@abysstract/admin-core/DESIGN.md`），使用方的项目规范只需写本项目的补充。框架自带页面会在后续版本按它整改。
+
 ## [0.6.0] - 2026-11-12
 
 Go 模块与 `@abysstract/admin-core`、`@abysstract/admin-proto` 同步发布 0.6.0。前端迁移到 antd 6、pro-components 3 与 React 19（破坏性，见 Changed）；新增 `ResourceSearchBar` 与 `AdminHost.configProvider`。后端与数据库没有变化。

@@ -63,3 +63,4 @@ Keep current usage and development guidance in README and `docs/`. Keep agent in
 - Standard CRUD and dedicated system workflows: `docs/resource-migration.md`
 - File storage, presigned uploads and drivers: `docs/storage.md`
 - Request (access) log, sinks and reuse in separate API servers: `docs/access-log.md`
+- Admin page design (layout, copy, feedback, data formats): `frontend/packages/admin-core/DESIGN.md`; shipped in the npm package, so downstream apps read `node_modules/@abysstract/admin-core/DESIGN.md`

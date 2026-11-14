@@ -15,4 +15,6 @@ import "@abysstract/admin-core/styles.css";
 
 宿主入口挂载 React 后，调用 `bindAdminAppPageLifecycle({ application, root })`，管理浏览器前进后退缓存与页面离开时的资源释放。
 
+页面的布局、文案、反馈和数据格式按[后台设计规范](https://github.com/abysstract/abysstract-admin/blob/main/frontend/packages/admin-core/DESIGN.md)。规范随包发布，安装后位于 `node_modules/@abysstract/admin-core/DESIGN.md`，和当前安装的版本一致。
+
 安装方式见[公共包用法](https://github.com/abysstract/abysstract-admin/blob/main/docs/admin-core-usage.md#安装前端包)，页面、权限和字段配置见[业务接入教程](https://github.com/abysstract/abysstract-admin/blob/main/docs/admin-core-getting-started.md)。
