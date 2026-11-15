@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { create } from "@bufbuild/protobuf";
 import { message } from "antd";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -71,7 +71,7 @@ function resetMocks(): void {
   ]) {
     mocks.permissions.add(permission);
   }
-  mocks.list.mockReset().mockResolvedValue({ items: [row], total: 1n, pageNum: 1, pageSize: 10 });
+  mocks.list.mockReset().mockResolvedValue({ items: [row], total: 1n, pageNum: 1, pageSize: 20 });
   mocks.create.mockReset().mockResolvedValue(row);
   mocks.update.mockReset().mockResolvedValue(row);
   mocks.delete.mockReset().mockResolvedValue(undefined);
@@ -83,8 +83,8 @@ function resetMocks(): void {
 
 async function openCreateForm(): Promise<void> {
   await screen.findByText("原部门");
-  fireEvent.click(screen.getByRole("button", { name: "新建部门" }));
-  await screen.findByRole("dialog", { name: "新建部门" });
+  fireEvent.click(screen.getByRole("button", { name: "新增" }));
+  await screen.findByRole("dialog", { name: "新增部门" });
 }
 
 async function openEditForm(): Promise<void> {
@@ -99,8 +99,9 @@ describe("DeptList Resource migration", () => {
   it("consumes generated Dept schema/operations through ResourceTable", async () => {
     render(<DeptList />);
     expect(document.querySelector('[data-resource-table="Dept"]')).toBeInTheDocument();
-    expect(screen.getByTestId("pro-table-toolbar")).toHaveTextContent("新建部门");
-    expect(screen.getByTestId("pro-table-toolbar")).toHaveTextContent("批量删除");
+    expect(screen.getByTestId("pro-table-toolbar")).toHaveTextContent("新增");
+    // 批量删除在选中行后才出现在表格底部，不在工具栏里。
+    expect(screen.getByTestId("pro-table-toolbar")).not.toHaveTextContent("删除");
     await waitFor(() =>
       expect(mocks.list).toHaveBeenCalledWith({
         pageNum: 1,
@@ -133,8 +134,8 @@ describe("DeptList Resource migration", () => {
     );
 
     render(<DeptList />);
-    fireEvent.click(screen.getByRole("button", { name: "新建部门" }));
-    await screen.findByRole("dialog", { name: "新建部门" });
+    fireEvent.click(screen.getByRole("button", { name: "新增" }));
+    await screen.findByRole("dialog", { name: "新增部门" });
 
     expect(await screen.findByRole("option", { name: "部门101" })).toBeInTheDocument();
   });
@@ -151,7 +152,7 @@ describe("DeptList Resource migration", () => {
     });
     fireEvent.change(screen.getByLabelText("部门名称"), { target: { value: "新部门" } });
     fireEvent.change(screen.getByLabelText("负责人"), { target: { value: "新负责人" } });
-    fireEvent.click(screen.getByRole("button", { name: "提交" }));
+    fireEvent.click(screen.getByRole("button", { name: "保存" }));
 
     await waitFor(() => expect(mocks.create).toHaveBeenCalledOnce());
     expect(mocks.create.mock.calls[0]?.[0]).toMatchObject({
@@ -160,7 +161,7 @@ describe("DeptList Resource migration", () => {
       leader: "新负责人",
       orderNum: 0,
     });
-    expect(message.success).toHaveBeenCalledWith("创建成功");
+    expect(message.success).toHaveBeenCalledWith("已创建");
   });
 
   it("uses generated update presence and preserves an explicit empty email", async () => {
@@ -168,7 +169,7 @@ describe("DeptList Resource migration", () => {
     await openEditForm();
 
     fireEvent.change(screen.getByLabelText("邮箱"), { target: { value: "" } });
-    fireEvent.click(screen.getByRole("button", { name: "提交" }));
+    fireEvent.click(screen.getByRole("button", { name: "保存" }));
 
     await waitFor(() => expect(mocks.update).toHaveBeenCalledOnce());
     const submission = mocks.update.mock.calls[0]?.[0] as {
@@ -189,12 +190,20 @@ describe("DeptList Resource migration", () => {
     await screen.findByText("原部门");
 
     fireEvent.click(screen.getByRole("button", { name: "删除" }));
-    fireEvent.click(screen.getByRole("button", { name: "确认删除" }));
+    fireEvent.click(
+      within(screen.getByRole("dialog", { name: "删除这条记录？" })).getByRole("button", {
+        name: "删除",
+      }),
+    );
     await waitFor(() => expect(mocks.delete).toHaveBeenCalledWith(7n));
 
     fireEvent.click(screen.getAllByRole("checkbox")[0]);
-    fireEvent.click(screen.getByRole("button", { name: "批量删除" }));
-    fireEvent.click(screen.getByRole("button", { name: "确认批量删除" }));
+    fireEvent.click(within(screen.getByRole("toolbar")).getByRole("button", { name: "删除" }));
+    fireEvent.click(
+      within(screen.getByRole("dialog", { name: /删除选中的/ })).getByRole("button", {
+        name: "删除",
+      }),
+    );
     await waitFor(() => expect(mocks.batchDelete).toHaveBeenCalledWith([7n]));
   });
 
@@ -202,7 +211,7 @@ describe("DeptList Resource migration", () => {
     mocks.list
       .mockReset()
       .mockRejectedValueOnce(new Error("list failed"))
-      .mockResolvedValueOnce({ items: [row], total: 1n, pageNum: 1, pageSize: 10 });
+      .mockResolvedValueOnce({ items: [row], total: 1n, pageNum: 1, pageSize: 20 });
     const rendered = render(<DeptList />);
 
     expect(await screen.findByRole("alert")).toHaveTextContent("list failed");
@@ -213,6 +222,6 @@ describe("DeptList Resource migration", () => {
     mocks.permissions.delete("system:dept:edit");
     mocks.permissions.delete("system:dept:remove");
     rendered.rerender(<DeptList />);
-    expect(screen.queryByRole("button", { name: "新建部门" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "新增" })).not.toBeInTheDocument();
   });
 });

@@ -1,23 +1,30 @@
 import { useSystemClients } from "../../system/hooks";
 import { useEffect, useState } from "react";
-import { Card, Form, Button, Avatar, Upload, type UploadProps } from "antd";
+import { Card, Form, Button, Avatar, Input, Result, Upload, theme, type UploadProps } from "antd";
 import { UserOutlined } from "@ant-design/icons";
-import { PageContainer, ProFormText } from "@ant-design/pro-components";
+import { PageContainer } from "@ant-design/pro-components";
 
 import { formatErrorMessage, useAppMessage } from "../../runtime/message";
+import { useAdminTexts } from "../../runtime/texts";
 export default function ProfilePage() {
   const { profile: profileClient, upload: uploadClient } = useSystemClients();
   const message = useAppMessage();
-  const [form] = Form.useForm();
+  const [initialValues, setInitialValues] = useState<Record<string, string>>();
   const [avatar, setAvatar] = useState("");
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [loadError, setLoadError] = useState<unknown>();
+  const [attempt, setAttempt] = useState(0);
+  const { token } = theme.useToken();
+  const texts = useAdminTexts();
 
   useEffect(() => {
+    setInitialLoading(true);
+    setLoadError(undefined);
     profileClient
       .getProfile({})
       .then((res) => {
-        form.setFieldsValue({
+        setInitialValues({
           username: res.username,
           nickname: res.nickname,
           email: res.email,
@@ -25,9 +32,9 @@ export default function ProfilePage() {
         });
         setAvatar(res.avatar);
       })
-      .catch((e: unknown) => message.error(formatErrorMessage(e, "加载失败")))
+      .catch((e: unknown) => setLoadError(e))
       .finally(() => setInitialLoading(false));
-  }, [form, message]);
+  }, [profileClient, attempt]);
 
   const uploadProps: UploadProps = {
     accept: ".jpg,.jpeg,.png,.gif,.webp",
@@ -46,13 +53,13 @@ export default function ProfilePage() {
         message.success("头像已更新");
         onSuccess?.({}, new XMLHttpRequest());
       } catch (e) {
-        message.error(formatErrorMessage(e, "上传失败"));
+        message.error(formatErrorMessage(e, "无法上传头像，请稍后重试"));
         onError?.(e as Error);
       }
     },
     beforeUpload: (f) => {
       if (f.size > 5 * 1024 * 1024) {
-        message.error("头像不能超过 5MB");
+        message.error("无法上传：头像超过 5MB");
         return Upload.LIST_IGNORE;
       }
       return true;
@@ -69,33 +76,64 @@ export default function ProfilePage() {
       });
       message.success("已保存");
     } catch (e) {
-      message.error(formatErrorMessage(e, "保存失败"));
+      message.error(formatErrorMessage(e, "无法保存，请稍后重试"));
     } finally {
       setLoading(false);
     }
   };
 
+  if (loadError !== undefined) {
+    return (
+      <PageContainer>
+        <Result
+          status="error"
+          title="无法加载个人资料"
+          subTitle={formatErrorMessage(loadError)}
+          extra={
+            <Button onClick={() => setAttempt((value) => value + 1)}>{texts.action.retry}</Button>
+          }
+        />
+      </PageContainer>
+    );
+  }
+
   return (
     <PageContainer>
-      <Card title="个人资料" loading={initialLoading} style={{ maxWidth: 640 }}>
-        <div style={{ marginBottom: 24, display: "flex", alignItems: "center", gap: 16 }}>
-          <Avatar size={72} src={avatar || undefined} icon={<UserOutlined />} />
+      <Card title="个人资料" loading={initialLoading} style={{ maxWidth: 720 }}>
+        <div
+          style={{
+            marginBottom: token.marginLG,
+            display: "flex",
+            alignItems: "center",
+            gap: token.margin,
+          }}
+        >
+          <Avatar size={64} src={avatar || undefined} icon={<UserOutlined />} />
           <Upload {...uploadProps}>
             <Button>更换头像</Button>
           </Upload>
         </div>
-        <Form form={form} layout="vertical" onFinish={save}>
-          <ProFormText name="username" label="用户名" disabled tooltip="用户名不可自行修改" />
-          <ProFormText name="nickname" label="昵称" rules={[{ max: 64 }]} />
-          <ProFormText
+        {/* Card 加载时不渲染子元素，表单在数据到达后挂载，用 initialValues 填值。 */}
+        <Form layout="vertical" initialValues={initialValues} onFinish={save}>
+          <Form.Item name="username" label="用户名">
+            <Input disabled />
+          </Form.Item>
+          <Form.Item name="nickname" label="昵称" rules={[{ max: 64, message: "最多 64 个字" }]}>
+            <Input />
+          </Form.Item>
+          <Form.Item
             name="email"
             label="邮箱"
-            rules={[{ type: "email", message: "邮箱格式不正确" }]}
-          />
-          <ProFormText name="phone" label="手机号" rules={[{ max: 32 }]} />
+            rules={[{ type: "email", message: "邮箱格式不对，例如 name@example.com" }]}
+          >
+            <Input />
+          </Form.Item>
+          <Form.Item name="phone" label="手机号" rules={[{ max: 32, message: "最多 32 个字" }]}>
+            <Input />
+          </Form.Item>
           <Form.Item>
             <Button type="primary" htmlType="submit" loading={loading}>
-              保存
+              {texts.action.save}
             </Button>
           </Form.Item>
         </Form>

@@ -5,15 +5,31 @@ import type {
 } from "../../gen/resource/user.operations.gen";
 import { useSystemClients, useSystemOperations } from "../../system/hooks";
 import { useEffect, useState } from "react";
-import { Button, Form, Input, Modal, Popconfirm, Select, Switch, Upload } from "antd";
-import { DeleteOutlined, DownloadOutlined, PlusOutlined, UploadOutlined } from "@ant-design/icons";
+import {
+  Button,
+  Col,
+  Form,
+  Input,
+  Modal,
+  Popconfirm,
+  Result,
+  Row,
+  Select,
+  Switch,
+  Upload,
+} from "antd";
 import { PageContainer } from "@ant-design/pro-components";
 import type { User } from "@abysstract/admin-proto/abysstract/admin/v1/user_pb";
 import { Status } from "@abysstract/admin-proto/abysstract/admin/v1/common_pb";
 import { deptSchema } from "../../gen/resource/dept.schema.gen";
 import { roleSchema } from "../../gen/resource/role.schema.gen";
 import { userSchema } from "../../gen/resource/user.schema.gen";
-import { ResourceForm, ResourceTable, resourceListRows } from "../../components/resource";
+import {
+  ResourceForm,
+  ResourceFormDrawer,
+  ResourceTable,
+  resourceListRows,
+} from "../../components/resource";
 import type {
   ResourceColumnOverrides,
   ResourceCustomRowActionOverride,
@@ -23,10 +39,11 @@ import type {
   ResourceRowActionContext,
   ResourceToolbarContext,
 } from "../../components/resource";
-import { fmtTime, statusTag } from "../../util";
+import { statusTag, timeCell } from "../../util";
 import { useAccess } from "../../runtime/access";
 import { exportExcel, importExcel } from "../../utils/batchActions";
-import { formatErrorMessage, useAppMessage } from "../../runtime/message";
+import { formatErrorMessage, useAppFeedback, useAppMessage } from "../../runtime/message";
+import { useAdminTexts } from "../../runtime/texts";
 
 type UserCreateItems = ResourceFormItemOverrides<
   typeof userSchema,
@@ -147,7 +164,7 @@ function UserRoleField({ value, onChange, validationError }: UserRoleFieldProps)
   const { options, loading, error: loadError } = useRoleOptions(true);
   const help =
     validationError ??
-    (loadError === undefined ? undefined : formatErrorMessage(loadError, "角色加载失败"));
+    (loadError === undefined ? undefined : formatErrorMessage(loadError, "无法加载角色"));
   return (
     <Form.Item
       label="角色"
@@ -189,7 +206,7 @@ function UserDeptSelect({
       showSearch
       optionFilterProp="label"
       status={error === undefined ? undefined : "error"}
-      notFoundContent={error === undefined ? "暂无部门" : formatErrorMessage(error, "暂无部门")}
+      notFoundContent={error === undefined ? "没有部门" : formatErrorMessage(error, "无法加载部门")}
       options={options.map((option) => ({ label: option.label, value: String(option.value) }))}
       onChange={(nextValue: unknown) =>
         onChange(
@@ -232,71 +249,41 @@ function UserUpdateDeptField({
   );
 }
 
+function validateEmail(value: string | undefined) {
+  if (value === undefined || value === "" || /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value)) return;
+  throw new Error("邮箱格式不对，例如 name@example.com");
+}
+
+function validatePhone(value: string | undefined) {
+  if (value === undefined || value === "" || /^1[3-9][0-9]{9}$/.test(value)) return;
+  throw new Error("手机号应为 11 位数字");
+}
+
 const userCreateItems: UserCreateItems = {
   username: { label: "用户名" },
-  nickname: { label: "昵称" },
-  email: {
-    label: "邮箱",
-    rules: [
-      {
-        validator: (value) => {
-          if (value === undefined || value === "" || /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value))
-            return;
-          throw new Error("邮箱格式不正确");
-        },
-      },
-    ],
-  },
-  phone: {
-    label: "手机号",
-    rules: [
-      {
-        validator: (value) => {
-          if (value === undefined || value === "" || /^1[3-9][0-9]{9}$/.test(value)) return;
-          throw new Error("手机号格式不正确");
-        },
-      },
-    ],
-  },
+  nickname: { label: "昵称", sameRowAsPrevious: true },
+  email: { label: "邮箱", rules: [{ validator: validateEmail }] },
+  phone: { label: "手机号", sameRowAsPrevious: true, rules: [{ validator: validatePhone }] },
   deptId: {
     label: "所属部门",
     valueType: "custom",
     component: UserCreateDeptField,
+    span: 12,
   },
-  remark: { label: "备注", valueType: "textarea", fieldProps: { rows: 3 } },
+  remark: { label: "备注", valueType: "textarea", fieldProps: { rows: 2 } },
 };
 
 const userUpdateItems: UserUpdateItems = {
   nickname: { label: "昵称" },
-  email: {
-    label: "邮箱",
-    rules: [
-      {
-        validator: (value) => {
-          if (value === undefined || value === "" || /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value))
-            return;
-          throw new Error("邮箱格式不正确");
-        },
-      },
-    ],
-  },
-  phone: {
-    label: "手机号",
-    rules: [
-      {
-        validator: (value) => {
-          if (value === undefined || value === "" || /^1[3-9][0-9]{9}$/.test(value)) return;
-          throw new Error("手机号格式不正确");
-        },
-      },
-    ],
-  },
+  email: { label: "邮箱", rules: [{ validator: validateEmail }] },
+  phone: { label: "手机号", sameRowAsPrevious: true, rules: [{ validator: validatePhone }] },
   deptId: {
     label: "所属部门",
     valueType: "custom",
     component: UserUpdateDeptField,
+    span: 12,
   },
-  remark: { label: "备注", valueType: "textarea", fieldProps: { rows: 3 } },
+  remark: { label: "备注", valueType: "textarea", fieldProps: { rows: 2 } },
 };
 
 function userColumns(canEdit: boolean): ResourceColumnOverrides<typeof userSchema, User> {
@@ -313,13 +300,14 @@ function userColumns(canEdit: boolean): ResourceColumnOverrides<typeof userSchem
     },
     deptId: { title: "所属部门", render: ({ value }) => String(value), hidden: true },
     remark: { title: "备注", hidden: true },
-    createTime: { title: "创建时间", render: ({ value }) => fmtTime(value), hidden: true },
-    updateTime: { title: "更新时间", render: ({ value }) => fmtTime(value), hidden: true },
+    createTime: { title: "创建时间", render: ({ value }) => timeCell(value), hidden: true },
+    updateTime: { title: "更新时间", render: ({ value }) => timeCell(value), hidden: true },
   };
 }
 
 type UserStatusSwitchProps = Pick<ResourceRowActionContext<User, bigint>, "entity" | "reload">;
 
+// 列表里的启用/停用立即生效，所以用 Switch（见 DESIGN.md「控件选择」）。
 function UserStatusSwitch({ entity, reload }: UserStatusSwitchProps) {
   const { userOperations } = useSystemOperations();
   const message = useAppMessage();
@@ -333,10 +321,10 @@ function UserStatusSwitch({ entity, reload }: UserStatusSwitchProps) {
         id: entity.id,
         status: checked ? Status.ENABLED : Status.DISABLED,
       });
-      message.success(checked ? "用户已启用" : "用户已停用");
+      message.success(checked ? "已启用" : "已停用");
       await reload();
     } catch (cause) {
-      message.error(formatErrorMessage(cause, "状态更新失败"));
+      message.error(formatErrorMessage(cause, "无法更改状态，请稍后重试"));
     } finally {
       setLoading(false);
     }
@@ -356,42 +344,43 @@ function UserStatusSwitch({ entity, reload }: UserStatusSwitchProps) {
 function UserCreateAction({ reload }: Pick<ResourceToolbarContext<User, bigint>, "reload">) {
   const { userOperations } = useSystemOperations();
   const message = useAppMessage();
+  const texts = useAdminTexts();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [password, setPassword] = useState("");
   const [roleIds, setRoleIds] = useState<readonly bigint[]>([]);
   const [passwordError, setPasswordError] = useState<string>();
   const [roleError, setRoleError] = useState<string>();
-  const [error, setError] = useState<Error | undefined>();
+
+  const close = () => {
+    setOpen(false);
+    setPassword("");
+    setRoleIds([]);
+    setPasswordError(undefined);
+    setRoleError(undefined);
+  };
 
   const submit = async ({ values }: { values: Readonly<UserCreateValues> }) => {
-    const nextPasswordError = password.trim() === "" ? "请输入密码" : undefined;
-    const nextRoleError = roleIds.length === 0 ? "请至少选择一个角色" : undefined;
-    setError(undefined);
+    const nextPasswordError = password.trim() === "" ? "请填写密码" : undefined;
+    const nextRoleError = roleIds.length === 0 ? "至少选择一个角色" : undefined;
     setPasswordError(nextPasswordError);
     setRoleError(nextRoleError);
     if (nextPasswordError !== undefined || nextRoleError !== undefined) {
       return;
     }
     setLoading(true);
-    setError(undefined);
     try {
       await userOperations.custom.createUser({
         ...values,
         password,
         roleIds: [...roleIds],
       });
-      message.success("创建成功");
-      setOpen(false);
-      setPassword("");
-      setRoleIds([]);
-      setPasswordError(undefined);
-      setRoleError(undefined);
+      message.success(texts.feedback.created);
+      close();
       await reload();
     } catch (cause) {
-      const nextError = cause instanceof Error ? cause : new Error(String(cause));
-      setError(nextError);
-      message.error(formatErrorMessage(nextError, "创建失败"));
+      // 抽屉不关，用户填的内容保留。
+      message.error(formatErrorMessage(cause, "无法创建用户，请稍后重试"));
     } finally {
       setLoading(false);
     }
@@ -399,107 +388,102 @@ function UserCreateAction({ reload }: Pick<ResourceToolbarContext<User, bigint>,
 
   return (
     <>
-      <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>
-        新建用户
+      <Button type="primary" onClick={() => setOpen(true)}>
+        {texts.action.create}
       </Button>
-      <Modal
-        title="新建用户"
-        open={open}
-        footer={null}
-        destroyOnHidden
-        onCancel={() => {
-          setOpen(false);
-          setPassword("");
-          setRoleIds([]);
-          setPasswordError(undefined);
-          setRoleError(undefined);
-          setError(undefined);
-        }}
-      >
-        <ResourceForm<
-          typeof userSchema,
-          UserCreateValues,
-          "create",
-          bigint,
-          UserCreateValues,
-          UserUpdateValues,
-          keyof UserUpdateValues,
-          User
-        >
-          schema={userSchema}
-          mode="create"
-          initialValues={{
-            username: "",
-            nickname: "",
-            email: "",
-            phone: "",
-            deptId: 0n,
-            remark: "",
-          }}
-          itemOverrides={userCreateItems}
-          extraFields={
-            <>
-              <Form.Item
-                label="密码"
-                required
-                validateStatus={passwordError === undefined ? undefined : "error"}
-                help={passwordError}
-              >
-                <Input.Password
-                  aria-label="密码"
-                  value={password}
-                  onChange={(event) => {
-                    setPassword(event.currentTarget.value);
-                    setPasswordError(undefined);
-                    setError(undefined);
-                  }}
-                />
-              </Form.Item>
-              <UserRoleField
-                value={roleIds}
-                validationError={roleError}
-                onChange={(nextValue) => {
-                  setRoleIds(nextValue);
-                  setRoleError(undefined);
-                  setError(undefined);
-                }}
-              />
-            </>
-          }
-          error={error}
-          loading={loading}
-          onCreate={submit}
-        />
-      </Modal>
+      <ResourceFormDrawer open={open} title="新增用户" onClose={close}>
+        {(actionsContainer) => (
+          <ResourceForm<
+            typeof userSchema,
+            UserCreateValues,
+            "create",
+            bigint,
+            UserCreateValues,
+            UserUpdateValues,
+            keyof UserUpdateValues,
+            User
+          >
+            schema={userSchema}
+            mode="create"
+            initialValues={{
+              username: "",
+              nickname: "",
+              email: "",
+              phone: "",
+              deptId: 0n,
+              remark: "",
+            }}
+            itemOverrides={userCreateItems}
+            extraFields={
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item
+                    label="密码"
+                    required
+                    validateStatus={passwordError === undefined ? undefined : "error"}
+                    help={passwordError}
+                  >
+                    <Input.Password
+                      aria-label="密码"
+                      value={password}
+                      onChange={(event) => {
+                        setPassword(event.currentTarget.value);
+                        setPasswordError(undefined);
+                      }}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <UserRoleField
+                    value={roleIds}
+                    validationError={roleError}
+                    onChange={(nextValue) => {
+                      setRoleIds(nextValue);
+                      setRoleError(undefined);
+                    }}
+                  />
+                </Col>
+              </Row>
+            }
+            loading={loading}
+            onCreate={submit}
+            onCancel={close}
+            actionsContainer={actionsContainer}
+          />
+        )}
+      </ResourceFormDrawer>
     </>
   );
 }
 
-type UserEditActionProps = Pick<ResourceRowActionContext<User, bigint>, "entity" | "reload">;
+type UserTarget = { readonly entity: User; readonly reload: () => Promise<void> };
 
-function UserEditAction({ entity, reload }: UserEditActionProps) {
+function UserEditDrawer({
+  target,
+  onClose,
+}: {
+  readonly target: UserTarget | undefined;
+  readonly onClose: () => void;
+}) {
   const { userOperations, userBuildUpdateRequest } = useSystemOperations();
   const message = useAppMessage();
-  const [open, setOpen] = useState(false);
+  const texts = useAdminTexts();
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<User | undefined>();
   const [roleIds, setRoleIds] = useState<readonly bigint[]>([]);
-  const [error, setError] = useState<Error | undefined>();
-
-  const openEditor = () => {
-    setUser(undefined);
-    setRoleIds([]);
-    setError(undefined);
-    setOpen(true);
-  };
+  const [loadError, setLoadError] = useState<Error | undefined>();
+  const [attempt, setAttempt] = useState(0);
+  const id = target?.entity.id;
 
   useEffect(() => {
-    if (!open) return;
+    setUser(undefined);
+    setRoleIds([]);
+    setLoadError(undefined);
+    if (id === undefined) return;
     let active = true;
     setLoading(true);
-    setError(undefined);
     void userOperations.custom
-      .getUser({ id: entity.id })
+      .getUser({ id })
       .then((response) => {
         if (!active) return;
         if (response.user === undefined) throw new Error("用户详情缺少 user");
@@ -508,9 +492,7 @@ function UserEditAction({ entity, reload }: UserEditActionProps) {
       })
       .catch((cause: unknown) => {
         if (!active) return;
-        const nextError = cause instanceof Error ? cause : new Error(String(cause));
-        setError(nextError);
-        message.error(formatErrorMessage(nextError, "加载用户失败"));
+        setLoadError(cause instanceof Error ? cause : new Error(String(cause)));
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -518,7 +500,7 @@ function UserEditAction({ entity, reload }: UserEditActionProps) {
     return () => {
       active = false;
     };
-  }, [entity.id, message, open]);
+  }, [id, attempt]);
 
   const submit = async ({
     values,
@@ -527,20 +509,18 @@ function UserEditAction({ entity, reload }: UserEditActionProps) {
     values: Readonly<UserUpdateValues>;
     touched: ReadonlySet<keyof UserUpdateValues>;
   }) => {
+    if (target === undefined) return;
     setLoading(true);
-    setError(undefined);
     try {
-      const request = userBuildUpdateRequest(entity.id, values, touched);
+      const request = userBuildUpdateRequest(target.entity.id, values, touched);
       request.roleIds = [...roleIds];
       const response = await userOperations.custom.updateUser(request);
       if (response.user === undefined) throw new Error("保存响应缺少 user");
-      message.success("已保存");
-      setOpen(false);
-      await reload();
+      message.success(texts.feedback.saved);
+      onClose();
+      await target.reload();
     } catch (cause) {
-      const nextError = cause instanceof Error ? cause : new Error(String(cause));
-      setError(nextError);
-      message.error(formatErrorMessage(nextError, "保存失败"));
+      message.error(formatErrorMessage(cause, "无法保存，请稍后重试"));
     } finally {
       setLoading(false);
     }
@@ -558,27 +538,23 @@ function UserEditAction({ entity, reload }: UserEditActionProps) {
         };
 
   return (
-    <>
-      <Button type="link" onClick={openEditor}>
-        编辑
-      </Button>
-      <Modal
-        title="编辑用户"
-        open={open}
-        loading={loading && user === undefined}
-        footer={null}
-        destroyOnHidden
-        onCancel={() => {
-          setOpen(false);
-          setUser(undefined);
-          setRoleIds([]);
-          setError(undefined);
-        }}
-      >
-        {error !== undefined && user === undefined ? (
-          <div role="alert">{formatErrorMessage(error)}</div>
-        ) : null}
-        {user !== undefined && initialValues !== undefined ? (
+    <ResourceFormDrawer
+      open={target !== undefined}
+      title="编辑用户"
+      loading={loading && user === undefined && loadError === undefined}
+      onClose={onClose}
+    >
+      {(actionsContainer) =>
+        loadError !== undefined ? (
+          <Result
+            status="error"
+            title="无法加载用户"
+            subTitle={formatErrorMessage(loadError)}
+            extra={
+              <Button onClick={() => setAttempt((value) => value + 1)}>{texts.action.retry}</Button>
+            }
+          />
+        ) : user !== undefined && initialValues !== undefined ? (
           <ResourceForm<
             typeof userSchema,
             UserUpdateValues,
@@ -597,110 +573,94 @@ function UserEditAction({ entity, reload }: UserEditActionProps) {
             initialValues={initialValues}
             itemOverrides={userUpdateItems}
             extraFields={
-              <UserRoleField
-                value={roleIds}
-                onChange={(nextValue) => {
-                  setRoleIds(nextValue);
-                  setError(undefined);
-                }}
-              />
+              <Row gutter={16}>
+                <Col span={12}>
+                  <UserRoleField value={roleIds} onChange={setRoleIds} />
+                </Col>
+              </Row>
             }
-            error={error}
             loading={loading}
             onUpdate={submit}
+            onCancel={onClose}
+            actionsContainer={actionsContainer}
           />
-        ) : null}
-      </Modal>
-    </>
+        ) : null
+      }
+    </ResourceFormDrawer>
   );
 }
 
-function UserResetPasswordAction({ entity }: UserEditActionProps) {
+function UserResetPasswordModal({
+  target,
+  onClose,
+}: {
+  readonly target: UserTarget | undefined;
+  readonly onClose: () => void;
+}) {
   const { userOperations } = useSystemOperations();
   const message = useAppMessage();
-  const [open, setOpen] = useState(false);
+  const texts = useAdminTexts();
   const [password, setPassword] = useState("");
+  const [passwordError, setPasswordError] = useState<string>();
   const [loading, setLoading] = useState(false);
 
+  const close = () => {
+    setPassword("");
+    setPasswordError(undefined);
+    onClose();
+  };
+
   const submit = async () => {
+    if (target === undefined) return;
     if (password.trim() === "") {
-      message.error("请输入新密码");
+      setPasswordError("请填写新密码");
       return;
     }
     setLoading(true);
     try {
-      await userOperations.custom.resetPassword({ id: entity.id, newPassword: password });
-      message.success("密码已重置");
-      setOpen(false);
-      setPassword("");
+      await userOperations.custom.resetPassword({ id: target.entity.id, newPassword: password });
+      message.success("已重置密码");
+      close();
     } catch (cause) {
-      message.error(formatErrorMessage(cause, "重置失败"));
+      message.error(formatErrorMessage(cause, "无法重置密码，请稍后重试"));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <>
-      <Button
-        type="link"
-
-        onClick={() => {
-          setPassword("");
-          setOpen(true);
-        }}
-      >
-        改密
-      </Button>
-      <Modal
-        title="重置密码"
-        open={open}
-        footer={null}
-        destroyOnHidden
-        onCancel={() => {
-          setOpen(false);
-          setPassword("");
-        }}
-      >
-        <Form.Item label="新密码" required>
+    <Modal
+      title={target === undefined ? "重置密码" : `重置「${target.entity.username}」的密码`}
+      open={target !== undefined}
+      destroyOnHidden
+      onCancel={close}
+      footer={[
+        <Button key="cancel" disabled={loading} onClick={close}>
+          {texts.action.cancel}
+        </Button>,
+        <Button key="submit" type="primary" loading={loading} onClick={() => void submit()}>
+          重置密码
+        </Button>,
+      ]}
+    >
+      <Form layout="vertical">
+        <Form.Item
+          label="新密码"
+          required
+          validateStatus={passwordError === undefined ? undefined : "error"}
+          help={passwordError}
+        >
           <Input.Password
             aria-label="新密码"
             value={password}
-            onChange={(event) => setPassword(event.currentTarget.value)}
+            onChange={(event) => {
+              setPassword(event.currentTarget.value);
+              setPasswordError(undefined);
+            }}
           />
         </Form.Item>
-        <Button type="primary" loading={loading} onClick={() => void submit()}>
-          提交
-        </Button>
-      </Modal>
-    </>
-  );
-}
-
-function UserDeleteAction({ entity, reload }: UserEditActionProps) {
-  const { userOperations } = useSystemOperations();
-  const message = useAppMessage();
-  const [loading, setLoading] = useState(false);
-
-  const remove = async () => {
-    setLoading(true);
-    try {
-      await userOperations.custom.deleteUser({ id: entity.id });
-      message.success("已删除");
-      await reload();
-    } catch (cause) {
-      message.error(formatErrorMessage(cause, "删除失败"));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <Popconfirm title="确认删除该用户？" onConfirm={() => void remove()}>
-      <Button type="link" danger loading={loading}>
-        删除
-      </Button>
-    </Popconfirm>
+      </Form>
+    </Modal>
   );
 }
 
@@ -711,6 +671,8 @@ function UserBatchDeleteAction({
 }: Pick<ResourceToolbarContext<User, bigint>, "selectedKeys" | "reload" | "clearSelection">) {
   const { userOperations } = useSystemOperations();
   const message = useAppMessage();
+  const { modal } = useAppFeedback();
+  const texts = useAdminTexts();
   const [loading, setLoading] = useState(false);
 
   const remove = async () => {
@@ -718,11 +680,14 @@ function UserBatchDeleteAction({
     setLoading(true);
     try {
       const response = await userOperations.custom.batchDeleteUsers({ ids: [...selectedKeys] });
-      message.success(`已删除 ${response.deleted} 条`);
+      message.success(texts.feedback.batchDeleted(Number(response.deleted)));
       clearSelection();
       await reload();
     } catch (cause) {
-      message.error(formatErrorMessage(cause, "批量删除失败"));
+      modal.error({
+        title: texts.feedback.cannotDelete,
+        content: formatErrorMessage(cause, "请稍后重试"),
+      });
     } finally {
       setLoading(false);
     }
@@ -731,21 +696,17 @@ function UserBatchDeleteAction({
   return (
     <Popconfirm
       destroyOnHidden
-      title={`确认删除选中的 ${selectedKeys.length} 个用户？`}
+      title={`删除选中的 ${selectedKeys.length} 个用户？`}
+      description={texts.confirm.deleteContent}
       onConfirm={remove}
-      okText="确认删除"
-      cancelText="取消"
+      okText={texts.action.delete}
+      cancelText={texts.action.cancel}
       okButtonProps={{ danger: true, loading }}
       cancelButtonProps={{ disabled: loading }}
       disabled={selectedKeys.length === 0 || loading}
     >
-      <Button
-        danger
-        icon={<DeleteOutlined />}
-        disabled={selectedKeys.length === 0 || loading}
-        loading={loading}
-      >
-        批量删除（{selectedKeys.length}）
+      <Button danger disabled={selectedKeys.length === 0 || loading} loading={loading}>
+        {texts.action.delete}
       </Button>
     </Popconfirm>
   );
@@ -755,10 +716,7 @@ function UserExportAction() {
   const { commonExport } = useSystemClients();
   const message = useAppMessage();
   return (
-    <Button
-      icon={<DownloadOutlined />}
-      onClick={() => void exportExcel("system:user", { message, client: commonExport })}
-    >
+    <Button onClick={() => void exportExcel("system:user", { message, client: commonExport })}>
       导出
     </Button>
   );
@@ -773,7 +731,7 @@ function UserImportAction({ reload }: Pick<ResourceToolbarContext<User, bigint>,
       showUploadList={false}
       beforeUpload={(file) => {
         if (file.size > 10 * 1024 * 1024) {
-          message.error("导入文件不能超过 10MB");
+          message.error("无法导入：文件超过 10MB");
           return Upload.LIST_IGNORE;
         }
         void importExcel("system:user", file, {
@@ -784,7 +742,7 @@ function UserImportAction({ reload }: Pick<ResourceToolbarContext<User, bigint>,
         return false;
       }}
     >
-      <Button icon={<UploadOutlined />}>导入</Button>
+      <Button>导入</Button>
     </Upload>
   );
 }
@@ -797,55 +755,62 @@ const userDeletePermission = userSchema.permissions?.delete ?? `${userSchema.per
 const roleListPermission = roleSchema.permissions?.list ?? `${roleSchema.permPrefix}:list`;
 const deptListPermission = deptSchema.permissions?.list ?? `${deptSchema.permPrefix}:list`;
 
+type UserRowHandlers = {
+  readonly edit: (target: UserTarget) => void;
+  readonly resetPassword: (target: UserTarget) => void;
+  readonly remove: (target: UserTarget) => void;
+};
+
+// 操作列：「编辑」露出，「重置密码」「删除」收进「⋯」（见 DESIGN.md「数据列表」）。
 function userRowActions(
   canOpenEditor: boolean,
+  handlers: UserRowHandlers,
 ): readonly ResourceCustomRowActionOverride<User, bigint>[] {
   return [
     {
       action: "custom",
       name: "edit",
+      title: "编辑",
       permission: userUpdatePermission,
       merge: "append",
       // The editor performs a dedicated GetUser and loads role/dept options.
       // Do not expose a button that is guaranteed to fail in a partial role.
       hidden: !canOpenEditor,
-      render: ({ entity, reload }) => <UserEditAction entity={entity} reload={reload} />,
+      onClick: ({ entity, reload }) => handlers.edit({ entity, reload }),
     },
     {
       action: "custom",
       name: "resetPassword",
+      title: "重置密码",
       permission: `${userSchema.permPrefix}:resetPwd`,
       merge: "append",
-      render: ({ entity, reload }) => <UserResetPasswordAction entity={entity} reload={reload} />,
+      onClick: ({ entity, reload }) => handlers.resetPassword({ entity, reload }),
     },
     {
       action: "custom",
       name: "delete",
+      title: "删除",
       permission: userDeletePermission,
       merge: "append",
-      render: ({ entity, reload }) => <UserDeleteAction entity={entity} reload={reload} />,
+      danger: true,
+      onClick: ({ entity, reload }) => handlers.remove({ entity, reload }),
     },
   ];
 }
 
+// 工具栏：新增 → 导入 → 导出；批量删除在选中行后出现在表格底部。
 function userToolbar(
   canOpenCreateForm: boolean,
 ): readonly ResourceCustomToolbarOverride<User, bigint>[] {
   return [
     {
       action: "custom",
-      name: "batchDelete",
-      permission: userDeletePermission,
+      name: "create",
+      permission: userCreatePermission,
       merge: "append",
-      hidden: ({ selectedKeys }) => selectedKeys.length === 0,
-      render: (context) => <UserBatchDeleteAction {...context} />,
-    },
-    {
-      action: "custom",
-      name: "export",
-      permission: userListPermission,
-      merge: "append",
-      render: () => <UserExportAction />,
+      // The form always fetches both relation option lists when opened.
+      hidden: !canOpenCreateForm,
+      render: (context) => <UserCreateAction {...context} />,
     },
     {
       action: "custom",
@@ -856,12 +821,18 @@ function userToolbar(
     },
     {
       action: "custom",
-      name: "create",
-      permission: userCreatePermission,
+      name: "export",
+      permission: userListPermission,
       merge: "append",
-      // The form always fetches both relation option lists when opened.
-      hidden: !canOpenCreateForm,
-      render: (context) => <UserCreateAction {...context} />,
+      render: () => <UserExportAction />,
+    },
+    {
+      action: "custom",
+      name: "batchDelete",
+      permission: userDeletePermission,
+      merge: "append",
+      placement: "selection",
+      render: (context) => <UserBatchDeleteAction {...context} />,
     },
   ];
 }
@@ -869,11 +840,37 @@ function userToolbar(
 export default function UserList() {
   const { userOperations } = useSystemOperations();
   const message = useAppMessage();
+  const { modal } = useAppFeedback();
+  const texts = useAdminTexts();
   const { has } = useAccess();
   const canEdit = has(userUpdatePermission);
   const canLoadUserRelations = has(roleListPermission) && has(deptListPermission);
   const canOpenEditor = canEdit && has(userGetPermission) && canLoadUserRelations;
   const canOpenCreateForm = has(userCreatePermission) && canLoadUserRelations;
+  const [editing, setEditing] = useState<UserTarget>();
+  const [resetting, setResetting] = useState<UserTarget>();
+
+  const remove = ({ entity, reload }: UserTarget) => {
+    modal.confirm({
+      title: `删除用户「${entity.username}」？`,
+      content: texts.confirm.deleteContent,
+      okText: texts.action.delete,
+      okButtonProps: { danger: true },
+      cancelText: texts.action.cancel,
+      onOk: async () => {
+        try {
+          await userOperations.custom.deleteUser({ id: entity.id });
+          message.success(texts.feedback.deleted);
+          await reload();
+        } catch (cause) {
+          modal.error({
+            title: texts.feedback.cannotDelete,
+            content: formatErrorMessage(cause, "请稍后重试"),
+          });
+        }
+      },
+    });
+  };
 
   return (
     <PageContainer>
@@ -882,11 +879,16 @@ export default function UserList() {
         schema={userSchema}
         operations={userOperations}
         access={{ can: (permission) => has(permission) }}
-        onError={(error) => message.error(formatErrorMessage(error))}
         columns={userColumns(canEdit)}
-        rowActions={userRowActions(canOpenEditor)}
+        rowActions={userRowActions(canOpenEditor, {
+          edit: setEditing,
+          resetPassword: setResetting,
+          remove,
+        })}
         toolbar={userToolbar(canOpenCreateForm)}
       />
+      <UserEditDrawer target={editing} onClose={() => setEditing(undefined)} />
+      <UserResetPasswordModal target={resetting} onClose={() => setResetting(undefined)} />
     </PageContainer>
   );
 }

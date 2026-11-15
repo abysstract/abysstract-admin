@@ -15,9 +15,8 @@ import type {
   ResourceRowActionOverride,
   ResourceToolbarOverride,
 } from "../../components/resource";
-import { fmtTime } from "../../util";
+import { timeCell } from "../../util";
 
-import { formatErrorMessage, useAppMessage } from "../../runtime/message";
 type ConfigCreateItems = ResourceFormItemOverrides<
   typeof configSchema,
   ConfigCreateValues,
@@ -38,13 +37,13 @@ const configColumns: ResourceColumnOverrides<typeof configSchema, Config> = {
   configValue: { title: "参数键值" },
   configType: { hidden: true },
   remark: { hidden: true },
-  createTime: { title: "创建时间", render: ({ value }) => fmtTime(value) },
+  createTime: { title: "创建时间", render: ({ value }) => timeCell(value) },
   updateTime: { hidden: true },
 };
 
 const configCreateItems: ConfigCreateItems = {
   configName: { label: "参数名称" },
-  configKey: { label: "参数键名" },
+  configKey: { label: "参数键名", sameRowAsPrevious: true },
   configValue: { label: "参数键值" },
   configType: { visible: false },
   remark: { label: "备注", valueType: "textarea" },
@@ -61,14 +60,10 @@ const rowActions: readonly ResourceRowActionOverride<Config, bigint>[] = [
   { action: "delete", merge: "replace", title: "删除" },
 ];
 
-const toolbar: readonly ResourceToolbarOverride<Config, bigint>[] = [
-  { action: "create", merge: "replace", title: "新建参数" },
-  { action: "batchDelete", merge: "replace", title: "批量删除" },
-];
+const toolbar: readonly ResourceToolbarOverride<Config, bigint>[] = [];
 
 export default function ConfigList() {
   const { configOperations } = useSystemOperations();
-  const message = useAppMessage();
   const { has } = useAccess();
 
   return (
@@ -84,21 +79,14 @@ export default function ConfigList() {
         schema={configSchema}
         operations={configOperations}
         access={{ can: (permission) => has(permission) }}
-        reload={async () => {
-          message.success("已删除");
-        }}
-        onError={(error) => message.error(formatErrorMessage(error))}
         columns={configColumns}
         rowActions={rowActions}
         toolbar={toolbar}
         form={{
           createConfig: {
-            title: "新建参数",
+            title: "新增参数",
             initialValues: { configType: 0, remark: "" },
             itemOverrides: configCreateItems,
-            onSuccess: async () => {
-              message.success("创建成功");
-            },
           },
           editConfig: {
             title: "编辑参数",
@@ -108,9 +96,6 @@ export default function ConfigList() {
               remark: entity.remark,
             }),
             itemOverrides: configUpdateItems,
-            onSuccess: async () => {
-              message.success("已保存");
-            },
           },
         }}
       />

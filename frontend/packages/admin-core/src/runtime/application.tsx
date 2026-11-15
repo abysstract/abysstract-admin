@@ -1,4 +1,5 @@
 import { useEffect, useMemo, type ComponentType } from "react";
+import { AdminTextsProvider } from "./texts";
 import { useInRouterContext } from "react-router-dom";
 import { App as AntdApp, ConfigProvider } from "antd";
 import type { AdminApplication, AdminFrontendModule, AdminHost } from "./types";
@@ -74,13 +75,15 @@ export function createAdminApp(input: {
         locale={host.locale}
       >
         <AntdApp>
-          <AdminRuntimeProvider value={memo}>
-            <AppErrorBoundary
-              onError={(error) => host.reportError?.(error, { operation: "app.render" })}
-            >
-              <AdminApp />
-            </AppErrorBoundary>
-          </AdminRuntimeProvider>
+          <AdminTextsProvider texts={host.texts}>
+            <AdminRuntimeProvider value={memo}>
+              <AppErrorBoundary
+                onError={(error) => host.reportError?.(error, { operation: "app.render" })}
+              >
+                <AdminApp />
+              </AppErrorBoundary>
+            </AdminRuntimeProvider>
+          </AdminTextsProvider>
         </AntdApp>
       </ConfigProvider>
     );

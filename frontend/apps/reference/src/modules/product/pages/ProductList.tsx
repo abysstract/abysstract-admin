@@ -1,18 +1,12 @@
 import { useMemo, type ChangeEvent } from "react";
 import { Input } from "antd";
 import { PageContainer } from "@ant-design/pro-components";
-import {
-  formatErrorMessage,
-  useAccess,
-  useAdminRuntime,
-  useAppMessage,
-} from "@abysstract/admin-core";
+import { useAccess, useAdminRuntime } from "@abysstract/admin-core";
 import { ResourceTable } from "@abysstract/admin-core/resource";
 import type {
   ResourceColumnOverrides,
   ResourceFormItemOverrides,
   ResourceRowActionOverride,
-  ResourceToolbarOverride,
 } from "@abysstract/admin-core/resource";
 import type { Product } from "../gen/proto/company/product/v1/product_pb";
 import {
@@ -110,18 +104,12 @@ const rowActions: readonly ResourceRowActionOverride<Product, bigint>[] = [
   { action: "delete", merge: "replace", title: "删除" },
 ];
 
-const toolbar: readonly ResourceToolbarOverride<Product, bigint>[] = [
-  { action: "create", merge: "replace", title: "新建商品" },
-  { action: "batchDelete", merge: "replace", title: "批量删除" },
-];
-
 export default function ProductList() {
   const { transport } = useAdminRuntime();
   const operations = useMemo(
     () => createProductOperations(createProductRaw(transport)),
     [transport],
   );
-  const message = useAppMessage();
   const { has } = useAccess();
 
   return (
@@ -137,28 +125,17 @@ export default function ProductList() {
         schema={productSchema}
         operations={operations}
         access={{ can: (permission) => has(permission) }}
-        reload={async () => {
-          message.success("删除成功");
-        }}
-        onError={(error) => message.error(formatErrorMessage(error))}
         columns={productColumns}
         rowActions={rowActions}
-        toolbar={toolbar}
         form={{
           createConfig: {
-            title: "新建商品",
+            title: "新增商品",
             initialValues: { deptId: 1n },
             itemOverrides: productCreateItems,
-            onSuccess: async () => {
-              message.success("创建成功");
-            },
           },
           editConfig: {
             title: "编辑商品",
             itemOverrides: productUpdateItems,
-            onSuccess: async () => {
-              message.success("已保存");
-            },
           },
         }}
       />

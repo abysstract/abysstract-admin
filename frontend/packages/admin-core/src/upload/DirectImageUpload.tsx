@@ -81,7 +81,7 @@ export function DirectImageUpload({
       options.onSuccess?.(result);
     } catch (e) {
       if (!controller.signal.aborted) {
-        message.error(formatErrorMessage(e, "上传失败"));
+        message.error(formatErrorMessage(e, "无法上传，请稍后重试"));
       }
       options.onError?.(e as Error);
     } finally {

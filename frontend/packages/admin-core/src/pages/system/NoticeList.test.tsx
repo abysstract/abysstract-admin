@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { create } from "@bufbuild/protobuf";
 import { message } from "antd";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -69,7 +69,7 @@ function resetMocks(): void {
   ]) {
     mocks.permissions.add(permission);
   }
-  mocks.list.mockReset().mockResolvedValue({ items: [row], total: 1n, pageNum: 1, pageSize: 10 });
+  mocks.list.mockReset().mockResolvedValue({ items: [row], total: 1n, pageNum: 1, pageSize: 20 });
   mocks.create.mockReset().mockResolvedValue(row);
   mocks.update.mockReset().mockResolvedValue(row);
   mocks.delete.mockReset().mockResolvedValue(undefined);
@@ -81,8 +81,8 @@ function resetMocks(): void {
 
 async function openCreateForm(): Promise<void> {
   await screen.findByText("原公告");
-  fireEvent.click(screen.getByRole("button", { name: "新建公告" }));
-  await screen.findByRole("dialog", { name: "新建公告" });
+  fireEvent.click(screen.getByRole("button", { name: "新增" }));
+  await screen.findByRole("dialog", { name: "新增公告" });
 }
 
 async function openEditForm(): Promise<void> {
@@ -98,12 +98,13 @@ describe("NoticeList Resource migration", () => {
     render(<NoticeList />);
 
     expect(document.querySelector('[data-resource-table="Notice"]')).toBeInTheDocument();
-    expect(screen.getByTestId("pro-table-toolbar")).toHaveTextContent("新建公告");
-    expect(screen.getByTestId("pro-table-toolbar")).toHaveTextContent("批量删除");
+    expect(screen.getByTestId("pro-table-toolbar")).toHaveTextContent("新增");
+    // 批量删除在选中行后才出现在表格底部，不在工具栏里。
+    expect(screen.getByTestId("pro-table-toolbar")).not.toHaveTextContent("删除");
     await waitFor(() =>
       expect(mocks.list).toHaveBeenCalledWith({
         pageNum: 1,
-        pageSize: 10,
+        pageSize: 20,
       }),
     );
     expect(screen.getByRole("columnheader", { name: "标题" })).toBeInTheDocument();
@@ -123,7 +124,7 @@ describe("NoticeList Resource migration", () => {
     await waitFor(() =>
       expect(mocks.list).toHaveBeenLastCalledWith({
         pageNum: 1,
-        pageSize: 10,
+        pageSize: 20,
         keyword: "公告",
       }),
     );
@@ -132,7 +133,7 @@ describe("NoticeList Resource migration", () => {
     await waitFor(() =>
       expect(mocks.list).toHaveBeenLastCalledWith({
         pageNum: 2,
-        pageSize: 10,
+        pageSize: 20,
         keyword: "公告",
       }),
     );
@@ -154,19 +155,19 @@ describe("NoticeList Resource migration", () => {
     fireEvent.mouseDown(screen.getByRole("combobox", { name: "类型" }));
     expect(screen.getByText("公告")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "提交" }));
+    fireEvent.click(screen.getByRole("button", { name: "保存" }));
     expect(mocks.create).not.toHaveBeenCalled();
-    expect(screen.getAllByText(/必填/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/请填写/).length).toBeGreaterThan(0);
 
     fireEvent.change(screen.getByLabelText("标题"), { target: { value: "x".repeat(101) } });
     fireEvent.change(screen.getByLabelText("内容"), { target: { value: "内容" } });
-    fireEvent.click(screen.getByRole("button", { name: "提交" }));
+    fireEvent.click(screen.getByRole("button", { name: "保存" }));
     expect(mocks.create).not.toHaveBeenCalled();
     expect(screen.getByText(/100|maxLen|长度/)).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("标题"), { target: { value: "新公告" } });
     fireEvent.change(screen.getByLabelText("内容"), { target: { value: "新内容" } });
-    fireEvent.click(screen.getByRole("button", { name: "提交" }));
+    fireEvent.click(screen.getByRole("button", { name: "保存" }));
 
     await waitFor(() => expect(mocks.create).toHaveBeenCalledOnce());
     expect(mocks.create).toHaveBeenCalledWith({
@@ -175,7 +176,7 @@ describe("NoticeList Resource migration", () => {
       noticeContent: "新内容",
       remark: "",
     });
-    expect(message.success).toHaveBeenCalledWith("创建成功");
+    expect(message.success).toHaveBeenCalledWith("已创建");
     await waitFor(() => expect(mocks.list).toHaveBeenCalledTimes(2));
   });
 
@@ -184,7 +185,7 @@ describe("NoticeList Resource migration", () => {
     await openEditForm();
 
     fireEvent.change(screen.getByLabelText("备注"), { target: { value: "" } });
-    fireEvent.click(screen.getByRole("button", { name: "提交" }));
+    fireEvent.click(screen.getByRole("button", { name: "保存" }));
 
     await waitFor(() => expect(mocks.update).toHaveBeenCalledOnce());
     const submission = mocks.update.mock.calls[0]?.[0] as {
@@ -215,13 +216,21 @@ describe("NoticeList Resource migration", () => {
     await screen.findByText("原公告");
 
     fireEvent.click(screen.getByRole("button", { name: "删除" }));
-    fireEvent.click(screen.getByRole("button", { name: "确认删除" }));
+    fireEvent.click(
+      within(screen.getByRole("dialog", { name: "删除这条记录？" })).getByRole("button", {
+        name: "删除",
+      }),
+    );
     await waitFor(() => expect(mocks.delete).toHaveBeenCalledWith(7n));
 
     const selection = screen.getAllByRole("checkbox")[0];
     fireEvent.click(selection);
-    fireEvent.click(screen.getByRole("button", { name: "批量删除" }));
-    fireEvent.click(screen.getByRole("button", { name: "确认批量删除" }));
+    fireEvent.click(within(screen.getByRole("toolbar")).getByRole("button", { name: "删除" }));
+    fireEvent.click(
+      within(screen.getByRole("dialog", { name: /删除选中的/ })).getByRole("button", {
+        name: "删除",
+      }),
+    );
     await waitFor(() => expect(mocks.batchDelete).toHaveBeenCalledWith([7n]));
   });
 
@@ -229,7 +238,7 @@ describe("NoticeList Resource migration", () => {
     mocks.list
       .mockReset()
       .mockRejectedValueOnce(new Error("list failed"))
-      .mockResolvedValueOnce({ items: [row], total: 1n, pageNum: 1, pageSize: 10 });
+      .mockResolvedValueOnce({ items: [row], total: 1n, pageNum: 1, pageSize: 20 });
     render(<NoticeList />);
 
     expect(await screen.findByRole("alert")).toHaveTextContent("list failed");
@@ -245,7 +254,7 @@ describe("NoticeList Resource migration", () => {
     render(<NoticeList />);
 
     await waitFor(() => expect(mocks.list).toHaveBeenCalledOnce());
-    expect(screen.queryByRole("button", { name: "新建公告" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "新增" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "编辑" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "删除" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "批量删除" })).not.toBeInTheDocument();

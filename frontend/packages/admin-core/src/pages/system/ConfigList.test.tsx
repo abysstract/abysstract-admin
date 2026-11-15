@@ -1,6 +1,6 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { create } from "@bufbuild/protobuf";
-import { message } from "antd";
+import { Modal, message } from "antd";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ConfigSchema } from "@abysstract/admin-proto/abysstract/admin/v1/config_pb";
 import { configSchema } from "../../gen/resource/config.schema.gen";
@@ -71,7 +71,7 @@ function resetFacade(): void {
     items: [row],
     total: 1n,
     pageNum: 1,
-    pageSize: 10,
+    pageSize: 20,
   });
   facade.create.mockReset().mockResolvedValue(row);
   facade.update.mockReset().mockResolvedValue(row);
@@ -84,8 +84,8 @@ function resetFacade(): void {
 
 async function openCreateForm(): Promise<void> {
   await screen.findByText("原名称");
-  fireEvent.click(screen.getByRole("button", { name: "新建参数" }));
-  await screen.findByRole("dialog", { name: "新建参数" });
+  fireEvent.click(screen.getByRole("button", { name: "新增" }));
+  await screen.findByRole("dialog", { name: "新增参数" });
 }
 
 async function openEditForm(): Promise<void> {
@@ -100,12 +100,12 @@ describe("ConfigList Resource consumption", () => {
   it("renders the generated Config schema and facade through ResourceTable", async () => {
     render(<ConfigList />);
 
-    expect(screen.getByTestId("pro-table-toolbar")).toHaveTextContent("新建参数");
+    expect(screen.getByTestId("pro-table-toolbar")).toHaveTextContent("新增");
     expect(document.querySelector('[data-resource-table="Config"]')).toBeInTheDocument();
     await waitFor(() =>
       expect(facade.list).toHaveBeenCalledWith({
         pageNum: 1,
-        pageSize: 10,
+        pageSize: 20,
       }),
     );
     expect(screen.getByRole("columnheader", { name: "参数名称" })).toBeInTheDocument();
@@ -124,7 +124,7 @@ describe("ConfigList Resource consumption", () => {
     await waitFor(() =>
       expect(facade.list).toHaveBeenLastCalledWith({
         pageNum: 1,
-        pageSize: 10,
+        pageSize: 20,
         keyword: "fixed",
       }),
     );
@@ -133,7 +133,7 @@ describe("ConfigList Resource consumption", () => {
     await waitFor(() =>
       expect(facade.list).toHaveBeenLastCalledWith({
         pageNum: 2,
-        pageSize: 10,
+        pageSize: 20,
         keyword: "fixed",
       }),
     );
@@ -158,7 +158,7 @@ describe("ConfigList Resource consumption", () => {
     fireEvent.change(screen.getByLabelText("参数键名"), { target: { value: "new.key" } });
     fireEvent.change(screen.getByLabelText("参数键值"), { target: { value: "new-value" } });
     fireEvent.change(screen.getByLabelText("备注"), { target: { value: "新备注" } });
-    fireEvent.click(screen.getByRole("button", { name: "提交" }));
+    fireEvent.click(screen.getByRole("button", { name: "保存" }));
 
     await waitFor(() => expect(facade.create).toHaveBeenCalledOnce());
     expect(facade.create).toHaveBeenCalledWith({
@@ -168,9 +168,9 @@ describe("ConfigList Resource consumption", () => {
       configType: 0,
       remark: "新备注",
     });
-    expect(message.success).toHaveBeenCalledWith("创建成功");
+    expect(message.success).toHaveBeenCalledWith("已创建");
     await waitFor(() => expect(facade.list).toHaveBeenCalledTimes(2));
-    expect(screen.queryByRole("dialog", { name: "新建参数" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "新增参数" })).not.toBeInTheDocument();
   });
 
   it("keeps the create form open and shows the original failure message when create fails", async () => {
@@ -181,10 +181,10 @@ describe("ConfigList Resource consumption", () => {
     fireEvent.change(screen.getByLabelText("参数名称"), { target: { value: "新名称" } });
     fireEvent.change(screen.getByLabelText("参数键名"), { target: { value: "new.key" } });
     fireEvent.change(screen.getByLabelText("参数键值"), { target: { value: "new-value" } });
-    fireEvent.click(screen.getByRole("button", { name: "提交" }));
+    fireEvent.click(screen.getByRole("button", { name: "保存" }));
 
     await waitFor(() => expect(message.error).toHaveBeenCalledWith("create failed"));
-    expect(screen.getByRole("dialog", { name: "新建参数" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "新增参数" })).toBeInTheDocument();
     expect(facade.list).toHaveBeenCalledOnce();
   });
 
@@ -199,7 +199,7 @@ describe("ConfigList Resource consumption", () => {
     expect(screen.getByLabelText("参数键值")).toHaveValue("before-value");
 
     fireEvent.change(screen.getByLabelText("备注"), { target: { value: "" } });
-    fireEvent.click(screen.getByRole("button", { name: "提交" }));
+    fireEvent.click(screen.getByRole("button", { name: "保存" }));
 
     await waitFor(() => expect(facade.update).toHaveBeenCalledOnce());
     const submission = facade.update.mock.calls[0]?.[0] as {
@@ -233,13 +233,13 @@ describe("ConfigList Resource consumption", () => {
     await openEditForm();
 
     fireEvent.change(screen.getByLabelText("参数名称"), { target: { value: "失败名称" } });
-    fireEvent.click(screen.getByRole("button", { name: "提交" }));
+    fireEvent.click(screen.getByRole("button", { name: "保存" }));
 
     await waitFor(() => expect(message.error).toHaveBeenCalledWith("update failed"));
     expect(screen.getByRole("dialog", { name: "编辑参数" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "提交" })).not.toBeDisabled();
+    expect(screen.getByRole("button", { name: "保存" })).not.toBeDisabled();
 
-    fireEvent.click(screen.getByRole("button", { name: "提交" }));
+    fireEvent.click(screen.getByRole("button", { name: "保存" }));
     await waitFor(() => expect(facade.update).toHaveBeenCalledTimes(2));
     expect(message.success).toHaveBeenCalledWith("已保存");
   });
@@ -251,7 +251,7 @@ describe("ConfigList Resource consumption", () => {
     const name = screen.getByLabelText("参数名称");
     fireEvent.change(name, { target: { value: "临时名称" } });
     fireEvent.change(name, { target: { value: "原名称" } });
-    fireEvent.click(screen.getByRole("button", { name: "提交" }));
+    fireEvent.click(screen.getByRole("button", { name: "保存" }));
 
     await waitFor(() => expect(facade.update).toHaveBeenCalledOnce());
     const submission = facade.update.mock.calls[0]?.[0] as {
@@ -267,7 +267,11 @@ describe("ConfigList Resource consumption", () => {
     await screen.findByText("原名称");
 
     fireEvent.click(screen.getByRole("button", { name: "删除" }));
-    fireEvent.click(screen.getByRole("button", { name: "确认删除" }));
+    fireEvent.click(
+      within(screen.getByRole("dialog", { name: "删除这条记录？" })).getByRole("button", {
+        name: "删除",
+      }),
+    );
     await waitFor(() => expect(facade.delete).toHaveBeenCalledWith(7n));
     await waitFor(() => expect(facade.list).toHaveBeenCalledTimes(2));
     expect(message.success).toHaveBeenCalledWith("已删除");
@@ -277,8 +281,14 @@ describe("ConfigList Resource consumption", () => {
     render(<ConfigList />);
     await screen.findByText("原名称");
     fireEvent.click(screen.getAllByRole("button", { name: "删除" })[0]);
-    fireEvent.click(screen.getByRole("button", { name: "确认删除" }));
-    await waitFor(() => expect(message.error).toHaveBeenCalledWith("delete failed"));
+    fireEvent.click(
+      within(screen.getByRole("dialog", { name: "删除这条记录？" })).getByRole("button", {
+        name: "删除",
+      }),
+    );
+    await waitFor(() =>
+      expect(Modal.error).toHaveBeenCalledWith({ title: "无法删除", content: "delete failed" }),
+    );
   });
 
   it("uses the typed batchDelete facade and reloads after success", async () => {
@@ -286,12 +296,16 @@ describe("ConfigList Resource consumption", () => {
     await screen.findByText("原名称");
 
     fireEvent.click(screen.getByRole("checkbox", { name: "选择 7" }));
-    fireEvent.click(screen.getByRole("button", { name: "批量删除" }));
-    fireEvent.click(screen.getByRole("button", { name: "确认批量删除" }));
+    fireEvent.click(within(screen.getByRole("toolbar")).getByRole("button", { name: "删除" }));
+    fireEvent.click(
+      within(screen.getByRole("dialog", { name: /删除选中的/ })).getByRole("button", {
+        name: "删除",
+      }),
+    );
 
     await waitFor(() => expect(facade.batchDelete).toHaveBeenCalledWith([7n]));
     await waitFor(() => expect(facade.list).toHaveBeenCalledTimes(2));
-    expect(message.success).toHaveBeenCalledWith("已删除");
+    expect(message.success).toHaveBeenCalledWith("已删除 1 条");
   });
 
   it("resets the form when its modal is closed and reopened", async () => {
@@ -310,11 +324,10 @@ describe("ConfigList Resource consumption", () => {
     facade.list
       .mockReset()
       .mockRejectedValueOnce(new Error("list failed"))
-      .mockResolvedValueOnce({ items: [row], total: 1n, pageNum: 1, pageSize: 10 });
+      .mockResolvedValueOnce({ items: [row], total: 1n, pageNum: 1, pageSize: 20 });
     render(<ConfigList />);
 
     expect(await screen.findByRole("alert")).toHaveTextContent("list failed");
-    expect(message.error).toHaveBeenCalledWith("list failed");
     fireEvent.click(screen.getByRole("button", { name: "重试" }));
     await waitFor(() => expect(facade.list).toHaveBeenCalledTimes(2));
     expect(await screen.findByText("原名称")).toBeInTheDocument();
@@ -324,7 +337,7 @@ describe("ConfigList Resource consumption", () => {
     {
       label: "add",
       permissions: ["system:config:list", "system:config:edit", "system:config:remove"],
-      hidden: ["新建参数"],
+      hidden: ["新增"],
     },
     {
       label: "edit",
@@ -355,7 +368,7 @@ describe("ConfigList Resource consumption", () => {
     render(<ConfigList />);
 
     await waitFor(() => expect(facade.list).toHaveBeenCalledOnce());
-    expect(screen.queryByRole("button", { name: "新建参数" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "新增" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "编辑" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "删除" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "批量删除" })).not.toBeInTheDocument();

@@ -16,9 +16,9 @@ import type {
   ResourceRowActionOverride,
   ResourceToolbarOverride,
 } from "../../components/resource";
-import { fmtTime, statusTag } from "../../util";
+import { statusTag, timeCell } from "../../util";
 import { useAccess } from "../../runtime/access";
-import { formatErrorMessage, useAppMessage } from "../../runtime/message";
+import { formatErrorMessage } from "../../runtime/message";
 
 type MenuCreateItems = ResourceFormItemOverrides<
   typeof menuSchema,
@@ -39,11 +39,8 @@ type MenuParentTreeNode = {
   children?: MenuParentTreeNode[];
 };
 
-const typeTag: Record<string, { color: string; text: string }> = {
-  M: { color: "blue", text: "目录" },
-  C: { color: "green", text: "菜单" },
-  F: { color: "default", text: "按钮" },
-};
+// 菜单类型是普通分类，用默认灰色 Tag（见 DESIGN.md「颜色」）。
+const typeLabels: Record<string, string> = { M: "目录", C: "菜单", F: "按钮" };
 
 const typeOptions = [
   { label: "目录", value: "M" },
@@ -55,7 +52,7 @@ const menuColumns: ResourceColumnOverrides<typeof menuSchema, Menu> = {
   id: { hidden: true },
   menuName: { title: "菜单名称" },
   parentId: { title: "上级菜单 ID", hidden: true },
-  orderNum: { title: "排序" },
+  orderNum: { title: "排序", numeric: true },
   path: { title: "路由" },
   component: { title: "组件", hidden: true },
   query: { title: "参数", hidden: true },
@@ -64,16 +61,15 @@ const menuColumns: ResourceColumnOverrides<typeof menuSchema, Menu> = {
   menuType: {
     title: "类型",
     render: ({ value }) => {
-      const tag = typeTag[String(value)] ?? { color: "default", text: String(value) };
-      return <Tag color={tag.color}>{tag.text}</Tag>;
+      return <Tag>{typeLabels[String(value)] ?? String(value)}</Tag>;
     },
   },
   visible: { title: "可见", hidden: true },
   status: { title: "状态", render: ({ value }) => statusTag(value) },
   perms: { title: "权限标识" },
   icon: { title: "图标", hidden: true },
-  createTime: { title: "创建时间", render: ({ value }) => fmtTime(value), hidden: true },
-  updateTime: { title: "更新时间", render: ({ value }) => fmtTime(value), hidden: true },
+  createTime: { title: "创建时间", render: ({ value }) => timeCell(value), hidden: true },
+  updateTime: { title: "更新时间", render: ({ value }) => timeCell(value), hidden: true },
 };
 
 function menuParentItems(
@@ -90,7 +86,7 @@ function menuParentItems(
     isCache: { label: "是否缓存", visible: false },
     menuType: { label: "类型", valueType: "select", fieldProps: { options: typeOptions } },
     visible: { label: "是否可见", visible: false },
-    perms: { label: "权限标识", fieldProps: { placeholder: "如 system:user:add" } },
+    perms: { label: "权限标识", fieldProps: { placeholder: "system:user:add" } },
     icon: { label: "图标" },
   } as MenuCreateItems | MenuUpdateItems;
 }
@@ -102,10 +98,7 @@ const menuRowActions: readonly ResourceRowActionOverride<Menu, bigint>[] = [
   { action: "update", merge: "replace", title: "编辑" },
   { action: "delete", merge: "replace", title: "删除" },
 ];
-const menuToolbar: readonly ResourceToolbarOverride<Menu, bigint>[] = [
-  { action: "create", merge: "replace", title: "新建菜单" },
-  { action: "batchDelete", merge: "replace", title: "批量删除" },
-];
+const menuToolbar: readonly ResourceToolbarOverride<Menu, bigint>[] = [];
 
 function MenuCreateParentSelect({
   value,
@@ -224,7 +217,7 @@ function MenuParentSelect({
       treeDefaultExpandAll
       treeData={treeData}
       status={error === undefined ? undefined : "error"}
-      notFoundContent={error === undefined ? "暂无菜单" : formatErrorMessage(error, "暂无菜单")}
+      notFoundContent={error === undefined ? "没有菜单" : formatErrorMessage(error, "无法加载菜单")}
       onChange={(nextValue) => onChange(BigInt(String(nextValue ?? "0")))}
     />
   );
@@ -256,7 +249,6 @@ function flattenMenuTree(rows: readonly Menu[]): readonly Menu[] {
 
 export default function MenuList() {
   const { menuOperations } = useSystemOperations();
-  const message = useAppMessage();
   const { has } = useAccess();
 
   return (
@@ -272,7 +264,6 @@ export default function MenuList() {
         schema={menuSchema}
         operations={menuOperations}
         access={{ can: (permission) => has(permission) }}
-        onError={(error) => message.error(formatErrorMessage(error))}
         columns={menuColumns}
         treeData={{ pageSize: 100, build: buildMenuTree, flatten: flattenMenuTree }}
         rowActions={menuRowActions}
@@ -280,7 +271,7 @@ export default function MenuList() {
         query={{ defaults: { orders: [{ field: "orderNum", desc: false }] } }}
         form={{
           createConfig: {
-            title: "新建菜单",
+            title: "新增菜单",
             initialValues: {
               parentId: 0n,
               orderNum: 0,
@@ -295,9 +286,6 @@ export default function MenuList() {
               icon: "",
             },
             itemOverrides: menuCreateItems,
-            onSuccess: async () => {
-              message.success("创建成功");
-            },
           },
           editConfig: {
             title: "编辑菜单",
@@ -316,9 +304,6 @@ export default function MenuList() {
               icon: entity.icon,
             }),
             itemOverrides: menuUpdateItems,
-            onSuccess: async () => {
-              message.success("已保存");
-            },
           },
         }}
       />

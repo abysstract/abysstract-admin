@@ -1,10 +1,11 @@
 import { useSystemOperations } from "../../system/hooks";
 import { useEffect, useState } from "react";
-import { Drawer, Button, Tree, Space } from "antd";
+import { Drawer, Button, Result, Tree, Space } from "antd";
 import type { DataNode } from "antd/es/tree";
 import type { Menu } from "@abysstract/admin-proto/abysstract/admin/v1/menu_pb";
 import type { Role } from "@abysstract/admin-proto/abysstract/admin/v1/role_pb";
 import { formatErrorMessage, useAppMessage } from "../../runtime/message";
+import { useAdminTexts } from "../../runtime/texts";
 
 async function loadAllMenus(menuOperations: {
   list: (query: {
@@ -64,11 +65,14 @@ type Props = {
 export default function RoleMenuDrawer({ role, open, onClose }: Props) {
   const { menuOperations, roleOperations } = useSystemOperations();
   const message = useAppMessage();
+  const texts = useAdminTexts();
   const [treeData, setTreeData] = useState<DataNode[]>([]);
   const [checked, setChecked] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [ready, setReady] = useState(false);
+  const [loadError, setLoadError] = useState<unknown>();
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     if (!open || !role) return;
@@ -76,6 +80,7 @@ export default function RoleMenuDrawer({ role, open, onClose }: Props) {
     setReady(false);
     setTreeData([]);
     setChecked([]);
+    setLoadError(undefined);
     let active = true;
     (async () => {
       const [menus, roleMenus] = await Promise.all([
@@ -88,7 +93,7 @@ export default function RoleMenuDrawer({ role, open, onClose }: Props) {
       setReady(true);
     })()
       .catch((cause: unknown) => {
-        if (active) message.error(formatErrorMessage(cause, "加载菜单权限失败"));
+        if (active) setLoadError(cause);
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -96,7 +101,7 @@ export default function RoleMenuDrawer({ role, open, onClose }: Props) {
     return () => {
       active = false;
     };
-  }, [menuOperations, message, open, role, roleOperations]);
+  }, [menuOperations, open, role, roleOperations, attempt]);
 
   const save = async () => {
     if (!role) return;
@@ -104,10 +109,10 @@ export default function RoleMenuDrawer({ role, open, onClose }: Props) {
     try {
       const menuIds = checked.map((key) => BigInt(key));
       await roleOperations.custom.updateRoleMenus({ roleId: role.id, menuIds });
-      message.success("权限已保存");
+      message.success("已保存");
       onClose();
     } catch (cause) {
-      message.error(formatErrorMessage(cause, "保存失败"));
+      message.error(formatErrorMessage(cause, "无法保存，请稍后重试"));
     } finally {
       setSaving(false);
     }
@@ -115,32 +120,42 @@ export default function RoleMenuDrawer({ role, open, onClose }: Props) {
 
   return (
     <Drawer
-      title={role ? `分配菜单权限 - ${role.roleName}` : "分配菜单权限"}
+      title={role ? `分配菜单：${role.roleName}` : "分配菜单"}
       open={open}
       onClose={onClose}
-      size={420}
+      size={720}
       loading={loading}
       extra={
         <Space>
-          <Button onClick={onClose}>取消</Button>
+          <Button onClick={onClose}>{texts.action.cancel}</Button>
           <Button type="primary" loading={saving} disabled={!ready} onClick={save}>
-            保存
+            {texts.action.save}
           </Button>
         </Space>
       }
     >
-      <p>目录、菜单和按钮权限按勾选项独立授权。</p>
-      <Tree
-        checkable
-        checkStrictly
-        treeData={treeData}
-        checkedKeys={checked}
-        onCheck={(checkedKeys) => {
-          const keys = Array.isArray(checkedKeys) ? checkedKeys : checkedKeys.checked;
-          setChecked(keys.map(String));
-        }}
-        defaultExpandAll
-      />
+      {loadError !== undefined ? (
+        <Result
+          status="error"
+          title="无法加载菜单权限"
+          subTitle={formatErrorMessage(loadError)}
+          extra={
+            <Button onClick={() => setAttempt((value) => value + 1)}>{texts.action.retry}</Button>
+          }
+        />
+      ) : (
+        <Tree
+          checkable
+          checkStrictly
+          treeData={treeData}
+          checkedKeys={checked}
+          onCheck={(checkedKeys) => {
+            const keys = Array.isArray(checkedKeys) ? checkedKeys : checkedKeys.checked;
+            setChecked(keys.map(String));
+          }}
+          defaultExpandAll
+        />
+      )}
     </Drawer>
   );
 }

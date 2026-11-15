@@ -172,7 +172,7 @@ describe("ResourceForm production behavior failure gates", () => {
     fireEvent.change(screen.getByLabelText("dictLabel"), { target: { value: "" } });
     fireEvent.click(screen.getByRole("button", { name: /提交|保存|create/i }));
     expect(onCreate).not.toHaveBeenCalled();
-    expect(screen.getByRole("alert")).toHaveTextContent(/required|必填/i);
+    expect(screen.getByRole("alert")).toHaveTextContent("请填写dictLabel");
 
     fireEvent.change(screen.getByLabelText("dictLabel"), { target: { value: "x".repeat(101) } });
     fireEvent.click(screen.getByRole("button", { name: /提交|保存|create/i }));
@@ -192,14 +192,14 @@ describe("ResourceForm production behavior failure gates", () => {
     render(<ResourceForm {...createProps(onCreate)} />);
 
     fireEvent.change(screen.getByLabelText("dictLabel"), { target: { value: "   " } });
-    fireEvent.click(screen.getByRole("button", { name: /提交/i }));
-    await waitFor(() => expect(screen.getByText(/必填/)).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: /保存/ }));
+    await waitFor(() => expect(screen.getByText("请填写dictLabel")).toBeInTheDocument());
     expect(onCreate).not.toHaveBeenCalled();
 
     fireEvent.change(screen.getByLabelText("dictLabel"), {
       target: { value: "😀".repeat(100) },
     });
-    fireEvent.click(screen.getByRole("button", { name: /提交/i }));
+    fireEvent.click(screen.getByRole("button", { name: /保存/ }));
     await waitFor(() => expect(onCreate).toHaveBeenCalledOnce());
   });
 
@@ -280,19 +280,32 @@ describe("ResourceForm production behavior failure gates", () => {
     expect(onUpdate.mock.calls[0][0].dirty).toEqual(new Set());
   });
 
-  it("resets controlled values and presence state through the visible reset action", async () => {
+  it("shows「取消 保存」and cancels without submitting", async () => {
     const onUpdate = vi.fn<UpdateHandler>(async () => undefined);
-    render(<ResourceForm {...updateProps(onUpdate)} />);
+    const onCancel = vi.fn();
+    render(<ResourceForm {...updateProps(onUpdate)} onCancel={onCancel} />);
 
     fireEvent.change(screen.getByLabelText("remark"), { target: { value: "unsaved" } });
-    fireEvent.click(screen.getByRole("button", { name: "重置" }));
+    expect(screen.queryByRole("button", { name: "重置" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "取消" }));
 
-    expect(screen.getByLabelText("remark")).toHaveValue("初始备注");
-    fireEvent.click(screen.getByRole("button", { name: "提交" }));
+    expect(onCancel).toHaveBeenCalledOnce();
+    expect(onUpdate).not.toHaveBeenCalled();
+  });
+
+  it("renders its actions into an external container such as a drawer header", async () => {
+    const onUpdate = vi.fn<UpdateHandler>(async () => undefined);
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    render(
+      <ResourceForm {...updateProps(onUpdate)} onCancel={vi.fn()} actionsContainer={container} />,
+    );
+
+    const save = screen.getByRole("button", { name: "保存" });
+    expect(container).toContainElement(save);
+    fireEvent.click(save);
     await waitFor(() => expect(onUpdate).toHaveBeenCalledOnce());
-    expect(onUpdate.mock.calls[0][0].touched).toEqual(new Set());
-    expect(onUpdate.mock.calls[0][0].dirty).toEqual(new Set());
-    expect(onUpdate.mock.calls[0][0].values.remark).toBe("初始备注");
+    container.remove();
   });
 
   it("accepts initialValues that arrive asynchronously while the form is pristine", async () => {
@@ -498,11 +511,11 @@ it("defaults visible writable scalars and preserves explicit values and lifecycl
   expect(screen.queryByLabelText("hidden")).toBeNull();
   expect(screen.queryByLabelText("audit")).toBeNull();
   fireEvent.change(screen.getByLabelText("自定义品牌"), { target: { value: "😀😀😀" } });
-  fireEvent.click(screen.getByRole("button", { name: "提交" }));
-  await screen.findByText(/长度不能超过 2/);
+  fireEvent.click(screen.getByRole("button", { name: "保存" }));
+  await screen.findByText("最多 2 个字");
   expect(onCreate).not.toHaveBeenCalled();
   fireEvent.change(screen.getByLabelText("自定义品牌"), { target: { value: "😀😀" } });
-  fireEvent.click(screen.getByRole("button", { name: "提交" }));
+  fireEvent.click(screen.getByRole("button", { name: "保存" }));
   await waitFor(() => expect(onCreate).toHaveBeenCalledOnce());
   expect(onCreate.mock.calls[0][0].values).toEqual({
     brand: "😀😀",

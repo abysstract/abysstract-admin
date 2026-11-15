@@ -80,7 +80,7 @@ describe("UserList CUSTOM workflow permissions", () => {
       items: [row],
       total: 1n,
       pageNum: 1,
-      pageSize: 10,
+      pageSize: 20,
     });
   });
 
@@ -104,6 +104,6 @@ describe("UserList CUSTOM workflow permissions", () => {
 
     await renderUserList();
 
-    expect(screen.queryByRole("button", { name: "新建用户" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "新增" })).not.toBeInTheDocument();
   });
 });

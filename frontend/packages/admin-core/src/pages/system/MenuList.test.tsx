@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { create } from "@bufbuild/protobuf";
 import { message } from "antd";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -84,8 +84,8 @@ function resetMocks(): void {
 
 async function openCreateForm(): Promise<void> {
   await screen.findByText("原菜单");
-  fireEvent.click(screen.getByRole("button", { name: "新建菜单" }));
-  await screen.findByRole("dialog", { name: "新建菜单" });
+  fireEvent.click(screen.getByRole("button", { name: "新增" }));
+  await screen.findByRole("dialog", { name: "新增菜单" });
 }
 
 async function openEditForm(): Promise<void> {
@@ -100,8 +100,9 @@ describe("MenuList Resource migration", () => {
   it("consumes generated Menu schema/operations through ResourceTable", async () => {
     render(<MenuList />);
     expect(document.querySelector('[data-resource-table="Menu"]')).toBeInTheDocument();
-    expect(screen.getByTestId("pro-table-toolbar")).toHaveTextContent("新建菜单");
-    expect(screen.getByTestId("pro-table-toolbar")).toHaveTextContent("批量删除");
+    expect(screen.getByTestId("pro-table-toolbar")).toHaveTextContent("新增");
+    // 批量删除在选中行后才出现在表格底部，不在工具栏里。
+    expect(screen.getByTestId("pro-table-toolbar")).not.toHaveTextContent("删除");
     await waitFor(() => expect(mocks.list).toHaveBeenCalledOnce());
     expect(screen.getByRole("columnheader", { name: "菜单名称" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "类型" })).toBeInTheDocument();
@@ -131,21 +132,21 @@ describe("MenuList Resource migration", () => {
     expect(screen.getByText("顶级菜单")).toBeInTheDocument();
     expect(screen.getByText("└ 子菜单")).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("菜单名称"), { target: { value: "新菜单" } });
-    fireEvent.click(screen.getByRole("button", { name: "提交" }));
+    fireEvent.click(screen.getByRole("button", { name: "保存" }));
     await waitFor(() => expect(mocks.create).toHaveBeenCalledOnce());
     expect(mocks.create.mock.calls[0]?.[0]).toMatchObject({
       parentId: 0n,
       menuName: "新菜单",
       menuType: "C",
     });
-    expect(message.success).toHaveBeenCalledWith("创建成功");
+    expect(message.success).toHaveBeenCalledWith("已创建");
   });
 
   it("uses generated optional update presence", async () => {
     render(<MenuList />);
     await openEditForm();
     fireEvent.change(screen.getByLabelText("路由地址"), { target: { value: "" } });
-    fireEvent.click(screen.getByRole("button", { name: "提交" }));
+    fireEvent.click(screen.getByRole("button", { name: "保存" }));
     await waitFor(() => expect(mocks.update).toHaveBeenCalledOnce());
     const submission = mocks.update.mock.calls[0]?.[0] as {
       key: bigint;
@@ -162,11 +163,19 @@ describe("MenuList Resource migration", () => {
     render(<MenuList />);
     await screen.findByText("原菜单");
     fireEvent.click(screen.getByRole("button", { name: "删除" }));
-    fireEvent.click(screen.getByRole("button", { name: "确认删除" }));
+    fireEvent.click(
+      within(screen.getByRole("dialog", { name: "删除这条记录？" })).getByRole("button", {
+        name: "删除",
+      }),
+    );
     await waitFor(() => expect(mocks.delete).toHaveBeenCalledWith(7n));
     fireEvent.click(screen.getAllByRole("checkbox")[0]);
-    fireEvent.click(screen.getByRole("button", { name: "批量删除" }));
-    fireEvent.click(screen.getByRole("button", { name: "确认批量删除" }));
+    fireEvent.click(within(screen.getByRole("toolbar")).getByRole("button", { name: "删除" }));
+    fireEvent.click(
+      within(screen.getByRole("dialog", { name: /删除选中的/ })).getByRole("button", {
+        name: "删除",
+      }),
+    );
     await waitFor(() => expect(mocks.batchDelete).toHaveBeenCalledWith([7n]));
   });
 });

@@ -6,7 +6,8 @@ import { dictTypeSchema } from "../../gen/resource/dict-type.schema.gen";
 import { ResourceForm, type ResourceFormSubmission } from "./ResourceForm";
 
 describe("ResourceForm", () => {
-  it("renders submit errors with the shared error presentation class", () => {
+  it("does not render a form-level error block for submit errors", () => {
+    // 提交失败由调用方用 message 提示，表单顶部不放错误块（见 DESIGN.md「反馈」）。
     render(
       <ResourceForm
         schema={dictTypeSchema}
@@ -16,7 +17,8 @@ describe("ResourceForm", () => {
       />,
     );
 
-    expect(screen.getByRole("alert")).toHaveClass("resource-form__error");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.queryByText("提交失败")).not.toBeInTheDocument();
   });
 
   it("renders only ordinary updatable fields and reports remark-only touched/dirty state", () => {
@@ -36,7 +38,7 @@ describe("ResourceForm", () => {
     expect(screen.queryByLabelText("id")).not.toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("remark"), { target: { value: "" } });
-    fireEvent.click(screen.getByRole("button", { name: "提交" }));
+    fireEvent.click(screen.getByRole("button", { name: "保存" }));
 
     expect(onSubmit).toHaveBeenCalledOnce();
     const submission = onSubmit.mock.calls[0][0];
@@ -57,7 +59,7 @@ describe("ResourceForm", () => {
     );
 
     fireEvent.change(screen.getByLabelText("dictSort"), { target: { value: "0" } });
-    fireEvent.click(screen.getByRole("button", { name: "提交" }));
+    fireEvent.click(screen.getByRole("button", { name: "保存" }));
 
     const submission = onSubmit.mock.calls[0][0];
     expect(submission.values.dictSort).toBe(0);
@@ -156,7 +158,7 @@ it("resets values, touched, and dirty when initialValues changes without remount
       onSubmit={onSubmit}
     />,
   );
-  fireEvent.click(screen.getByRole("button", { name: "提交" }));
+  fireEvent.click(screen.getByRole("button", { name: "保存" }));
 
   const submission = onSubmit.mock.calls[0][0];
   expect(submission.values).toMatchObject({ id: 2n, dictName: "B", remark: "second" });
@@ -224,7 +226,7 @@ it("adopts asynchronously loaded initialValues for the same resetKey", () => {
       onSubmit={onSubmit}
     />,
   );
-  fireEvent.click(screen.getByRole("button", { name: "提交" }));
+  fireEvent.click(screen.getByRole("button", { name: "保存" }));
 
   const submission = onSubmit.mock.calls[0][0];
   expect(submission.values).toMatchObject({ id: 1n, dictName: "loaded", remark: "from-api" });
@@ -254,7 +256,7 @@ it("does not discard dirty local edits when the same resetKey receives refreshed
       onSubmit={onSubmit}
     />,
   );
-  fireEvent.click(screen.getByRole("button", { name: "提交" }));
+  fireEvent.click(screen.getByRole("button", { name: "保存" }));
 
   const submission = onSubmit.mock.calls[0][0];
   expect(submission.values).toMatchObject({ id: 1n, dictName: "A", remark: "editing" });
@@ -285,7 +287,7 @@ it("keeps the original dirty baseline while editing after a same-key refresh", (
     />,
   );
   fireEvent.change(screen.getByLabelText("remark"), { target: { value: "first" } });
-  fireEvent.click(screen.getByRole("button", { name: "提交" }));
+  fireEvent.click(screen.getByRole("button", { name: "保存" }));
 
   const submission = onSubmit.mock.calls[0][0];
   expect(submission.values).toMatchObject({ id: 1n, dictName: "A", remark: "first" });
@@ -316,7 +318,7 @@ it("adopts same-key refreshed initialValues after the user reverts back to a cle
       onSubmit={onSubmit}
     />,
   );
-  fireEvent.click(screen.getByRole("button", { name: "提交" }));
+  fireEvent.click(screen.getByRole("button", { name: "保存" }));
 
   const submission = onSubmit.mock.calls[0][0];
   expect(submission.values).toMatchObject({ id: 1n, dictName: "A", remark: "server-refresh" });
@@ -346,7 +348,7 @@ it("does not discard edits when a parent recreates an equal initialValues object
       onSubmit={onSubmit}
     />,
   );
-  fireEvent.click(screen.getByRole("button", { name: "提交" }));
+  fireEvent.click(screen.getByRole("button", { name: "保存" }));
 
   const submission = onSubmit.mock.calls[0][0];
   expect(submission.values.remark).toBe("editing");

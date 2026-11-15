@@ -113,7 +113,7 @@ export function AccessProvider({ children }: { children: ReactNode }) {
     return (
       <Result
         status="error"
-        title="加载用户信息失败"
+        title="无法加载用户信息"
         subTitle={formatErrorMessage(loadError, "网络异常，请重试")}
         extra={
           <Button type="primary" onClick={() => setRetry((value) => value + 1)}>

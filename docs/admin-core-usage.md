@@ -175,6 +175,60 @@ npm install /absolute/path/to/abysstract-admin-proto-VERSION.tgz /absolute/path/
 
 需要特殊展示时，使用列的 `hidden`、`render`、`title`；需要特殊输入时，使用表单的 `component`、`valueType`、`label`、`fieldProps`、`rules`、`visible`、`disabled`。附加 `rules` 在 `Required()` 和 `MaxLen()` 标准校验之后执行，长度按 Unicode 码点计数；bigint 保持完整精度。
 
+页面的布局和文案按[后台设计规范](../frontend/packages/admin-core/DESIGN.md)。`ResourceTable` 和 `ResourceForm` 默认就是规范里的做法：
+
+| 行为 | 默认 | 调整方式 |
+|---|---|---|
+| 每页条数 | 20；只有一页时隐藏分页器，超过 5 页显示快速跳转 | `query.defaults.pageSize` |
+| 地址栏 | 关键词、页码、每页条数、排序写进 `q`、`page`、`size`、`sort` 参数，刷新或分享链接后是同一画面 | 同一页面有多个表格，或表格在抽屉里时，设 `query.syncUrl: false` |
+| 新增、编辑 | 720 宽抽屉，标题栏右侧是「取消 保存」，成功后提示「已创建」「已保存」，失败时抽屉不关、提示原因 | `form.createConfig` / `form.editConfig` |
+| 表单排布 | 标签在上；每个字段单独一行，宽度按类型（数字 6、文本和下拉 12、长文本 24）；布尔字段用 Checkbox；长文本自动增高 | 表单项的 `span`、`sameRowAsPrevious` |
+| 操作列 | 最多露出两个文字链接，其余收进「⋯」，删除排在最后 | 自定义行操作设 `danger: true` 会排到最后 |
+| 没有权限的操作 | 不显示 | — |
+| 删除 | 确认框写清后果，按钮是「删除 / 取消」；成功提示「已删除」，失败用 `Modal.error` 说明原因 | — |
+| 批量操作 | 选中行后出现在表格底部 | 自定义工具栏项设 `placement: "selection"` |
+| 空状态 | 「还没有记录」+「新增」；有关键词时「没有符合条件的记录」+「清除筛选」 | `emptyText` |
+| 数字列 | — | 列的 `numeric: true`：右对齐、等宽数字 |
+
+`onError` 只在列表加载失败时调用；新增、编辑、删除的结果由 `ResourceTable` 自己提示，页面不用再在 `onSuccess` 或 `onError` 里弹消息。
+
+手写的新增、编辑抽屉用 `ResourceFormDrawer`，把它传给子组件的 `actionsContainer` 交给 `ResourceForm`，「取消 保存」就会出现在抽屉标题栏：
+
+```tsx
+import { ResourceForm, ResourceFormDrawer } from "@abysstract/admin-core/resource";
+
+<ResourceFormDrawer open={open} title="新增笔记" onClose={close}>
+  {(actionsContainer) => (
+    <ResourceForm
+      schema={noteSchema}
+      mode="create"
+      onCreate={submit}
+      onCancel={close}
+      actionsContainer={actionsContainer}
+    />
+  )}
+</ResourceFormDrawer>;
+```
+
+## 界面文案
+
+框架组件和系统页面的按钮、提示、空状态文案集中在 `defaultAdminTexts`（`@abysstract/admin-core`）。通过 `host.texts` 覆盖其中一部分，未覆盖的沿用默认值：
+
+```tsx
+const application = createAdminApp({
+  host: {
+    // …
+    texts: {
+      action: { create: "添加" },
+      table: { empty: "这里还没有内容" },
+    },
+  },
+  modules,
+});
+```
+
+业务页面用 `useAdminTexts()` 读取当前文案，与框架页面保持一致。
+
 ## 全局 antd 配置
 
 `createAdminApp` 的 Root 用一个 antd `ConfigProvider` 包住整个后台。`host.theme` 和 `host.locale` 传给它的同名属性；其余全局配置放在 `host.configProvider`，例如：
@@ -210,7 +264,7 @@ import { ResourceSearchBar } from "@abysstract/admin-core/resource";
 </ResourceSearchBar>;
 ```
 
-回车或点击「查询」调用 `onSearch`；不传 `onReload` 时不显示「刷新」。卡片的背景、边框、圆角和阴影取自 antd token（`colorBgContainer`、`colorBorderSecondary`、`borderRadiusLG`、`boxShadowTertiary`），跟随 `host.theme` 和暗色算法。
+回车、点击「查询」或把关键词删空时调用 `onSearch`；删空时传入空字符串，以它为准。不传 `onReload` 时不显示「刷新」。占位文字写搜索范围，例如 `placeholder="用户名、昵称"`，默认是「关键词」。卡片的背景、边框和圆角取自 antd token（`colorBgContainer`、`colorBorderSecondary`、`borderRadiusLG`），跟随 `host.theme` 和暗色算法；页面内的卡片不加阴影。
 
 ## 故障说明
 

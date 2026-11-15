@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { PageContainer } from "@ant-design/pro-components";
-import { formatErrorMessage, useAccess, useAdminRuntime, useAppMessage } from "@abysstract/admin-core";
+import { useAccess, useAdminRuntime } from "@abysstract/admin-core";
 import { ResourceTable } from "@abysstract/admin-core/resource";
 import type { {{.Name}} } from "{{.ProtoFromPages}}/company/{{.Module}}/v1/{{.File}}_pb";
 import { create{{.Name}}Operations, type {{.Name}}Filters, type {{.Name}}CreateValues, type {{.Name}}UpdateValues } from "../gen/resource/{{.TSFile}}.operations.gen";
@@ -11,7 +11,6 @@ export default function {{.Name}}List() {
  const { transport } = useAdminRuntime();
  const operations = useMemo(() => create{{.Name}}Operations(create{{.Name}}Raw(transport)), [transport]);
  const { has } = useAccess();
- const message = useAppMessage();
  return (
   <PageContainer title={ {{printf "%q" .Title}} }>
    <ResourceTable<typeof {{.Var}}Schema, {{.Name}}, bigint, {{.Name}}Filters, {{.Name}}CreateValues, {{.Name}}UpdateValues>
@@ -20,11 +19,9 @@ export default function {{.Name}}List() {
     access={ {{"{"}} can: (permission) => has(permission) {{"}"}} }
     columns={ {{"{"}} id: { hidden: true }, {{.AuditJSON}}: { hidden: true } {{"}"}} }
     rowActions={[{ action: "update", merge: "replace", title: "编辑" }, { action: "delete", merge: "replace", title: "删除" }]}
-    toolbar={[{ action: "create", merge: "replace", title: "新增" }, { action: "batchDelete", merge: "replace", title: "批量删除" }]}
-    onError={(error) => message.error(formatErrorMessage(error))}
     form={ {{"{"}}
-     createConfig: { title: {{printf "%q" (print "新增" .Title)}}, onSuccess: async () => { message.success("创建成功"); } },
-     editConfig: { title: {{printf "%q" (print "编辑" .Title)}}, onSuccess: async () => { message.success("已保存"); } },
+     createConfig: { title: {{printf "%q" (print "新增" .Title)}} },
+     editConfig: { title: {{printf "%q" (print "编辑" .Title)}} },
     {{"}"}} }
    />
   </PageContainer>

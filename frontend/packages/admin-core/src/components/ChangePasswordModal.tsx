@@ -13,14 +13,14 @@ type Props = {
 // 密码复杂度前端预检（与后端 validatePasswordPolicy 一致）：
 // 长度 8–64，且大写/小写/数字三类中至少两类。
 function policyCheck(_rule: unknown, value: string): Promise<void> {
-  if (!value) return Promise.reject(new Error("请输入新密码"));
-  if (value.length < 8) return Promise.reject(new Error("密码长度至少 8 位"));
-  if (value.length > 64) return Promise.reject(new Error("密码长度不得超过 64 位"));
+  if (!value) return Promise.reject(new Error("请填写新密码"));
+  if (value.length < 8) return Promise.reject(new Error("至少 8 位"));
+  if (value.length > 64) return Promise.reject(new Error("最多 64 位"));
   let classes = 0;
   if (/[A-Z]/.test(value)) classes++;
   if (/[a-z]/.test(value)) classes++;
   if (/[0-9]/.test(value)) classes++;
-  if (classes < 2) return Promise.reject(new Error("需包含大写/小写/数字中至少两类"));
+  if (classes < 2) return Promise.reject(new Error("大写字母、小写字母、数字至少用两类"));
   return Promise.resolve();
 }
 
@@ -46,14 +46,14 @@ export default function ChangePasswordModal({ open, forced, onClose, onSuccess }
         oldPassword: v.oldPassword,
         newPassword: v.newPassword,
       });
-      message.success("密码修改成功，请使用新密码重新登录");
+      message.success("已修改密码，用新密码重新登录");
       onSuccess?.();
       onClose();
     } catch (e) {
       if (e instanceof Error && e.message) {
         // 后端错误（如旧密码不正确）通过 message 提示；表单校验错误由 antd 自动显示。
         if (!(e as { errorFields?: unknown }).errorFields) {
-          message.error(formatErrorMessage(e));
+          message.error(formatErrorMessage(e, "无法修改密码，请稍后重试"));
         }
       }
     } finally {
@@ -63,7 +63,7 @@ export default function ChangePasswordModal({ open, forced, onClose, onSuccess }
 
   return (
     <Modal
-      title={forced ? "首次登录，请修改初始密码" : "修改密码"}
+      title={forced ? "修改初始密码" : "修改密码"}
       open={open}
       onOk={submit}
       onCancel={forced ? undefined : onClose}
@@ -71,41 +71,42 @@ export default function ChangePasswordModal({ open, forced, onClose, onSuccess }
       closable={!forced}
       mask={{ closable: !forced }}
       keyboard={!forced}
-      okText="确认修改"
+      okText="修改密码"
+      cancelButtonProps={forced ? { style: { display: "none" } } : undefined}
     >
       <Form form={form} layout="vertical">
         <Form.Item
           name="oldPassword"
           label="当前密码"
-          rules={[{ required: true, message: "请输入当前密码" }]}
+          rules={[{ required: true, message: "请填写当前密码" }]}
         >
-          <Input.Password placeholder="当前密码" autoComplete="current-password" />
+          <Input.Password autoComplete="current-password" />
         </Form.Item>
         <Form.Item
           name="newPassword"
           label="新密码"
           rules={[{ required: true, validator: policyCheck }]}
-          extra="长度 8–64，含大写/小写/数字中至少两类"
+          extra="8 到 64 位，大写字母、小写字母、数字至少用两类"
         >
-          <Input.Password placeholder="新密码" autoComplete="new-password" />
+          <Input.Password autoComplete="new-password" />
         </Form.Item>
         <Form.Item
           name="confirmPassword"
           label="确认新密码"
           dependencies={["newPassword"]}
           rules={[
-            { required: true, message: "请再次输入新密码" },
+            { required: true, message: "再填一次新密码" },
             ({ getFieldValue }) => ({
               validator(_, value) {
                 if (!value || getFieldValue("newPassword") === value) {
                   return Promise.resolve();
                 }
-                return Promise.reject(new Error("两次输入的新密码不一致"));
+                return Promise.reject(new Error("两次填的新密码不一样"));
               },
             }),
           ]}
         >
-          <Input.Password placeholder="再次输入新密码" autoComplete="new-password" />
+          <Input.Password autoComplete="new-password" />
         </Form.Item>
       </Form>
     </Modal>

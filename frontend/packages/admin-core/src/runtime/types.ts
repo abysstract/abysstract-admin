@@ -1,6 +1,7 @@
 import type { ConfigProviderProps, ThemeConfig } from "antd";
 import type { Transport } from "@connectrpc/connect";
 import type { LazyExoticComponent, ComponentType, ReactNode } from "react";
+import type { AdminTextsOverride } from "./texts";
 
 export interface AuthStorage {
   getToken(): string | null;
@@ -22,6 +23,8 @@ export interface AdminHost {
    * 这里的 `button` 与默认值合并。
    */
   configProvider?: Omit<ConfigProviderProps, "children" | "theme" | "locale">;
+  /** 覆盖框架界面文案（按钮、提示、空状态等）的一部分，未覆盖的沿用默认值。 */
+  texts?: AdminTextsOverride;
   reportError?: (error: unknown, context: { operation: string }) => void;
   developmentLogin?: Readonly<{ username: string; password: string }>;
 }

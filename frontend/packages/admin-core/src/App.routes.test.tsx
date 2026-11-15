@@ -81,7 +81,7 @@ describe("AuthedApp 路由", () => {
         <app.Root />
       </MemoryRouter>,
     );
-    expect(await screen.findByText("无可用菜单")).toBeInTheDocument();
+    expect(await screen.findByText("没有可访问的页面")).toBeInTheDocument();
     expect(screen.queryByPlaceholderText("用户名")).not.toBeInTheDocument();
     app.dispose();
   });

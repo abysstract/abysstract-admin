@@ -54,13 +54,13 @@ import UserList from "./UserList";
 async function openCreateForm() {
   render(<UserList />);
   await waitFor(() => expect(mocks.listUsers).toHaveBeenCalledOnce());
-  fireEvent.click(screen.getByRole("button", { name: "新建用户" }));
+  fireEvent.click(screen.getByRole("button", { name: "新增" }));
 }
 
 describe("UserList 新建用户校验", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.listUsers.mockResolvedValue({ items: [], total: 0n, pageNum: 1, pageSize: 10 });
+    mocks.listUsers.mockResolvedValue({ items: [], total: 0n, pageNum: 1, pageSize: 20 });
     mocks.listRoles.mockResolvedValue({ items: [{ id: 1n, roleName: "管理员" }] });
     mocks.listDepts.mockResolvedValue({ items: [] });
     mocks.createUser.mockResolvedValue({});
@@ -70,9 +70,9 @@ describe("UserList 新建用户校验", () => {
     await openCreateForm();
     fireEvent.change(screen.getByLabelText("用户名"), { target: { value: "new-user" } });
     fireEvent.change(screen.getByLabelText("密码"), { target: { value: "GoodPass1" } });
-    fireEvent.click(screen.getByRole("button", { name: "提交" }));
+    fireEvent.click(screen.getByRole("button", { name: "保存" }));
 
-    const roleError = await screen.findByText("请至少选择一个角色");
+    const roleError = await screen.findByText("至少选择一个角色");
     expect(roleError.closest("[role=alert]")).toBeInTheDocument();
     expect(mocks.createUser).not.toHaveBeenCalled();
   });
@@ -81,9 +81,9 @@ describe("UserList 新建用户校验", () => {
     await openCreateForm();
     fireEvent.change(screen.getByLabelText("用户名"), { target: { value: "new-user" } });
     fireEvent.change(screen.getByLabelText("邮箱"), { target: { value: "not-an-email" } });
-    fireEvent.click(screen.getByRole("button", { name: "提交" }));
+    fireEvent.click(screen.getByRole("button", { name: "保存" }));
 
-    expect(await screen.findByText("邮箱格式不正确")).toBeInTheDocument();
+    expect(await screen.findByText("邮箱格式不对，例如 name@example.com")).toBeInTheDocument();
     expect(mocks.createUser).not.toHaveBeenCalled();
   });
 
@@ -91,9 +91,9 @@ describe("UserList 新建用户校验", () => {
     await openCreateForm();
     fireEvent.change(screen.getByLabelText("用户名"), { target: { value: "new-user" } });
     fireEvent.change(screen.getByLabelText("手机号"), { target: { value: "1380000000" } });
-    fireEvent.click(screen.getByRole("button", { name: "提交" }));
+    fireEvent.click(screen.getByRole("button", { name: "保存" }));
 
-    expect(await screen.findByText("手机号格式不正确")).toBeInTheDocument();
+    expect(await screen.findByText("手机号应为 11 位数字")).toBeInTheDocument();
     expect(mocks.createUser).not.toHaveBeenCalled();
   });
 

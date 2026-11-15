@@ -51,7 +51,7 @@ it.each([false, true])("uses one initial context when brand visibility is %s", a
   render(<ResourceForm {...props} />);
   if (visible) expect(screen.getByLabelText("brand")).toHaveValue("");
   else expect(screen.queryByLabelText("brand")).toBeNull();
-  fireEvent.click(screen.getByRole("button", { name: "提交" }));
+  fireEvent.click(screen.getByRole("button", { name: "保存" }));
   await waitFor(() => expect(onCreate).toHaveBeenCalledOnce());
   expect(onCreate.mock.calls[0][0].values).toEqual({
     enabled: false,
@@ -70,8 +70,9 @@ it("keeps explicit initial values and hidden business values", async () => {
   };
   render(<ResourceForm {...props} />);
   expect(screen.queryByLabelText("brand")).toBeNull();
-  expect(screen.getByRole("switch", { name: "enabled" })).toBeChecked();
-  fireEvent.click(screen.getByRole("button", { name: "提交" }));
+  // 随表单保存的布尔字段用 Checkbox（见 DESIGN.md「控件选择」）。
+  expect(screen.getByRole("checkbox", { name: "enabled" })).toBeChecked();
+  fireEvent.click(screen.getByRole("button", { name: "保存" }));
   await waitFor(() => expect(onCreate).toHaveBeenCalledOnce());
   expect(onCreate.mock.calls[0][0].values).toEqual({ enabled: true, brand: "业务初值" });
 });
@@ -105,7 +106,7 @@ it("sends a touched field restored to its initial value through generated operat
   );
   fireEvent.change(screen.getByLabelText("configName"), { target: { value: "改名称" } });
   fireEvent.change(screen.getByLabelText("configName"), { target: { value: item.configName } });
-  fireEvent.click(screen.getByRole("button", { name: "提交" }));
+  fireEvent.click(screen.getByRole("button", { name: "保存" }));
   await waitFor(() => expect(updateConfig).toHaveBeenCalledOnce());
   expect(onUpdate.mock.calls[0][0].touched).toEqual(new Set(["configName"]));
   expect(onUpdate.mock.calls[0][0].dirty).toEqual(new Set());
@@ -132,7 +133,7 @@ it("leaves nullable create fields empty and omits them", async () => {
   expect(screen.getByLabelText("parentId")).toHaveValue("");
   fireEvent.change(screen.getByLabelText("parentId"), { target: { value: "7" } });
   fireEvent.change(screen.getByLabelText("parentId"), { target: { value: "" } });
-  fireEvent.click(screen.getByRole("button", { name: "提交" }));
+  fireEvent.click(screen.getByRole("button", { name: "保存" }));
   await waitFor(() => expect(onCreate).toHaveBeenCalledOnce());
   // Non-nullable fields keep their zero value; nullable ones stay unset.
   expect(onCreate.mock.calls[0][0].values).toEqual({

@@ -55,6 +55,8 @@ export type {
 } from "./operations";
 export { resourceListRows, toProTableTotal } from "./operations";
 export { ResourceForm } from "./ResourceForm";
+export type { ResourceFormDrawerProps } from "./ResourceFormDrawer";
+export { ResourceFormDrawer } from "./ResourceFormDrawer";
 export type {
   ResourceQueryConfig,
   ResourceTableTreeConfig,

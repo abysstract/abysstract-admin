@@ -8,7 +8,8 @@ import {
   type ReactElement,
   type ReactNode,
 } from "react";
-import { Button, Form, Input, InputNumber, Select, Space, Switch } from "antd";
+import { createPortal } from "react-dom";
+import { Button, Checkbox, Col, Form, Input, InputNumber, Row, Select, Space } from "antd";
 import { ProForm } from "@ant-design/pro-components";
 
 import type { RelationOptionLoader } from "./relation";
@@ -16,6 +17,7 @@ import type { ResourceKey } from "./operations";
 import type { FieldSchema, ResourceSchema } from "./schema";
 import type { ResourceFieldContext } from "./metadata";
 import { formatErrorMessage } from "../../runtime/message";
+import { useAdminTexts } from "../../runtime/texts";
 import type {
   ResourceFormItemOverride,
   ResourceFormPrototypeProps,
@@ -24,7 +26,6 @@ import type {
   ResourceValues,
 } from "./form-contract";
 import { AdminButtonSpacing } from "../AdminButtonSpacing";
-import "./ResourceForm.css";
 
 export type {
   ResourceFormPrototypeProps,
@@ -107,6 +108,15 @@ function parseInput(field: FieldSchema, value: string | boolean, fallback?: unkn
     default:
       return value;
   }
+}
+
+function defaultSpan(field: FieldSchema, override: FormItemOverride | undefined): number {
+  const valueType = override?.valueType;
+  if (valueType === "textarea" || valueType === "custom" || override?.component !== undefined)
+    return 24;
+  if (valueType === "boolean" || field.tsType === "boolean") return 24;
+  if (valueType === "number" || (valueType === undefined && field.tsType === "number")) return 6;
+  return 12;
 }
 
 function isBlank(value: unknown): boolean {
@@ -393,13 +403,14 @@ function LegacyResourceForm({ props }: { props: ResourceFormPrototypeProps }): R
           </div>
         );
       })}
-      <button type="submit">提交</button>
+      <button type="submit">保存</button>
     </form>
   );
 }
 
 function ProductionResourceForm({ props }: { props: ProductionProps }): ReactElement {
   const { schema, mode, resetKey, initialValues: suppliedInitialValues } = props;
+  const texts = useAdminTexts();
   const relationLoaders = (props.relationLoaders ?? {}) as Readonly<
     Record<string, AnyRelationOptionLoader>
   >;
@@ -530,17 +541,27 @@ function ProductionResourceForm({ props }: { props: ProductionProps }): ReactEle
       const override = itemOverrides[field.name];
       const value = values[field.name];
       const blank = isBlank(value);
+      const label =
+        typeof override?.label === "string" ? override.label : (field.label ?? field.name);
+      const choosing =
+        field.relation !== undefined ||
+        override?.valueType === "select" ||
+        override?.valueType === "custom" ||
+        override?.component !== undefined;
+      const requiredMessage = choosing
+        ? texts.form.requiredSelect(label)
+        : texts.form.required(label);
       if (field.required && blank) {
-        nextErrors[field.name] = "该字段为必填项 (required)";
+        nextErrors[field.name] = requiredMessage;
         continue;
       }
       if (field.maxLen > 0 && typeof value === "string" && unicodeLength(value) > field.maxLen) {
-        nextErrors[field.name] = `长度不能超过 ${field.maxLen} (maxLen)`;
+        nextErrors[field.name] = texts.form.maxLength(field.maxLen);
         continue;
       }
       for (const rule of override?.rules ?? []) {
         if (rule.required && blank) {
-          nextErrors[field.name] = rule.message ?? "该字段为必填项 (required)";
+          nextErrors[field.name] = rule.message ?? requiredMessage;
           break;
         }
         if (
@@ -548,7 +569,7 @@ function ProductionResourceForm({ props }: { props: ProductionProps }): ReactEle
           typeof value === "string" &&
           unicodeLength(value) > rule.maxLength
         ) {
-          nextErrors[field.name] = rule.message ?? `长度不能超过 ${rule.maxLength}`;
+          nextErrors[field.name] = rule.message ?? texts.form.maxLength(rule.maxLength);
           break;
         }
         if (rule.validator !== undefined) {
@@ -592,16 +613,6 @@ function ProductionResourceForm({ props }: { props: ProductionProps }): ReactEle
       else if (updateProps.operations !== undefined)
         await updateProps.operations.update(submission);
     }
-  };
-
-  const reset = (): void => {
-    const nextValues = Object.fromEntries(
-      fields.map((field) => [field.name, baselineValues.current[field.name]]),
-    );
-    setValues(nextValues);
-    setTouched(new Set());
-    setDirty(new Set());
-    setErrors({});
   };
 
   const renderField = (field: FieldSchema) => {
@@ -664,7 +675,7 @@ function ProductionResourceForm({ props }: { props: ProductionProps }): ReactEle
       control = (
         <Input.TextArea
           {...common}
-          rows={fieldProps?.rows}
+          autoSize={{ minRows: fieldProps?.rows ?? 3 }}
           onChange={(event) => change(field, event.currentTarget.value)}
           value={inputValue(field, value) as string}
         />
@@ -697,12 +708,15 @@ function ProductionResourceForm({ props }: { props: ProductionProps }): ReactEle
         />
       );
     } else if (field.tsType === "boolean" || override?.valueType === "boolean") {
+      // 随表单一起保存的开关用 Checkbox；Switch 只表示立即生效（见 DESIGN.md「控件选择」）。
       control = (
-        <Switch
+        <Checkbox
           {...common}
           checked={Boolean(value)}
-          onChange={(nextValue) => change(field, nextValue)}
-        />
+          onChange={(event) => change(field, event.target.checked)}
+        >
+          {label}
+        </Checkbox>
       );
     } else {
       control = (
@@ -717,10 +731,11 @@ function ProductionResourceForm({ props }: { props: ProductionProps }): ReactEle
       );
     }
 
+    const checkbox = field.tsType === "boolean" || override?.valueType === "boolean";
     return (
       <Form.Item
         key={field.name}
-        label={label}
+        label={checkbox ? undefined : label}
         required={field.required}
         validateStatus={errors[field.name] === undefined ? undefined : "error"}
         help={errors[field.name]}
@@ -730,35 +745,59 @@ function ProductionResourceForm({ props }: { props: ProductionProps }): ReactEle
     );
   };
 
-  return (
-    <ProForm submitter={false} onFinish={() => submit()}>
-      {props.error !== undefined && (
-        <div className="resource-form__error" role="alert">
-          {formatErrorMessage(props.error)}
-        </div>
-      )}
-      {fields.map(renderField)}
-      {props.extraFields}
-      <Space>
-        <Button htmlType="button" disabled={props.loading} onClick={reset}>
-          重置
-        </Button>
-        <Button
-          type="primary"
-          htmlType="submit"
+  // 每个字段默认单独一行；sameRowAsPrevious 的字段并到上一行（见 DESIGN.md「表单字段宽度」）。
+  const rows: { key: string; cols: { key: string; span: number; node: ReactNode }[] }[] = [];
+  for (const field of fields) {
+    const node = renderField(field);
+    if (node === null) continue;
+    const override = itemOverrides[field.name];
+    const col = { key: field.name, span: override?.span ?? defaultSpan(field, override), node };
+    const previous = rows[rows.length - 1];
+    if (override?.sameRowAsPrevious === true && previous !== undefined) previous.cols.push(col);
+    else rows.push({ key: field.name, cols: [col] });
+  }
 
-          loading={props.loading}
-          onClick={(event) => {
-            // ResourceForm owns validation and the controlled values. Handle
-            // the click explicitly instead of letting the browser submit a
-            // native form with an unrelated Form.Item state.
-            event.preventDefault();
-            void submit();
-          }}
-        >
-          {props.loading ? "提交中" : "提交"}
+  const actions = (
+    <Space>
+      {props.onCancel !== undefined ? (
+        <Button htmlType="button" disabled={props.loading} onClick={props.onCancel}>
+          {texts.action.cancel}
         </Button>
-      </Space>
+      ) : null}
+      <Button
+        type="primary"
+        htmlType="submit"
+        loading={props.loading}
+        onClick={(event) => {
+          // ResourceForm owns validation and the controlled values. Handle
+          // the click explicitly instead of letting the browser submit a
+          // native form with an unrelated Form.Item state.
+          event.preventDefault();
+          void submit();
+        }}
+      >
+        {texts.action.save}
+      </Button>
+    </Space>
+  );
+
+  return (
+    <ProForm submitter={false} layout="vertical" onFinish={() => submit()}>
+      {rows.map((row) => (
+        <Row key={row.key} gutter={16}>
+          {row.cols.map((col) => (
+            <Col key={col.key} span={col.span}>
+              {col.node}
+            </Col>
+          ))}
+        </Row>
+      ))}
+      {props.extraFields}
+      {props.actionsContainer === undefined ? (
+        <div style={{ display: "flex", justifyContent: "flex-end" }}>{actions}</div>
+      ) : props.actionsContainer === null ? null : (
+        createPortal(actions, props.actionsContainer)
+      )}
     </ProForm>
   );
 }

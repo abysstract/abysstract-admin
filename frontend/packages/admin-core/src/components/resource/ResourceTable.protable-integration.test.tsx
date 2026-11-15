@@ -265,21 +265,15 @@ describe("ResourceTable real ProTable integration", () => {
 
     await screen.findByText("real protable");
     const sortHeader = screen.getByRole("columnheader", { name: "sort" });
-    fireEvent.click(sortHeader);
-    await waitFor(() =>
-      expect(list).toHaveBeenLastCalledWith(
-        expect.objectContaining({ orders: [{ field: "sort", desc: false }] }),
-      ),
-    );
+    // The default order is shown as the column's active sort, so the first click flips it.
+    expect(sortHeader).toHaveAttribute("aria-sort", "ascending");
     fireEvent.click(sortHeader);
     await waitFor(() =>
       expect(list).toHaveBeenLastCalledWith(
         expect.objectContaining({ orders: [{ field: "sort", desc: true }] }),
       ),
     );
-    const sorter = sortHeader.querySelector(".ant-table-column-sorter");
-    if (sorter === null) throw new Error("sorter element missing");
-    fireEvent.click(sorter);
+    fireEvent.click(sortHeader);
     await waitFor(() =>
       expect(list).toHaveBeenLastCalledWith(
         expect.objectContaining({ orders: [{ field: "sort", desc: false }] }),
@@ -374,11 +368,12 @@ it("keeps real checkbox keys aligned and sends lossless bigint batch identifiers
   const checkbox = within(tableRow).getByRole("checkbox");
   fireEvent.click(checkbox);
   await waitFor(() => expect(checkbox).toBeChecked());
-  const batch = screen.getByRole("button", { name: "批量删除" });
+  // The batch action appears in the bar under the table once a row is selected.
+  const batch = within(screen.getByRole("toolbar")).getByRole("button", { name: "删除" });
   expect(batch).toBeEnabled();
   fireEvent.click(batch);
-  const dialog = await screen.findByRole("dialog", { name: "确认批量删除" });
-  fireEvent.click(within(dialog).getByRole("button", { name: "确认批量删除" }));
+  const dialog = await screen.findByRole("dialog", { name: "删除选中的 1 条记录？" });
+  fireEvent.click(within(dialog).getByRole("button", { name: "删除" }));
   await waitFor(() => expect(operations.batchDelete).toHaveBeenCalledWith([entity.id]));
   await waitFor(() => expect(checkbox).not.toBeChecked());
 });

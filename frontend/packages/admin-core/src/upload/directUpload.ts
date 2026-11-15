@@ -120,7 +120,7 @@ export const sendWithXhr: SendUpload = (target, file, { signal, onProgress }) =>
     };
     xhr.onerror = () => {
       done();
-      reject(new DirectUploadError("上传失败：网络错误或存储服务拒绝跨域请求", 0));
+      reject(new DirectUploadError("无法上传：网络出错，或存储服务拒绝了跨域请求", 0));
     };
     xhr.onabort = () => {
       done();

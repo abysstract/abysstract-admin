@@ -1,7 +1,7 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { Code, ConnectError } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
-import { message } from "antd";
+import { Modal, message } from "antd";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { RoleSchema } from "@abysstract/admin-proto/abysstract/admin/v1/role_pb";
 import { Status } from "@abysstract/admin-proto/abysstract/admin/v1/common_pb";
@@ -84,7 +84,7 @@ function resetMocks(): void {
   ]) {
     mocks.permissions.add(permission);
   }
-  mocks.list.mockReset().mockResolvedValue({ items: [row], total: 1n, pageNum: 1, pageSize: 10 });
+  mocks.list.mockReset().mockResolvedValue({ items: [row], total: 1n, pageNum: 1, pageSize: 20 });
   mocks.create.mockReset().mockResolvedValue(row);
   mocks.update.mockReset().mockResolvedValue(row);
   mocks.delete.mockReset().mockResolvedValue(undefined);
@@ -100,8 +100,8 @@ function resetMocks(): void {
 
 async function openCreateForm(): Promise<void> {
   await screen.findByText("原角色");
-  fireEvent.click(screen.getByRole("button", { name: "新建角色" }));
-  await screen.findByRole("dialog", { name: "新建角色" });
+  fireEvent.click(screen.getByRole("button", { name: "新增" }));
+  await screen.findByRole("dialog", { name: "新增角色" });
 }
 
 async function openEditForm(): Promise<void> {
@@ -117,12 +117,13 @@ describe("RoleList Resource migration", () => {
     render(<RoleList />);
 
     expect(document.querySelector('[data-resource-table="Role"]')).toBeInTheDocument();
-    expect(screen.getByTestId("pro-table-toolbar")).toHaveTextContent("新建角色");
-    expect(screen.getByTestId("pro-table-toolbar")).toHaveTextContent("批量删除");
+    expect(screen.getByTestId("pro-table-toolbar")).toHaveTextContent("新增");
+    // 批量删除在选中行后才出现在表格底部，不在工具栏里。
+    expect(screen.getByTestId("pro-table-toolbar")).not.toHaveTextContent("删除");
     await waitFor(() =>
       expect(mocks.list).toHaveBeenCalledWith({
         pageNum: 1,
-        pageSize: 10,
+        pageSize: 20,
       }),
     );
     expect(screen.getByRole("columnheader", { name: "角色名称" })).toBeInTheDocument();
@@ -142,7 +143,7 @@ describe("RoleList Resource migration", () => {
 
     fireEvent.change(screen.getByLabelText("角色名称"), { target: { value: "新角色" } });
     fireEvent.change(screen.getByLabelText("权限标识"), { target: { value: "new-role" } });
-    fireEvent.click(screen.getByRole("button", { name: "提交" }));
+    fireEvent.click(screen.getByRole("button", { name: "保存" }));
 
     await waitFor(() => expect(mocks.create).toHaveBeenCalledOnce());
     expect(mocks.create).toHaveBeenCalledWith({
@@ -152,7 +153,7 @@ describe("RoleList Resource migration", () => {
       dataScope: 1,
       remark: "",
     });
-    expect(message.success).toHaveBeenCalledWith("创建成功");
+    expect(message.success).toHaveBeenCalledWith("已创建");
   });
 
   it("uses generated update presence and keeps role_key out of the update form", async () => {
@@ -161,7 +162,7 @@ describe("RoleList Resource migration", () => {
 
     expect(screen.queryByLabelText("权限标识")).not.toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("备注"), { target: { value: "" } });
-    fireEvent.click(screen.getByRole("button", { name: "提交" }));
+    fireEvent.click(screen.getByRole("button", { name: "保存" }));
 
     await waitFor(() => expect(mocks.update).toHaveBeenCalledOnce());
     const submission = mocks.update.mock.calls[0]?.[0] as {
@@ -190,13 +191,13 @@ describe("RoleList Resource migration", () => {
     await waitFor(() =>
       expect(mocks.changeRoleStatus).toHaveBeenCalledWith({ id: 7n, status: Status.DISABLED }),
     );
-    expect(message.success).toHaveBeenCalledWith("角色已停用");
+    expect(message.success).toHaveBeenCalledWith("已停用");
     expect(screen.getByLabelText("原角色状态")).toBeInTheDocument();
     await waitFor(() => expect(mocks.list).toHaveBeenCalledTimes(2));
 
     fireEvent.click(screen.getByRole("button", { name: "分配菜单" }));
     await waitFor(() => expect(mocks.getRoleMenus).toHaveBeenCalledWith({ roleId: 7n }));
-    expect(screen.getByRole("dialog", { name: "分配菜单权限 - 原角色" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "分配菜单：原角色" })).toBeInTheDocument();
   });
 
   it("hides menu assignment when the menu list prerequisite is missing", async () => {
@@ -227,12 +228,20 @@ describe("RoleList Resource migration", () => {
     await screen.findByText("原角色");
 
     fireEvent.click(screen.getByRole("button", { name: "删除" }));
-    fireEvent.click(screen.getByRole("button", { name: "确认删除" }));
+    fireEvent.click(
+      within(screen.getByRole("dialog", { name: "删除这条记录？" })).getByRole("button", {
+        name: "删除",
+      }),
+    );
     await waitFor(() => expect(mocks.delete).toHaveBeenCalledWith(7n));
 
     fireEvent.click(screen.getAllByRole("checkbox")[0]);
-    fireEvent.click(screen.getByRole("button", { name: "批量删除" }));
-    fireEvent.click(screen.getByRole("button", { name: "确认批量删除" }));
+    fireEvent.click(within(screen.getByRole("toolbar")).getByRole("button", { name: "删除" }));
+    fireEvent.click(
+      within(screen.getByRole("dialog", { name: /删除选中的/ })).getByRole("button", {
+        name: "删除",
+      }),
+    );
     await waitFor(() => expect(mocks.batchDelete).toHaveBeenCalledWith([7n]));
   });
 
@@ -244,8 +253,17 @@ describe("RoleList Resource migration", () => {
     await screen.findByText("原角色");
 
     fireEvent.click(screen.getByRole("button", { name: "删除" }));
-    fireEvent.click(screen.getByRole("button", { name: "确认删除" }));
-    await waitFor(() => expect(message.error).toHaveBeenCalledWith("超级管理员角色不可删除"));
+    fireEvent.click(
+      within(screen.getByRole("dialog", { name: "删除这条记录？" })).getByRole("button", {
+        name: "删除",
+      }),
+    );
+    await waitFor(() =>
+      expect(Modal.error).toHaveBeenCalledWith({
+        title: "无法删除",
+        content: "超级管理员角色不可删除",
+      }),
+    );
 
     expect(screen.getByText("原角色")).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
@@ -258,7 +276,7 @@ describe("RoleList Resource migration", () => {
     render(<RoleList />);
 
     await waitFor(() => expect(mocks.list).toHaveBeenCalledOnce());
-    expect(screen.queryByRole("button", { name: "新建角色" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "新增" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "编辑" })).not.toBeInTheDocument();
     expect(screen.queryByLabelText("原角色状态")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "分配菜单" })).not.toBeInTheDocument();

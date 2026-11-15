@@ -10,7 +10,7 @@ export function renderRegisteredPage(component: string, registry: ModuleRegistry
       <Result
         status="404"
         title="页面未注册"
-        subTitle={`component=${component}。当前应用没有注册该页面，请检查模块 pages 表。`}
+        subTitle={`component=${component}。当前应用没有注册这个页面。检查模块的 pages 表`}
       />
     );
   }
