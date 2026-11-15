@@ -215,3 +215,4 @@ mv "$product_archive/frontend-product" frontend/apps/reference/src/modules/produ
 - [模块指南](module-guide.md)：接口、权限与页面注册。
 - [Resource 开发手册](ai-cookbook.md)：从数据库到页面的开发流程。
 - [配置说明](configuration.md)：根目录配置与迁移。
+- [后台设计规范](../frontend/packages/admin-core/DESIGN.md)：页面布局、文案、反馈和数据格式。

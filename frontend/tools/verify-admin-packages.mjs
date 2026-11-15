@@ -52,14 +52,17 @@ function packList(dir) {
   return (entry.files ?? []).map((file) => file.path ?? file);
 }
 
-function assertPackContents(name, files) {
+function assertPackContents(name, files, extra = []) {
   for (const file of files) {
-    const ok = allowed.has(file) || file.startsWith("dist/");
+    const ok = allowed.has(file) || extra.includes(file) || file.startsWith("dist/");
     if (!ok) throw new Error(`${name} pack contains non-whitelist file: ${file}`);
     if (file.endsWith(".map")) throw new Error(`${name} pack contains source map: ${file}`);
   }
   if (!files.includes("package.json") || !files.some((file) => file.startsWith("dist/"))) {
     throw new Error(`${name} pack missing package.json or dist`);
+  }
+  for (const file of extra) {
+    if (!files.includes(file)) throw new Error(`${name} pack missing ${file}`);
   }
 }
 
@@ -72,7 +75,7 @@ const coreDir = path.join(frontendRoot, "packages/admin-core");
 const protoFiles = packList(protoDir);
 const coreFiles = packList(coreDir);
 assertPackContents("@abysstract/admin-proto", protoFiles);
-assertPackContents("@abysstract/admin-core", coreFiles);
+assertPackContents("@abysstract/admin-core", coreFiles, ["DESIGN.md"]);
 
 const protoPkg = JSON.parse(readFileSync(path.join(protoDir, "package.json"), "utf8"));
 const corePkg = JSON.parse(readFileSync(path.join(coreDir, "package.json"), "utf8"));
