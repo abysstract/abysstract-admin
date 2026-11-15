@@ -43,6 +43,7 @@
 - `ADMIN_LOGIN_MAX_FAILURES` 不设置时自动取值：未启用验证码为 5（与原默认相同），启用验证码为 20。`adminconfig.Config.LoginMaxFailures` 为 0 表示自动，用 `LoginMaxFailuresFor` 取实际阈值。`.env.example` 不再写死 5。
 - 未设置 `CaptureOptions.RequestID` 时，`request_id` 先取 context 中的请求 ID，再取 `X-Request-Id` 请求头；取自请求头的值截断到 128 个字符。
 - `adminapp.AccessLogCapture` 改用 `accesslog.DefaultSkip`，跳过的请求不变。
+- 「系统管理」的排序从 1 改为 1000，排到侧栏最后，1000 以下留给业务模块的一级菜单。
 
 ## [0.6.0] - 2026-11-12
 
