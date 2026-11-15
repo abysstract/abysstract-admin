@@ -1,5 +1,6 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { Modal } from "antd";
 
 import { create } from "@bufbuild/protobuf";
 import type {
@@ -204,8 +205,19 @@ describe("ResourceTable production behavior failure gates", () => {
     await screen.findByText("启用");
 
     fireEvent.click(screen.getByRole("button", { name: "删除此行" }));
-    fireEvent.click(screen.getByRole("button", { name: /确认.*删除/ }));
-    await waitFor(() => expect(onError).toHaveBeenCalledWith(expect.any(Error)));
+    fireEvent.click(
+      within(screen.getByRole("dialog", { name: "删除这条记录？" })).getByRole("button", {
+        name: "删除",
+      }),
+    );
+    // 删除失败用弹窗说明原因（见 DESIGN.md「反馈」），列表加载错误回调不参与。
+    await waitFor(() =>
+      expect(Modal.error).toHaveBeenCalledWith({
+        title: "无法删除",
+        content: "超级管理员角色不可删除",
+      }),
+    );
+    expect(onError).not.toHaveBeenCalled();
 
     expect(screen.getByText("启用")).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
@@ -432,13 +444,15 @@ describe("ResourceTable production behavior failure gates", () => {
 
     fireEvent.click(screen.getByRole("checkbox", { name: /启用|选择/i }));
     fireEvent.click(screen.getByRole("button", { name: "删除此行" }));
-    expect(screen.getByRole("dialog")).toHaveTextContent(/确认.*删除/);
-    fireEvent.click(screen.getByRole("button", { name: /确认.*删除/ }));
+    // 删除确认写清后果，按钮是「删除 / 取消」。
+    const dialog = screen.getByRole("dialog", { name: "删除这条记录？" });
+    expect(dialog).toHaveTextContent("删除后无法恢复。");
+    fireEvent.click(within(dialog).getByRole("button", { name: "删除" }));
     await waitFor(() => expect(operations.delete).toHaveBeenCalledWith(largeKey));
 
-    fireEvent.click(screen.getByRole("button", { name: "批量删除" }));
-    expect(screen.getByRole("dialog")).toHaveTextContent(/确认.*批量.*删除/);
-    fireEvent.click(screen.getByRole("button", { name: /确认.*批量.*删除/ }));
+    fireEvent.click(within(screen.getByRole("toolbar")).getByRole("button", { name: "批量删除" }));
+    const batchDialog = screen.getByRole("dialog", { name: "删除选中的 1 条记录？" });
+    fireEvent.click(within(batchDialog).getByRole("button", { name: "删除" }));
     await waitFor(() => expect(operations.batchDelete).toHaveBeenCalledWith([largeKey]));
   });
 
@@ -754,7 +768,7 @@ describe("ResourceTable production behavior failure gates", () => {
 
     const { unmount } = render(<ResourceTable {...base} />);
     await screen.findByText("启用");
-    expect(screen.getByRole("button", { name: "新建" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "新增" })).toBeInTheDocument();
     unmount();
 
     render(
@@ -850,7 +864,7 @@ it("shares labels, fills editable fields by default and merges explicit edit val
   expect(screen.getByLabelText("remark")).toHaveValue("显式回填");
   expect(screen.queryByLabelText("dictType")).toBeNull();
   fireEvent.change(screen.getByLabelText("remark"), { target: { value: "" } });
-  fireEvent.click(screen.getByRole("button", { name: "提交" }));
+  fireEvent.click(screen.getByRole("button", { name: "保存" }));
   await waitFor(() => expect(operations.update).toHaveBeenCalledOnce());
   const submission = vi.mocked(operations.update).mock.calls[0][0];
   expect(submission.dirty).toEqual(new Set(["remark"]));

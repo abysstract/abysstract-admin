@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { message } from "antd";
 import { create } from "@bufbuild/protobuf";
 import { describe, expect, it, vi } from "vitest";
@@ -73,7 +73,7 @@ function resetFacade() {
     items: [row],
     total: 1n,
     pageNum: 1,
-    pageSize: 10,
+    pageSize: 20,
   });
   mocks.create.mockReset().mockResolvedValue(row);
   mocks.update.mockReset().mockResolvedValue(row);
@@ -89,11 +89,11 @@ describe("DictList Resource consumption", () => {
     render(<DictList />);
 
     expect(screen.getByTestId("pro-table-toolbar")).toBeInTheDocument();
-    expect(screen.getByTestId("pro-table-toolbar")).toHaveTextContent("新建字典");
+    expect(screen.getByTestId("pro-table-toolbar")).toHaveTextContent("新增");
     await waitFor(() =>
       expect(mocks.list).toHaveBeenCalledWith({
         pageNum: 1,
-        pageSize: 10,
+        pageSize: 20,
       }),
     );
     expect(screen.getByText("字典名称")).toBeInTheDocument();
@@ -120,11 +120,11 @@ describe("DictList Resource consumption", () => {
 
     await screen.findByText("编辑");
     fireEvent.click(screen.getByRole("button", { name: "编辑" }));
-    expect(screen.getByRole("dialog", { name: "编辑字典类型" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "编辑字典" })).toBeInTheDocument();
     expect(screen.queryByLabelText("字典类型")).not.toBeInTheDocument();
     const name = screen.getByLabelText("字典名称");
     fireEvent.change(name, { target: { value: "新名称" } });
-    fireEvent.click(screen.getByRole("button", { name: "提交" }));
+    fireEvent.click(screen.getByRole("button", { name: "保存" }));
 
     await waitFor(() => expect(mocks.update).toHaveBeenCalledOnce());
     const submission = mocks.update.mock.calls[0]?.[0] as {
@@ -147,21 +147,27 @@ describe("DictList Resource consumption", () => {
     render(<DictList />);
 
     await waitFor(() => expect(mocks.list).toHaveBeenCalledOnce());
-    expect(screen.queryByRole("button", { name: "新建字典" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "新增" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "编辑" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "删除" })).not.toBeInTheDocument();
   });
 
-  it("keeps the DictDataDrawer custom row action and standard delete facade action", async () => {
+  it("opens DictDataDrawer from the dict name and keeps the standard delete facade action", async () => {
     resetFacade();
     render(<DictList />);
 
-    await screen.findByText("数据");
-    fireEvent.click(screen.getByRole("button", { name: "数据" }));
+    // 点字典名称打开它的数据，不另放“数据”按钮。
+    await screen.findByText("原名称");
+    expect(screen.queryByRole("button", { name: "数据" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "原名称" }));
     expect(screen.getByTestId("dict-data-drawer")).toHaveTextContent("fixed-code");
 
     fireEvent.click(screen.getByRole("button", { name: "删除" }));
-    fireEvent.click(screen.getByRole("button", { name: "确认删除" }));
+    fireEvent.click(
+      within(screen.getByRole("dialog", { name: "删除这条记录？" })).getByRole("button", {
+        name: "删除",
+      }),
+    );
     await waitFor(() => expect(mocks.delete).toHaveBeenCalledWith(7n));
   });
 
@@ -169,13 +175,13 @@ describe("DictList Resource consumption", () => {
     resetFacade();
     render(<DictList />);
 
-    fireEvent.click(screen.getByRole("button", { name: "新建字典" }));
+    fireEvent.click(screen.getByRole("button", { name: "新增" }));
     fireEvent.change(screen.getByLabelText("字典名称"), { target: { value: "新字典" } });
     fireEvent.change(screen.getByLabelText("字典类型"), { target: { value: "new-code" } });
-    fireEvent.click(screen.getByRole("button", { name: "提交" }));
+    fireEvent.click(screen.getByRole("button", { name: "保存" }));
 
     await waitFor(() => expect(mocks.create).toHaveBeenCalledOnce());
-    expect(message.success).toHaveBeenCalledWith("创建成功");
+    expect(message.success).toHaveBeenCalledWith("已创建");
     expect(mocks.create).toHaveBeenCalledWith({
       dictName: "新字典",
       dictType: "new-code",

@@ -17,16 +17,16 @@ export async function batchDelete(
 ): Promise<boolean> {
   const name = opts.resourceName ?? resource;
   if (ids.length === 0) {
-    opts.message.warning("请先选择要删除的记录");
+    opts.message.warning("先选择要删除的记录");
     return false;
   }
   if (ids.length > 1000) {
-    opts.message.error("单次批量删除不能超过 1000 条");
+    opts.message.error("一次最多删除 1000 条");
     return false;
   }
   const ok = await confirmAction({
-    title: `确认删除选中的 ${ids.length} 条${name}？`,
-    content: "此操作不可恢复，关联数据将一并清理",
+    title: `删除选中的 ${ids.length} 条${name}？`,
+    content: "删除后无法恢复，关联数据会一起清理。",
     danger: true,
     okText: "删除",
     onOk: async () => {
@@ -35,7 +35,7 @@ export async function batchDelete(
         opts.message.success(`已删除 ${resp.deleted} 条`);
         opts.onSuccess?.();
       } catch (e) {
-        opts.message.error(formatErrorMessage(e, "批量删除失败"));
+        opts.message.error(formatErrorMessage(e, "无法删除，请稍后重试"));
         throw e;
       }
     },
@@ -70,7 +70,7 @@ export async function exportExcel(
     URL.revokeObjectURL(url);
     opts.message.success(`已导出 ${resp.rowCount} 行`);
   } catch (e) {
-    opts.message.error(formatErrorMessage(e, "导出失败"));
+    opts.message.error(formatErrorMessage(e, "无法导出，请稍后重试"));
   }
 }
 
@@ -87,16 +87,16 @@ export async function importExcel(
     const resp = await opts.client.importExcel({ resource, content: buf });
     const failed = resp.failures.length;
     if (failed === 0) {
-      opts.message.success(`导入完成：成功 ${resp.successCount} 条`);
+      opts.message.success(`已导入 ${resp.successCount} 条`);
     } else {
       opts.message.warning(
-        `导入完成：成功 ${resp.successCount} 条 / 失败 ${failed} 条（共 ${resp.total} 行）`,
+        `已导入 ${resp.successCount} 条，${failed} 条没有导入（共 ${resp.total} 行）`,
       );
       // 失败明细打印到控制台便于排查
       console.warn("导入失败行明细：", resp.failures);
     }
     opts.onSuccess?.();
   } catch (e) {
-    opts.message.error(formatErrorMessage(e, "导入失败"));
+    opts.message.error(formatErrorMessage(e, "无法导入，请稍后重试"));
   }
 }

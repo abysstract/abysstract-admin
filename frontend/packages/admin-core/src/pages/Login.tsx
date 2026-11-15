@@ -36,11 +36,11 @@ export default function Login() {
       const res = await runtime.clients.auth.login(values);
       if (attempt !== attemptRef.current || runtime.session.isDisposed()) return;
       runtime.session.applyToken(res.token);
-      message.success("登录成功");
+      // 进入首页本身就是结果，不再弹“登录成功”。
       navigate("/", { replace: true });
     } catch (e) {
       if (attempt !== attemptRef.current || runtime.session.isDisposed()) return;
-      message.error(formatErrorMessage(e, "登录失败"));
+      message.error(formatErrorMessage(e, "无法登录，请稍后重试"));
     } finally {
       if (attempt === attemptRef.current) setLoading(false);
     }
@@ -56,15 +56,15 @@ export default function Login() {
         background: token.colorBgLayout,
       }}
     >
-      <Card style={{ width: 380 }}>
+      <Card style={{ width: 400 }}>
         <Typography.Title level={3} style={{ textAlign: "center" }}>
           {host.title}
         </Typography.Title>
         <Form initialValues={initialValues} onFinish={onFinish}>
-          <Form.Item name="username" rules={[{ required: true, message: "请输入用户名" }]}>
+          <Form.Item name="username" rules={[{ required: true, message: "请填写用户名" }]}>
             <Input prefix={<UserOutlined />} placeholder="用户名" size="large" />
           </Form.Item>
-          <Form.Item name="password" rules={[{ required: true, message: "请输入密码" }]}>
+          <Form.Item name="password" rules={[{ required: true, message: "请填写密码" }]}>
             <Input.Password prefix={<LockOutlined />} placeholder="密码" size="large" />
           </Form.Item>
           <Form.Item>

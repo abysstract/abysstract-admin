@@ -16,7 +16,7 @@ describe("formatErrorMessage", () => {
       "登录已过期，请重新登录",
     );
     expect(formatErrorMessage(new ConnectError("denied", Code.PermissionDenied))).toBe(
-      "没有执行此操作的权限",
+      "没有执行这个操作的权限",
     );
   });
 
@@ -29,9 +29,11 @@ describe("formatErrorMessage", () => {
   });
 
   it("falls back for empty and non-Connect errors", () => {
-    expect(formatErrorMessage(new ConnectError("", Code.FailedPrecondition))).toBe("操作失败");
+    expect(formatErrorMessage(new ConnectError("", Code.FailedPrecondition))).toBe(
+      "无法完成操作，请稍后重试",
+    );
     expect(formatErrorMessage(new Error("boom"))).toBe("boom");
     expect(formatErrorMessage("自定义消息")).toBe("自定义消息");
-    expect(formatErrorMessage(undefined)).toBe("操作失败");
+    expect(formatErrorMessage(undefined)).toBe("无法完成操作，请稍后重试");
   });
 });

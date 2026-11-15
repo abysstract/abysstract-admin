@@ -61,9 +61,9 @@ describe("AccessProvider 菜单加载失败", () => {
         <app.Root />
       </MemoryRouter>,
     );
-    expect(await screen.findByText("加载用户信息失败")).toBeInTheDocument();
+    expect(await screen.findByText("无法加载用户信息")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "重试" }));
-    expect(await screen.findByText("无可用菜单")).toBeInTheDocument();
+    expect(await screen.findByText("没有可访问的页面")).toBeInTheDocument();
     expect(auth.getUserInfo).toHaveBeenCalledTimes(2);
     app.dispose();
   });

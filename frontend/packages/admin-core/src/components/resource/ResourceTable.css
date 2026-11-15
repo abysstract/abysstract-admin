@@ -1,16 +1,40 @@
 /* Keep Resource pages visually consistent with the existing ProTable pages.
  * The search controls and result table are intentionally separate surfaces:
  * migrated pages should not look like one unbounded block on the layout gray.
- * Colours, border and radius come from antd tokens (see useResourceSurfaceStyle). */
+ * Colours, border and radius come from antd tokens (see useResourceSurfaceStyle).
+ * Spacing uses the antd token CSS variables (antd 6 enables them by default). */
 .resource-table {
   width: 100%;
 }
 
 .resource-table__search {
-  margin-bottom: 16px;
-  padding: 24px;
+  margin-bottom: var(--ant-margin, 16px);
+  padding: var(--ant-padding-lg, 24px);
 }
 
 .resource-table__content {
   overflow: hidden;
+}
+
+.resource-table__error {
+  padding: var(--ant-padding-lg, 24px);
+}
+
+/* 时间、状态、操作列不换行（见 DESIGN.md「数据列表」）。 */
+.resource-table__actions {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+/* 数字列右对齐并使用等宽数字，便于上下比较。 */
+.resource-table__numeric {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 选中行后出现在表格底部的批量操作条。 */
+.resource-table__selection {
+  padding: var(--ant-padding-xs, 8px) var(--ant-padding, 16px);
+  border-top: var(--ant-line-width, 1px) var(--ant-line-type, solid)
+    var(--ant-color-split, rgba(5, 5, 5, 0.06));
 }

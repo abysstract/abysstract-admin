@@ -63,14 +63,14 @@ describe("UserList real Resource component integration", () => {
       ],
       total: 1n,
       pageNum: 1,
-      pageSize: 10,
+      pageSize: 20,
     });
 
     render(<UserList />);
 
     expect(screen.getByTestId("pro-table-toolbar")).toBeInTheDocument();
     await waitFor(() => expect(list).toHaveBeenCalledOnce());
-    expect(screen.getByTestId("pro-table-toolbar")).toHaveTextContent("新建用户");
+    expect(screen.getByTestId("pro-table-toolbar")).toHaveTextContent("新增");
     expect(screen.getByText("真实页面用户")).toBeInTheDocument();
   });
 });

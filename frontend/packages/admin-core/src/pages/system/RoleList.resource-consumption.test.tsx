@@ -59,14 +59,14 @@ describe("RoleList real Resource component integration", () => {
       ],
       total: 1n,
       pageNum: 1,
-      pageSize: 10,
+      pageSize: 20,
     });
 
     render(<RoleList />);
 
     expect(screen.getByTestId("pro-table-toolbar")).toBeInTheDocument();
     await waitFor(() => expect(list).toHaveBeenCalledOnce());
-    expect(screen.getByTestId("pro-table-toolbar")).toHaveTextContent("新建角色");
+    expect(screen.getByTestId("pro-table-toolbar")).toHaveTextContent("新增");
     expect(screen.getByText("真实页面角色")).toBeInTheDocument();
     expect(screen.getByText("全部数据")).toBeInTheDocument();
   });

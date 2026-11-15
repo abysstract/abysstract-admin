@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { create } from "@bufbuild/protobuf";
 import { message } from "antd";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -68,7 +68,7 @@ function resetFacade(): void {
     items: [row],
     total: 1n,
     pageNum: 1,
-    pageSize: 10,
+    pageSize: 20,
   });
   facade.create.mockReset().mockResolvedValue(row);
   facade.update.mockReset().mockResolvedValue(row);
@@ -81,8 +81,8 @@ function resetFacade(): void {
 
 async function openCreateForm(): Promise<void> {
   await screen.findByText("原商品名称");
-  fireEvent.click(screen.getByRole("button", { name: "新建商品" }));
-  await screen.findByRole("dialog", { name: "新建商品" });
+  fireEvent.click(screen.getByRole("button", { name: "新增" }));
+  await screen.findByRole("dialog", { name: "新增商品" });
 }
 
 describe("ProductList", () => {
@@ -94,7 +94,7 @@ describe("ProductList", () => {
     await waitFor(() =>
       expect(facade.list).toHaveBeenCalledWith({
         pageNum: 1,
-        pageSize: 10,
+        pageSize: 20,
       }),
     );
     expect(screen.getByRole("columnheader", { name: "商品编号" })).toBeInTheDocument();
@@ -111,7 +111,7 @@ describe("ProductList", () => {
     await waitFor(() =>
       expect(facade.list).toHaveBeenLastCalledWith({
         pageNum: 1,
-        pageSize: 10,
+        pageSize: 20,
         keyword: "AB",
       }),
     );
@@ -119,7 +119,7 @@ describe("ProductList", () => {
     await waitFor(() =>
       expect(facade.list).toHaveBeenLastCalledWith({
         pageNum: 2,
-        pageSize: 10,
+        pageSize: 20,
         keyword: "AB",
       }),
     );
@@ -130,7 +130,7 @@ describe("ProductList", () => {
     await waitFor(() =>
       expect(facade.list).toHaveBeenLastCalledWith({
         pageNum: 2,
-        pageSize: 10,
+        pageSize: 20,
         keyword: "AB",
         orders: [{ field: "priceCents", desc: true }],
       }),
@@ -144,7 +144,7 @@ describe("ProductList", () => {
     fireEvent.change(screen.getByLabelText("商品名称"), { target: { value: "新商品" } });
     fireEvent.change(screen.getByLabelText("价格(分)"), { target: { value: "9007199254740993" } });
     fireEvent.change(screen.getByLabelText("部门ID"), { target: { value: "1" } });
-    fireEvent.click(screen.getByRole("button", { name: "提交" }));
+    fireEvent.click(screen.getByRole("button", { name: "保存" }));
     await waitFor(() => expect(facade.create).toHaveBeenCalledOnce());
     expect(facade.create.mock.calls[0]?.[0]).toMatchObject({
       productNo: "ab-200",
@@ -160,9 +160,9 @@ describe("ProductList", () => {
     await openCreateForm();
     fireEvent.change(screen.getByLabelText("商品编号"), { target: { value: "AB-FAIL" } });
     fireEvent.change(screen.getByLabelText("商品名称"), { target: { value: "失败商品名称" } });
-    fireEvent.click(screen.getByRole("button", { name: "提交" }));
+    fireEvent.click(screen.getByRole("button", { name: "保存" }));
     await waitFor(() => expect(message.error).toHaveBeenCalledWith("create failed"));
-    expect(screen.getByRole("dialog", { name: "新建商品" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "新增商品" })).toBeInTheDocument();
     expect(screen.getByLabelText("商品名称")).toHaveValue("失败商品名称");
   });
 
@@ -171,7 +171,7 @@ describe("ProductList", () => {
     fireEvent.click(await screen.findByRole("button", { name: "编辑" }));
     await screen.findByRole("dialog", { name: "编辑商品" });
     fireEvent.change(screen.getByLabelText("备注"), { target: { value: "" } });
-    fireEvent.click(screen.getByRole("button", { name: "提交" }));
+    fireEvent.click(screen.getByRole("button", { name: "保存" }));
     await waitFor(() => expect(facade.update).toHaveBeenCalledOnce());
     const submission = facade.update.mock.calls[0]?.[0] as {
       key: bigint;
@@ -190,7 +190,11 @@ describe("ProductList", () => {
     fireEvent.click(screen.getByRole("button", { name: "取消" }));
     expect(facade.delete).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "删除" }));
-    fireEvent.click(screen.getByRole("button", { name: "确认删除" }));
+    fireEvent.click(
+      within(screen.getByRole("dialog", { name: "删除这条记录？" })).getByRole("button", {
+        name: "删除",
+      }),
+    );
     await waitFor(() => expect(facade.delete).toHaveBeenCalledWith(7n));
   });
 
@@ -198,11 +202,17 @@ describe("ProductList", () => {
     render(<ProductList />);
     await screen.findByText("原商品名称");
     fireEvent.click(screen.getByRole("checkbox", { name: "选择 7" }));
-    fireEvent.click(screen.getByRole("button", { name: "批量删除" }));
+    // 批量删除在选中行后出现在表格底部的操作条里。
+    const selectionBar = screen.getByRole("toolbar");
+    fireEvent.click(within(selectionBar).getByRole("button", { name: "删除" }));
     fireEvent.click(screen.getByRole("button", { name: "取消" }));
     expect(facade.batchDelete).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "批量删除" }));
-    fireEvent.click(screen.getByRole("button", { name: "确认批量删除" }));
+    fireEvent.click(within(selectionBar).getByRole("button", { name: "删除" }));
+    fireEvent.click(
+      within(screen.getByRole("dialog", { name: "删除选中的 1 条记录？" })).getByRole("button", {
+        name: "删除",
+      }),
+    );
     await waitFor(() => expect(facade.batchDelete).toHaveBeenCalledWith([7n]));
   });
 
@@ -210,9 +220,9 @@ describe("ProductList", () => {
     allow("biz:product:list");
     render(<ProductList />);
     await screen.findByText("原商品名称");
-    expect(screen.queryByRole("button", { name: "新建商品" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "新增" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "编辑" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "删除" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "批量删除" })).not.toBeInTheDocument();
+    expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
   });
 });

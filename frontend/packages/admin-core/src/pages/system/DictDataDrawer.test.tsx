@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { create } from "@bufbuild/protobuf";
 import { message } from "antd";
@@ -12,7 +12,13 @@ vi.mock("antd", async (importOriginal) => {
   const message = { success: vi.fn(), error: vi.fn() };
   return {
     ...actual,
-    Drawer: (props: Record<string, unknown>) => <div>{props.children as ReactNode}</div>,
+    Drawer: (props: Record<string, unknown>) =>
+      props.open === false ? null : (
+        <div role="dialog" aria-label={String(props.title ?? "")}>
+          {props.extra as ReactNode}
+          {props.children as ReactNode}
+        </div>
+      ),
     App: Object.assign(({ children }: { children?: ReactNode }) => <>{children}</>, {
       useApp: () => ({ message }),
     }),
@@ -89,7 +95,7 @@ function resetFacade(): void {
     items: [entity],
     total: 1n,
     pageNum: 1,
-    pageSize: 10,
+    pageSize: 20,
   });
   mocks.create.mockReset().mockResolvedValue(entity);
   mocks.update.mockReset().mockResolvedValue(entity);
@@ -107,11 +113,11 @@ describe("DictDataDrawer Resource consumption", () => {
     render(<DictDataDrawer dictType="sys_yes_no" open onClose={() => undefined} />);
 
     expect(dictDataSchema.name).toBe("DictData");
-    expect(screen.getByTestId("pro-table-toolbar")).toHaveTextContent("新建");
+    expect(screen.getByTestId("pro-table-toolbar")).toHaveTextContent("新增");
     await waitFor(() =>
       expect(mocks.list).toHaveBeenCalledWith({
         pageNum: 1,
-        pageSize: 10,
+        pageSize: 20,
         orders: [{ field: "dictSort", desc: false }],
         filters: { dictType: "sys_yes_no" },
       }),
@@ -129,7 +135,7 @@ describe("DictDataDrawer Resource consumption", () => {
     await waitFor(() =>
       expect(mocks.list).toHaveBeenLastCalledWith({
         pageNum: 2,
-        pageSize: 10,
+        pageSize: 20,
         orders: [{ field: "dictSort", desc: false }],
         filters: { dictType: "sys_yes_no" },
       }),
@@ -139,7 +145,7 @@ describe("DictDataDrawer Resource consumption", () => {
     await waitFor(() =>
       expect(mocks.list).toHaveBeenLastCalledWith({
         pageNum: 2,
-        pageSize: 10,
+        pageSize: 20,
         orders: [{ field: "dictSort", desc: true }],
         filters: { dictType: "sys_yes_no" },
       }),
@@ -150,10 +156,10 @@ describe("DictDataDrawer Resource consumption", () => {
     render(<DictDataDrawer dictType="sys_yes_no" open onClose={() => undefined} />);
     await screen.findByText("启用");
 
-    fireEvent.click(screen.getByRole("button", { name: "新建" }));
+    fireEvent.click(screen.getByRole("button", { name: "新增" }));
     fireEvent.change(screen.getByLabelText("标签"), { target: { value: "新标签" } });
     fireEvent.change(screen.getByLabelText("键值"), { target: { value: "new" } });
-    fireEvent.click(screen.getByRole("button", { name: "提交" }));
+    fireEvent.click(screen.getByRole("button", { name: "保存" }));
 
     await waitFor(() => expect(mocks.create).toHaveBeenCalledOnce());
     expect(mocks.create).toHaveBeenCalledWith(
@@ -167,7 +173,7 @@ describe("DictDataDrawer Resource consumption", () => {
       }),
     );
     expect(mocks.create.mock.calls[0]?.[0]).not.toHaveProperty("id");
-    expect(message.success).toHaveBeenCalledWith("创建成功");
+    expect(message.success).toHaveBeenCalledWith("已创建");
     await waitFor(() => expect(mocks.list).toHaveBeenCalledTimes(2));
   });
 
@@ -178,7 +184,7 @@ describe("DictDataDrawer Resource consumption", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "编辑" }));
     fireEvent.change(screen.getByLabelText("标签"), { target: { value: "已改" } });
-    fireEvent.click(screen.getByRole("button", { name: "提交" }));
+    fireEvent.click(screen.getByRole("button", { name: "保存" }));
 
     await waitFor(() => expect(mocks.update).toHaveBeenCalledOnce());
     const submission = mocks.update.mock.calls[0]?.[0] as {
@@ -204,13 +210,21 @@ describe("DictDataDrawer Resource consumption", () => {
     await screen.findByText("启用");
 
     fireEvent.click(screen.getByRole("button", { name: "删除" }));
-    fireEvent.click(screen.getByRole("button", { name: "确认删除" }));
+    fireEvent.click(
+      within(screen.getByRole("dialog", { name: "删除这条记录？" })).getByRole("button", {
+        name: "删除",
+      }),
+    );
     await waitFor(() => expect(mocks.delete).toHaveBeenCalledWith(entity.id));
     await waitFor(() => expect(mocks.list).toHaveBeenCalledTimes(2));
 
     fireEvent.click(screen.getByRole("checkbox", { name: `选择 ${entity.id}` }));
-    fireEvent.click(screen.getByRole("button", { name: "批量删除" }));
-    fireEvent.click(screen.getByRole("button", { name: "确认批量删除" }));
+    fireEvent.click(within(screen.getByRole("toolbar")).getByRole("button", { name: "删除" }));
+    fireEvent.click(
+      within(screen.getByRole("dialog", { name: /删除选中的/ })).getByRole("button", {
+        name: "删除",
+      }),
+    );
     await waitFor(() => expect(mocks.batchDelete).toHaveBeenCalledWith([entity.id]));
     await waitFor(() => expect(mocks.list).toHaveBeenCalledTimes(3));
 
@@ -233,7 +247,7 @@ describe("DictDataDrawer Resource consumption", () => {
     await waitFor(() =>
       expect(mocks.list).toHaveBeenLastCalledWith({
         pageNum: 1,
-        pageSize: 10,
+        pageSize: 20,
         orders: [{ field: "dictSort", desc: false }],
         filters: { dictType: "second" },
       }),

@@ -59,13 +59,13 @@ describe("DeptList real Resource component integration", () => {
       ],
       total: 2n,
       pageNum: 1,
-      pageSize: 10,
+      pageSize: 20,
     });
 
     render(<DeptList />);
 
     expect(document.querySelector('[data-resource-table="Dept"]')).toBeInTheDocument();
-    expect(screen.getByTestId("pro-table-toolbar")).toHaveTextContent("新建部门");
+    expect(screen.getByTestId("pro-table-toolbar")).toHaveTextContent("新增");
     await waitFor(() =>
       expect(list).toHaveBeenCalledWith({
         pageNum: 1,

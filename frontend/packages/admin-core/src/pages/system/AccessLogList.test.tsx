@@ -21,48 +21,6 @@ vi.mock("../../system/hooks", () => ({
   }),
 }));
 
-// The shared ProTable double renders dataSource only; this page loads rows
-// through request, so the double here calls it once like ProTable does.
-vi.mock("@ant-design/pro-components", async () => {
-  const { useEffect, useState } = await import("react");
-  type Column = {
-    dataIndex?: string;
-    title?: unknown;
-    hideInTable?: boolean;
-    render?: (value: unknown, record: unknown) => unknown;
-  };
-  type Props = {
-    columns: Column[];
-    request: (params: Record<string, unknown>) => Promise<{ data: Record<string, unknown>[] }>;
-  };
-  function ProTable({ columns, request }: Props) {
-    const [rows, setRows] = useState<Record<string, unknown>[]>([]);
-    useEffect(() => {
-      void request({ current: 1, pageSize: 10 }).then((res) => setRows(res.data));
-    }, [request]);
-    const visible = columns.filter((c) => !c.hideInTable);
-    return (
-      <table>
-        <tbody>
-          {rows.map((row, i) => (
-            <tr key={i}>
-              {visible.map((c, j) => (
-                <td key={j}>
-                  {(c.render ? c.render(row[c.dataIndex ?? ""], row) : String(row[c.dataIndex ?? ""] ?? "")) as never}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    );
-  }
-  return {
-    PageContainer: ({ children }: { children?: unknown }) => <div>{children as never}</div>,
-    ProTable,
-  };
-});
-
 import AccessLogList from "./AccessLogList";
 
 const readable = create(GetAccessLogStatusResponseSchema, {
@@ -110,13 +68,15 @@ describe("AccessLogList", () => {
     expect(screen.getByText("invalid_argument")).toBeTruthy();
     expect(screen.getByText("5.30")).toBeTruthy();
     expect(mocks.listAccessLogs).toHaveBeenCalledWith(
-      expect.objectContaining({ page: { pageNum: 1, pageSize: 10 }, result: "", principal: "" }),
+      expect.objectContaining({ page: { pageNum: 1, pageSize: 20 }, result: "", principal: "" }),
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "详情" }));
+    // 点接口名打开详情，不另放“详情”按钮。
+    expect(screen.queryByRole("button", { name: "详情" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "/sync.v1.SyncService/PushItems" }));
     const attrs = await screen.findByTestId("access-log-attrs");
     expect(attrs.textContent).toContain('"items_ok": 8');
-    const drawer = screen.getByRole("dialog");
+    const drawer = screen.getByRole("dialog", { name: "请求详情" });
     expect(within(drawer).getByText("2 items rejected")).toBeTruthy();
     expect(within(drawer).getByText("req-42")).toBeTruthy();
   });
@@ -130,7 +90,7 @@ describe("AccessLogList", () => {
       }),
     );
     render(<AccessLogList />);
-    expect(await screen.findByText("请求日志未配置可查询的存储")).toBeTruthy();
+    expect(await screen.findByText("请求日志没有保存到数据库")).toBeTruthy();
     expect(screen.getByText(/stdout/)).toBeTruthy();
     await waitFor(() => expect(mocks.listAccessLogs).not.toHaveBeenCalled());
   });
@@ -138,6 +98,6 @@ describe("AccessLogList", () => {
   it("reports a disabled request log", async () => {
     mocks.getAccessLogStatus.mockResolvedValue(create(GetAccessLogStatusResponseSchema, {}));
     render(<AccessLogList />);
-    expect(await screen.findByText("请求日志未启用")).toBeTruthy();
+    expect(await screen.findByText("请求日志没有开启")).toBeTruthy();
   });
 });

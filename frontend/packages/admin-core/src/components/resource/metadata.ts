@@ -78,6 +78,11 @@ export interface ResourceColumnOverrideBase<TEntity, TValue> {
   readonly hidden?: ResourceVisibility<TEntity>;
   /** A column override may hide a generated column, never turn listability on. */
   readonly listable?: false;
+  /**
+   * 数字列（数量、排序号、耗时）：右对齐并使用等宽数字，便于上下比较。
+   * 见 DESIGN.md「字体」「数据格式」。
+   */
+  readonly numeric?: boolean;
 }
 
 type CapabilityOverride<TField, TCapability extends "searchable" | "sortable"> =
@@ -152,6 +157,8 @@ export type ResourceCustomRowActionOverride<
    */
   readonly render?: (context: ResourceRowActionContext<TEntity, TKey>) => ReactNode;
   readonly onClick?: (context: ResourceRowActionContext<TEntity, TKey>) => void | Promise<void>;
+  /** 危险操作（如删除）：红色文字，排在同组最后。 */
+  readonly danger?: boolean;
 };
 
 export type ResourceRowActionOverride<TEntity, TKey extends string | number | bigint> =
@@ -182,6 +189,11 @@ export type ResourceCustomToolbarOverride<
   readonly title?: ReactNode;
   readonly hidden?: boolean | ((context: ResourceToolbarContext<TEntity, TKey>) => boolean);
   readonly render?: (context: ResourceToolbarContext<TEntity, TKey>) => ReactNode;
+  /**
+   * 放在哪里。"toolbar"（默认）是结果面板右上角；"selection" 是选中行后出现在表格底部的
+   * 批量操作条（见 DESIGN.md「数据列表」）。
+   */
+  readonly placement?: "toolbar" | "selection";
 };
 
 export type ResourceToolbarOverride<TEntity, TKey extends string | number | bigint> =

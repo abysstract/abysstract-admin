@@ -78,7 +78,7 @@ describe("UserList 页面冒烟测试", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("新建用户")).toBeInTheDocument();
+      expect(screen.getByText("新增")).toBeInTheDocument();
     });
     expect(mocks.listUsers).toHaveBeenCalledOnce();
     expect(await screen.findByText("admin")).toBeInTheDocument();

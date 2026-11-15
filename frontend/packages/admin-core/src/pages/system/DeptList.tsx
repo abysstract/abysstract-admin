@@ -16,9 +16,9 @@ import type {
   ResourceRowActionOverride,
   ResourceToolbarOverride,
 } from "../../components/resource";
-import { fmtTime, statusTag } from "../../util";
+import { statusTag, timeCell } from "../../util";
 import { useAccess } from "../../runtime/access";
-import { formatErrorMessage, useAppMessage } from "../../runtime/message";
+import { formatErrorMessage } from "../../runtime/message";
 
 type DeptCreateItems = ResourceFormItemOverrides<
   typeof deptSchema,
@@ -38,13 +38,13 @@ const deptColumns: ResourceColumnOverrides<typeof deptSchema, Dept> = {
   id: { hidden: true },
   parentId: { title: "上级部门 ID", hidden: true },
   deptName: { title: "部门名称" },
-  orderNum: { title: "排序" },
+  orderNum: { title: "排序", numeric: true },
   leader: { title: "负责人" },
   phone: { title: "电话" },
   email: { title: "邮箱", hidden: true },
   status: { title: "状态", render: ({ value }) => statusTag(value) },
-  createTime: { title: "创建时间", render: ({ value }) => fmtTime(value), hidden: true },
-  updateTime: { title: "更新时间", render: ({ value }) => fmtTime(value), hidden: true },
+  createTime: { title: "创建时间", render: ({ value }) => timeCell(value), hidden: true },
+  updateTime: { title: "更新时间", render: ({ value }) => timeCell(value), hidden: true },
 };
 
 const deptCreateItems: DeptCreateItems = {
@@ -78,10 +78,7 @@ const deptRowActions: readonly ResourceRowActionOverride<Dept, bigint>[] = [
   { action: "delete", merge: "replace", title: "删除" },
 ];
 
-const deptToolbar: readonly ResourceToolbarOverride<Dept, bigint>[] = [
-  { action: "create", merge: "replace", title: "新建部门" },
-  { action: "batchDelete", merge: "replace", title: "批量删除" },
-];
+const deptToolbar: readonly ResourceToolbarOverride<Dept, bigint>[] = [];
 
 function DeptCreateParentSelect({
   value,
@@ -180,7 +177,7 @@ function DeptParentSelect({
       optionFilterProp="label"
       options={[...options]}
       status={error === undefined ? undefined : "error"}
-      notFoundContent={error === undefined ? "暂无部门" : formatErrorMessage(error, "暂无部门")}
+      notFoundContent={error === undefined ? "没有部门" : formatErrorMessage(error, "无法加载部门")}
       onChange={(nextValue) =>
         onChange(typeof nextValue === "bigint" ? nextValue : BigInt(String(nextValue)))
       }
@@ -216,7 +213,6 @@ function flattenDeptTree(rows: readonly Dept[]): readonly Dept[] {
 
 export default function DeptList() {
   const { deptOperations } = useSystemOperations();
-  const message = useAppMessage();
   const { has } = useAccess();
 
   return (
@@ -232,7 +228,6 @@ export default function DeptList() {
         schema={deptSchema}
         operations={deptOperations}
         access={{ can: (permission) => has(permission) }}
-        onError={(error) => message.error(formatErrorMessage(error))}
         columns={deptColumns}
         treeData={{
           pageSize: 100,
@@ -244,12 +239,9 @@ export default function DeptList() {
         query={{ defaults: { orders: [{ field: "orderNum", desc: false }] } }}
         form={{
           createConfig: {
-            title: "新建部门",
+            title: "新增部门",
             initialValues: { parentId: 0n, orderNum: 0 },
             itemOverrides: deptCreateItems,
-            onSuccess: async () => {
-              message.success("创建成功");
-            },
           },
           editConfig: {
             title: "编辑部门",
@@ -262,9 +254,6 @@ export default function DeptList() {
               email: entity.email,
             }),
             itemOverrides: deptUpdateItems,
-            onSuccess: async () => {
-              message.success("已保存");
-            },
           },
         }}
       />

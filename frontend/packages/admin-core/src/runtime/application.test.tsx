@@ -253,7 +253,7 @@ describe("createAdminApp", () => {
         <app.Root />
       </MemoryRouter>,
     );
-    await screen.findByText("加载用户信息失败");
+    await screen.findByText("无法加载用户信息");
     expect(storage.getToken()).toBe("token");
     auth.getUserInfo.mockResolvedValueOnce({
       permissions: ["*:*:*"],

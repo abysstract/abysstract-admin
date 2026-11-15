@@ -43,6 +43,11 @@ export interface ResourceQueryConfig<TSchema extends ResourceSchema, TFilters ex
   readonly defaults?: Partial<ResourceListQuery<TFilters, SortableFieldName<TSchema>>>;
   readonly initial?: Partial<ResourceListQuery<TFilters, SortableFieldName<TSchema>>>;
   readonly onChange?: (query: ResourceListQuery<TFilters, SortableFieldName<TSchema>>) => void;
+  /**
+   * 把关键词、页码、每页条数和排序写进地址栏查询参数（`q`、`page`、`size`、`sort`），
+   * 刷新或分享链接后看到同一画面。默认开启；同一页面有多个表格、或表格在抽屉里时关闭。
+   */
+  readonly syncUrl?: boolean;
 }
 
 /**
@@ -63,6 +68,10 @@ export interface ResourceTableReload {
 export interface ResourceTableErrorBoundary {
   /** Optional page-level callback for legacy integrations; ResourceTable always reloads itself. */
   readonly reload?: () => Promise<void>;
+  /**
+   * 列表加载失败时调用。新增、编辑、删除的失败由 ResourceTable 自己提示
+   * （保存失败用 message，删除失败用 Modal.error），不再经过这里。
+   */
   readonly onError?: (error: ResourceOperationError) => void;
   readonly renderError?: (error: ResourceOperationError, retry: () => Promise<void>) => ReactNode;
 }
@@ -116,7 +125,7 @@ export interface ResourceTableFormIntegration<
   TCreateValues extends object,
   TUpdateValues extends object,
 > {
-  /** Preferred production path. ResourceTable owns trigger, modal, loading, error and reload. */
+  /** Preferred production path. ResourceTable owns trigger, drawer, loading, error and reload. */
   readonly createConfig?: ResourceTableCreateFormConfig<TSchema, TEntity, TCreateValues>;
   readonly editConfig?: ResourceTableEditFormConfig<TSchema, TEntity, TUpdateValues>;
   /** Compatibility escape hatches for non-standard layouts; not needed for standard CRUD. */

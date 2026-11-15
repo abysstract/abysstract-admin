@@ -16,7 +16,6 @@ import type {
   ResourceToolbarOverride,
 } from "../../components/resource";
 
-import { useAppMessage } from "../../runtime/message";
 type Props = { dictType: string; open: boolean; onClose: () => void };
 
 type DictDataCreateItems = ResourceFormItemOverrides<
@@ -36,7 +35,7 @@ const dictDataColumns: ResourceColumnOverrides<typeof dictDataSchema, DictData> 
   id: { hidden: true },
   dictLabel: { title: "标签" },
   dictValue: { title: "键值" },
-  dictSort: { title: "排序" },
+  dictSort: { title: "排序", numeric: true },
   dictType: { hidden: true },
   cssClass: { hidden: true },
   listClass: { hidden: true },
@@ -50,7 +49,7 @@ const dictDataColumns: ResourceColumnOverrides<typeof dictDataSchema, DictData> 
 const dictDataCreateItems: DictDataCreateItems = {
   dictSort: { label: "排序", valueType: "number", fieldProps: { min: 0 } },
   dictLabel: { label: "标签" },
-  dictValue: { label: "键值" },
+  dictValue: { label: "键值", sameRowAsPrevious: true },
   dictType: { visible: false },
   isDefault: { visible: false },
   remark: { label: "备注", valueType: "textarea" },
@@ -59,26 +58,22 @@ const dictDataCreateItems: DictDataCreateItems = {
 const dictDataUpdateItems: DictDataUpdateItems = {
   dictSort: { label: "排序", valueType: "number", fieldProps: { min: 0 } },
   dictLabel: { label: "标签" },
-  dictValue: { label: "键值" },
+  dictValue: { label: "键值", sameRowAsPrevious: true },
   isDefault: { visible: false },
   remark: { label: "备注", valueType: "textarea" },
 };
 
 export default function DictDataDrawer({ dictType, open, onClose }: Props) {
   const { dictDataOperations, dictDataRelationLoaders } = useSystemOperations();
-  const message = useAppMessage();
   const { has } = useAccess();
   const rowActions: readonly ResourceRowActionOverride<DictData, bigint>[] = [
     { action: "update", merge: "replace", title: "编辑" },
     { action: "delete", merge: "replace", title: "删除" },
   ];
-  const toolbar: readonly ResourceToolbarOverride<DictData, bigint>[] = [
-    { action: "create", merge: "replace", title: "新建" },
-    { action: "batchDelete", merge: "replace", title: "批量删除" },
-  ];
+  const toolbar: readonly ResourceToolbarOverride<DictData, bigint>[] = [];
 
   return (
-    <Drawer title={`字典数据 - ${dictType}`} open={open} onClose={onClose} size={640}>
+    <Drawer title={`字典数据：${dictType}`} open={open} onClose={onClose} size={720}>
       {open ? (
         <ResourceTable<
           typeof dictDataSchema,
@@ -98,20 +93,18 @@ export default function DictDataDrawer({ dictType, open, onClose }: Props) {
           toolbar={toolbar}
           query={{
             defaults: {
-              pageSize: 10,
               orders: [{ field: "dictSort", desc: false }],
             },
             initial: { filters: { dictType } },
+            // 抽屉里的表格不改地址栏，免得和下面的字典列表抢参数。
+            syncUrl: false,
           }}
           form={{
             createConfig: {
-              title: "新建字典数据",
+              title: "新增字典数据",
               initialValues: { dictType, dictSort: 0, isDefault: 0, remark: "" },
               itemOverrides: dictDataCreateItems,
               relationLoaders: { dictType: dictDataRelationLoaders.dictType },
-              onSuccess: async () => {
-                message.success("创建成功");
-              },
             },
             editConfig: {
               title: "编辑字典数据",
@@ -123,9 +116,6 @@ export default function DictDataDrawer({ dictType, open, onClose }: Props) {
                 remark: entity.remark,
               }),
               itemOverrides: dictDataUpdateItems,
-              onSuccess: async () => {
-                message.success("已保存");
-              },
             },
           }}
         />

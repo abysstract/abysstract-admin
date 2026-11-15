@@ -19,7 +19,7 @@ import type {
   ResourceRowActionOverride,
   ResourceToolbarOverride,
 } from "../../components/resource";
-import { fmtTime, statusTag } from "../../util";
+import { statusTag, timeCell } from "../../util";
 import { useAccess } from "../../runtime/access";
 import { formatErrorMessage, useAppMessage } from "../../runtime/message";
 import RoleMenuDrawer from "./RoleMenuDrawer";
@@ -54,7 +54,7 @@ function roleColumns(canEdit: boolean): ResourceColumnOverrides<typeof roleSchem
     id: { hidden: true },
     roleName: { title: "角色名称" },
     roleKey: { title: "权限标识" },
-    roleSort: { title: "排序" },
+    roleSort: { title: "排序", numeric: true },
     dataScope: {
       title: "数据范围",
       render: ({ value }) => <Tag>{dataScopeLabels[value] ?? String(value)}</Tag>,
@@ -65,21 +65,21 @@ function roleColumns(canEdit: boolean): ResourceColumnOverrides<typeof roleSchem
         canEdit ? <RoleStatusSwitch entity={entity} reload={reload} /> : statusTag(entity.status),
     },
     remark: { title: "备注", hidden: true },
-    createTime: { title: "创建时间", render: ({ value }) => fmtTime(value), hidden: true },
-    updateTime: { title: "更新时间", render: ({ value }) => fmtTime(value), hidden: true },
+    createTime: { title: "创建时间", render: ({ value }) => timeCell(value), hidden: true },
+    updateTime: { title: "更新时间", render: ({ value }) => timeCell(value), hidden: true },
   };
 }
 
 const roleCreateItems: RoleCreateItems = {
   roleName: { label: "角色名称" },
-  roleKey: { label: "权限标识" },
+  roleKey: { label: "权限标识", sameRowAsPrevious: true },
   roleSort: { label: "排序", valueType: "number", fieldProps: { min: 0 } },
   dataScope: {
     label: "数据范围",
     valueType: "select",
     fieldProps: { options: dataScopeOptions },
   },
-  remark: { label: "备注" },
+  remark: { label: "备注", valueType: "textarea", fieldProps: { rows: 2 } },
 };
 
 const roleUpdateItems: RoleUpdateItems = {
@@ -90,13 +90,10 @@ const roleUpdateItems: RoleUpdateItems = {
     valueType: "select",
     fieldProps: { options: dataScopeOptions },
   },
-  remark: { label: "备注" },
+  remark: { label: "备注", valueType: "textarea", fieldProps: { rows: 2 } },
 };
 
-const roleToolbar: readonly ResourceToolbarOverride<Role, bigint>[] = [
-  { action: "create", merge: "replace", title: "新建角色" },
-  { action: "batchDelete", merge: "replace", title: "批量删除" },
-];
+const roleToolbar: readonly ResourceToolbarOverride<Role, bigint>[] = [];
 
 type RoleStatusSwitchProps = Pick<ResourceRowActionContext<Role, bigint>, "entity" | "reload">;
 
@@ -113,10 +110,10 @@ function RoleStatusSwitch({ entity, reload }: RoleStatusSwitchProps) {
         id: entity.id,
         status: checked ? Status.ENABLED : Status.DISABLED,
       });
-      message.success(checked ? "角色已启用" : "角色已停用");
+      message.success(checked ? "已启用" : "已停用");
       await reload();
     } catch (cause) {
-      message.error(formatErrorMessage(cause, "状态更新失败"));
+      message.error(formatErrorMessage(cause, "无法更改状态，请稍后重试"));
     } finally {
       setLoading(false);
     }
@@ -139,7 +136,6 @@ const menuListPermission = menuSchema.permissions?.list ?? `${menuSchema.permPre
 
 export default function RoleList() {
   const { roleOperations } = useSystemOperations();
-  const message = useAppMessage();
   const { has } = useAccess();
   const [drawerRole, setDrawerRole] = useState<Role | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -178,18 +174,14 @@ export default function RoleList() {
         schema={roleSchema}
         operations={roleOperations}
         access={{ can: (permission) => has(permission) }}
-        onError={(error) => message.error(formatErrorMessage(error))}
         columns={roleColumns(canEdit)}
         rowActions={roleRowActions}
         toolbar={roleToolbar}
         form={{
           createConfig: {
-            title: "新建角色",
+            title: "新增角色",
             initialValues: { roleSort: 0, dataScope: 1 },
             itemOverrides: roleCreateItems,
-            onSuccess: async () => {
-              message.success("创建成功");
-            },
           },
           editConfig: {
             title: "编辑角色",
@@ -200,9 +192,6 @@ export default function RoleList() {
               remark: entity.remark,
             }),
             itemOverrides: roleUpdateItems,
-            onSuccess: async () => {
-              message.success("已保存");
-            },
           },
         }}
       />

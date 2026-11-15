@@ -18,7 +18,13 @@ vi.mock("antd", async (importOriginal) => {
   const message = { success: vi.fn(), error: vi.fn() };
   return {
     ...actual,
-    Drawer: (props: Record<string, unknown>) => <div>{props.children as ReactNode}</div>,
+    Drawer: (props: Record<string, unknown>) =>
+      props.open === false ? null : (
+        <div role="dialog" aria-label={String(props.title ?? "")}>
+          {props.extra as ReactNode}
+          {props.children as ReactNode}
+        </div>
+      ),
     App: Object.assign(({ children }: { children?: ReactNode }) => <>{children}</>, {
       useApp: () => ({ message }),
     }),
@@ -73,7 +79,7 @@ const row = create(DictDataSchema, {
 const nonEntityKey = 9007199254740993n;
 
 beforeEach(() => {
-  facade.list.mockReset().mockResolvedValue({ items: [row], total: 1n, pageNum: 1, pageSize: 10 });
+  facade.list.mockReset().mockResolvedValue({ items: [row], total: 1n, pageNum: 1, pageSize: 20 });
   facade.create.mockReset().mockResolvedValue(row);
   facade.update.mockReset().mockResolvedValue(row);
   facade.delete.mockReset().mockResolvedValue(undefined);
@@ -88,7 +94,7 @@ describe("DictDataDrawer real Resource consumption gate", () => {
     await waitFor(() => expect(facade.list).toHaveBeenCalledOnce());
     expect(facade.list).toHaveBeenCalledWith({
       pageNum: 1,
-      pageSize: 10,
+      pageSize: 20,
       orders: [{ field: "dictSort", desc: false }],
       filters: { dictType: "notice" },
     });
@@ -101,7 +107,7 @@ describe("DictDataDrawer real Resource consumption gate", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "编辑" }));
     fireEvent.change(screen.getByLabelText("标签"), { target: { value: "新标签" } });
-    fireEvent.click(screen.getByRole("button", { name: "提交" }));
+    fireEvent.click(screen.getByRole("button", { name: "保存" }));
 
     await waitFor(() => expect(facade.update).toHaveBeenCalledOnce());
     const submission = facade.update.mock.calls[0]?.[0] as {

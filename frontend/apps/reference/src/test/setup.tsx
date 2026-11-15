@@ -4,6 +4,8 @@ import { afterEach, vi } from "vitest";
 
 afterEach(() => {
   cleanup();
+  // ResourceTable writes its query into the address bar; start every test from a clean URL.
+  window.history.replaceState(null, "", "/");
 });
 import { createContext } from "react";
 import type { ChangeEvent, ComponentType, ReactNode } from "react";
@@ -176,28 +178,83 @@ vi.mock("antd", () => {
     info: vi.fn(),
     warning: vi.fn(),
   };
+  const modalStatics = {
+    error: vi.fn(),
+    confirm: vi.fn(),
+    info: vi.fn(),
+    success: vi.fn(),
+    warning: vi.fn(),
+  };
   const AntdApp = Object.assign(({ children }: { children?: ReactNode }) => <>{children}</>, {
-    useApp: () => ({ message }),
+    useApp: () => ({ message, modal: modalStatics }),
   });
   return {
     Button: passthroughButton,
     Space: passThrough,
     Alert: passThrough,
-    Empty: ({ description }: { description?: ReactNode }) => <div>{description}</div>,
-    Spin: () => <span role="status">加载中</span>,
-    Modal: (props: Record<string, unknown>) =>
-      props.open ? (
-        <div role="dialog" aria-label={String(props.title ?? "")}>
-          <button type="button" onClick={props.onCancel as (() => void) | undefined}>
-            关闭
-          </button>
-          {props.children as ReactNode}
-          {props.footer as ReactNode}
+    Empty: Object.assign(
+      ({ description, children }: { description?: ReactNode; children?: ReactNode }) => (
+        <div>
+          {description}
+          {children}
         </div>
-      ) : null,
+      ),
+      { PRESENTED_IMAGE_SIMPLE: "simple" },
+    ),
+    Skeleton: () => <span role="status">加载中</span>,
+    Tooltip: passThrough,
+    Row: passThrough,
+    Col: passThrough,
+    Checkbox: ({
+      checked,
+      disabled,
+      id,
+      name,
+      "aria-label": ariaLabel,
+      onChange,
+      children,
+    }: {
+      checked?: boolean;
+      disabled?: boolean;
+      id?: string;
+      name?: string;
+      "aria-label"?: string;
+      onChange?: (event: { target: { checked: boolean } }) => void;
+      children?: ReactNode;
+    }) => (
+      <label>
+        <input
+          id={id}
+          name={name}
+          aria-label={ariaLabel}
+          type="checkbox"
+          checked={checked}
+          disabled={disabled}
+          onChange={(event) => onChange?.({ target: { checked: event.currentTarget.checked } })}
+        />
+        {children}
+      </label>
+    ),
+    Spin: () => <span role="status">加载中</span>,
+    Modal: Object.assign(
+      (props: Record<string, unknown>) =>
+        props.open ? (
+          <div role="dialog" aria-label={String(props.title ?? "")}>
+            <button type="button" onClick={props.onCancel as (() => void) | undefined}>
+              关闭
+            </button>
+            {props.children as ReactNode}
+            {props.footer as ReactNode}
+          </div>
+        ) : null,
+      modalStatics,
+    ),
     Drawer: (props: Record<string, unknown>) =>
       props.open ? (
         <div role="dialog" aria-label={String(props.title ?? "")}>
+          <button type="button" onClick={props.onClose as (() => void) | undefined}>
+            关闭
+          </button>
           {props.extra as ReactNode}
           {props.children as ReactNode}
         </div>
@@ -237,7 +294,25 @@ vi.mock("antd", () => {
         {extra}
       </div>
     ),
-    Dropdown: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
+    Dropdown: ({
+      children,
+      menu,
+    }: {
+      children?: ReactNode;
+      menu?: {
+        items?: { key: string; label?: ReactNode }[];
+        onClick?: (info: { key: string }) => void;
+      };
+    }) => (
+      <div>
+        {children}
+        {menu?.items?.map((item) => (
+          <button key={item.key} type="button" onClick={() => menu.onClick?.({ key: item.key })}>
+            {item.label}
+          </button>
+        ))}
+      </div>
+    ),
     Tag: passThrough,
     Form,
     Input,
@@ -357,6 +432,7 @@ vi.mock("@ant-design/icons", () => {
     // ProLayout（pro-components 3）在模块加载时调用 createFromIconfontCN。
     createFromIconfontCN: () => Icon,
     DeleteOutlined: Icon,
+    EllipsisOutlined: Icon,
     DownloadOutlined: Icon,
     KeyOutlined: Icon,
     LockOutlined: Icon,
@@ -413,7 +489,7 @@ type MockProTableProps = {
   locale?: { emptyText?: ReactNode };
   search?: false | Record<string, unknown>;
   onChange?: MockProTableChange;
-  toolBarRender?: () => ReactNode[];
+  toolBarRender?: false | (() => ReactNode[]);
 };
 
 function mockProTableKey(
@@ -432,7 +508,7 @@ vi.mock("@ant-design/pro-components", () => {
   // consumes; all query and action decisions remain in ResourceTable.
   const ProTable = (rawProps: Record<string, unknown>) => {
     const props = rawProps as MockProTableProps;
-    const toolBar = props.toolBarRender?.() ?? [];
+    const toolBar = typeof props.toolBarRender === "function" ? props.toolBarRender() : [];
     const columns = props.columns ?? [];
     const rows = props.dataSource ?? [];
     const selection = props.rowSelection;

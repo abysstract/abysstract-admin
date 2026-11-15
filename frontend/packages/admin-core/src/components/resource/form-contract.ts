@@ -72,6 +72,16 @@ export interface ResourceFormItemOverride<TValue, TValues extends object, TEntit
   /** Generated required/maxLen rules are always retained; these rules append. */
   readonly rules?: readonly ResourceFormRule<TValue>[];
   readonly fieldProps?: ResourceFieldProps<TValue>;
+  /**
+   * 栅格宽度（24 列）。默认按类型：数字 6，文本、下拉 12，长文本、自定义控件 24。
+   * 见 DESIGN.md「表单字段宽度」。
+   */
+  readonly span?: 6 | 8 | 12 | 16 | 18 | 24;
+  /**
+   * 与上一个字段放在同一行。只给彼此相关的字段用（如用户名与昵称）；
+   * 默认每个字段单独一行，行尾留空。
+   */
+  readonly sameRowAsPrevious?: boolean;
 }
 
 export type ResourceFormItemOverrides<
@@ -104,6 +114,10 @@ export type ResourceRelationLoaders<
 
 export interface ResourceSubmitState {
   readonly loading?: boolean;
+  /**
+   * @deprecated 表单不再在顶部显示错误块（见 DESIGN.md「消息与反馈」）；
+   * 提交失败由调用方用 message 提示，表单内容保留。
+   */
   readonly error?: Error;
 }
 
@@ -179,6 +193,13 @@ interface ResourceFormCommonProps<
    * fields still own the ordinary CRUD values and presence bookkeeping.
    */
   readonly extraFields?: ReactNode;
+  /** 提供时显示「取消」按钮，点击后调用。 */
+  readonly onCancel?: () => void;
+  /**
+   * 把「取消 保存」按钮渲染到这个元素里（例如抽屉标题栏右侧，见 ResourceFormDrawer）。
+   * 不传时按钮放在表单底部右侧；传 null 表示容器尚未挂载，暂不渲染按钮。
+   */
+  readonly actionsContainer?: HTMLElement | null;
 }
 
 type CreateTransport<

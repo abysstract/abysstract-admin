@@ -24,7 +24,7 @@ export class AppErrorBoundary extends Component<AppErrorBoundaryProps, { error: 
         <Result
           status="error"
           title="页面出错了"
-          subTitle="页面发生异常，请刷新页面重试；若反复出现，请联系管理员。"
+          subTitle="页面出错了。刷新页面重试；反复出现时，把页面地址发给管理员"
           extra={
             <Button type="primary" onClick={() => window.location.reload()}>
               刷新页面
