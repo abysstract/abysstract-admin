@@ -9,7 +9,7 @@ import { useAdminTexts } from "../../runtime/texts";
 export default function ProfilePage() {
   const { profile: profileClient, upload: uploadClient } = useSystemClients();
   const message = useAppMessage();
-  const [form] = Form.useForm();
+  const [initialValues, setInitialValues] = useState<Record<string, string>>();
   const [avatar, setAvatar] = useState("");
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -24,7 +24,7 @@ export default function ProfilePage() {
     profileClient
       .getProfile({})
       .then((res) => {
-        form.setFieldsValue({
+        setInitialValues({
           username: res.username,
           nickname: res.nickname,
           email: res.email,
@@ -34,7 +34,7 @@ export default function ProfilePage() {
       })
       .catch((e: unknown) => setLoadError(e))
       .finally(() => setInitialLoading(false));
-  }, [form, profileClient, attempt]);
+  }, [profileClient, attempt]);
 
   const uploadProps: UploadProps = {
     accept: ".jpg,.jpeg,.png,.gif,.webp",
@@ -113,7 +113,8 @@ export default function ProfilePage() {
             <Button>更换头像</Button>
           </Upload>
         </div>
-        <Form form={form} layout="vertical" onFinish={save}>
+        {/* Card 加载时不渲染子元素，表单在数据到达后挂载，用 initialValues 填值。 */}
+        <Form layout="vertical" initialValues={initialValues} onFinish={save}>
           <Form.Item name="username" label="用户名">
             <Input disabled />
           </Form.Item>

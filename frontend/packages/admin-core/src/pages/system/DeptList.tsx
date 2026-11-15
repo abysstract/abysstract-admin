@@ -57,7 +57,7 @@ const deptCreateItems: DeptCreateItems = {
   orderNum: { label: "排序", valueType: "number", fieldProps: { min: 0 } },
   leader: { label: "负责人" },
   phone: { label: "联系电话" },
-  email: { label: "邮箱" },
+  email: { label: "邮箱", sameRowAsPrevious: true },
 };
 
 const deptUpdateItems: DeptUpdateItems = {
@@ -70,7 +70,7 @@ const deptUpdateItems: DeptUpdateItems = {
   orderNum: { label: "排序", valueType: "number", fieldProps: { min: 0 } },
   leader: { label: "负责人" },
   phone: { label: "联系电话" },
-  email: { label: "邮箱" },
+  email: { label: "邮箱", sameRowAsPrevious: true },
 };
 
 const deptRowActions: readonly ResourceRowActionOverride<Dept, bigint>[] = [
