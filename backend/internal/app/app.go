@@ -11,6 +11,10 @@ import (
 	// Enables ADMIN_STORAGE_DRIVER=s3. Remove the import to drop the AWS SDK
 	// from the binary when only local storage is used.
 	_ "github.com/abysstract/abysstract-admin/backend/storage/s3storage"
+
+	// Enables ADMIN_CAPTCHA_PROVIDER=slide, the self-hosted slider captcha.
+	// Remove the import to drop its images from the binary.
+	_ "github.com/abysstract/abysstract-admin/backend/captcha/slidecaptcha"
 )
 
 // New assembles the modules used by this application.

@@ -6,8 +6,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"net"
-	"strings"
 	"time"
 
 	"github.com/abysstract/abysstract-admin/backend/identity"
@@ -32,7 +30,8 @@ type AuthService struct {
 	// 刷新令牌
 	refreshEnabled   bool
 	refreshExpiresIn time.Duration
-	trustProxy       bool
+	proxies          accesslog.ProxyPolicy
+	guard            *LoginGuard
 	now              func() time.Time
 	// hiddenMenuPerms 中的菜单不出现在 GetUserInfo 的菜单树中（如未配置可查询 sink 时的请求日志）。
 	hiddenMenuPerms map[string]bool
@@ -72,26 +71,23 @@ func NewAuthService(
 		jwtExpiresIn:     jwtExpiresIn,
 		refreshEnabled:   refreshEnabled,
 		refreshExpiresIn: refreshExpiresIn,
-		trustProxy:       trustProxy,
+		proxies:          accesslog.ProxyPolicy{Trust: trustProxy},
 		now:              time.Now,
 	}
 }
 
-// loginIP 解析登录来源 IP。仅在信任反向代理时采用 X-Forwarded-For 最左地址，
-// 否则使用直连对端地址（去端口），避免外部伪造 XFF 头污染登录审计日志。
+// loginIP 解析登录来源 IP（规则见 accesslog.ProxyPolicy）。
 func (s *AuthService) loginIP(header *connect.Header, peerAddr string) string {
-	if s.trustProxy {
-		if xff := header.Get("X-Forwarded-For"); xff != "" {
-			if i := strings.IndexByte(xff, ','); i >= 0 {
-				return strings.TrimSpace(xff[:i])
-			}
-			return strings.TrimSpace(xff)
-		}
+	return s.proxies.ClientIP(header, peerAddr)
+}
+
+// tooManyAttemptsMessage 是来源 IP 失败过多时的文案，剩余时间按分钟向上取整。
+func tooManyAttemptsMessage(remaining time.Duration) string {
+	minutes := int((remaining + time.Minute - 1) / time.Minute)
+	if minutes < 1 {
+		minutes = 1
 	}
-	if host, _, err := net.SplitHostPort(peerAddr); err == nil {
-		return host
-	}
-	return peerAddr
+	return fmt.Sprintf("尝试次数过多，请 %d 分钟后再试", minutes)
 }
 
 // lockedMessage 是账号锁定时返回给登录页的文案，剩余时间按分钟向上取整，至少 1 分钟。
@@ -103,7 +99,7 @@ func lockedMessage(remaining time.Duration) string {
 	return fmt.Sprintf("账号已锁定，请 %d 分钟后再试", minutes)
 }
 
-// Login 验证密码 → 检查账号锁定 → 签发 JWT 与可选 refresh_token。
+// Login 检查账号锁定 → IP 计数与验证码 → 验证密码 → 签发 JWT 与可选 refresh_token。
 // 失败时通过 LoginSecurity 记录失败计数，达到阈值触发锁定（需求 6.6）。
 func (s *AuthService) Login(
 	ctx context.Context, req *adminv1.LoginRequest,
@@ -127,19 +123,58 @@ func (s *AuthService) Login(
 		}
 	}
 
-	u, err := s.repo.VerifyPassword(ctx, username, req.Password)
-	if err != nil {
-		// 2) 失败计数 +1（需求 6.6）。
-		// 计数失败视为基础设施异常，拒绝登录而不是放行：避免攻击者通过打挂
-		// sys_login_attempt 让计数永远写不进而在阈值之外反复尝试。
-		if s.loginSec != nil {
-			if _, _, ferr := s.loginSec.RecordFailure(ctx, username, now); ferr != nil {
-				_ = s.repo.AddLoginLog(ctx, &model.SysLoginLog{Username: username, Status: 2, IP: ip, Msg: "登录失败：计数器异常"})
-				return nil, connect.NewError(connect.CodeInternal, ferr.Error()).WithCause(ferr)
+	// 2) 按来源 IP 计数与验证码：未启用验证码时 IP 失败过多直接拒绝；
+	// 启用后账号或 IP 失败达到阈值要求验证码。验证码缺失或错误不计入失败次数。
+	ipKey := loginIPKey(ip)
+	if g := s.guard; g != nil {
+		ipFails, ipUntil, err := g.IP.Failures(ctx, ipKey, now)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
+		}
+		if g.Captcha == nil {
+			if int(ipFails) >= g.IPMaxFailures {
+				_ = s.repo.AddLoginLog(ctx, &model.SysLoginLog{Username: username, Status: 2, IP: ip, Msg: "登录失败：来源 IP 尝试次数过多"})
+				return nil, connect.NewError(connect.CodeResourceExhausted, tooManyAttemptsMessage(ipUntil.Sub(now)))
+			}
+		} else {
+			var accountFails int32
+			if s.loginSec != nil {
+				if accountFails, err = s.loginSec.FailCount(ctx, username, now); err != nil {
+					return nil, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
+				}
+			}
+			if g.captchaRequired(accountFails, ipFails) {
+				if cerr, msg := s.checkCaptcha(ctx, req, ip, now); cerr != nil {
+					_ = s.repo.AddLoginLog(ctx, &model.SysLoginLog{Username: username, Status: 2, IP: ip, Msg: msg})
+					return nil, cerr
+				}
 			}
 		}
+	}
+
+	u, err := s.repo.VerifyPassword(ctx, username, req.Password)
+	if err != nil {
+		// 3) 失败计数 +1（需求 6.6）。
+		// 计数失败视为基础设施异常，拒绝登录而不是放行：避免攻击者通过打挂
+		// sys_login_attempt 让计数永远写不进而在阈值之外反复尝试。
+		var accountFails, ipFails int32
+		var ferr error
+		if s.loginSec != nil {
+			_, accountFails, ferr = s.loginSec.RecordFailure(ctx, username, now)
+		}
+		if ferr == nil && s.guard != nil {
+			ipFails, ferr = s.guard.IP.RecordFailure(ctx, ipKey, now)
+		}
+		if ferr != nil {
+			_ = s.repo.AddLoginLog(ctx, &model.SysLoginLog{Username: username, Status: 2, IP: ip, Msg: "登录失败：计数器异常"})
+			return nil, connect.NewError(connect.CodeInternal, ferr.Error()).WithCause(ferr)
+		}
 		_ = s.repo.AddLoginLog(ctx, &model.SysLoginLog{Username: username, Status: 2, IP: ip, Msg: "登录失败：用户名或密码错误"})
-		return nil, connect.NewError(connect.CodeUnauthenticated, "用户名或密码错误")
+		cerr := connect.NewError(connect.CodeUnauthenticated, "用户名或密码错误")
+		if s.guard.captchaRequired(accountFails, ipFails) {
+			cerr = loginChallengeError(cerr, &adminv1.LoginChallenge{CaptchaRequired: true})
+		}
+		return nil, cerr
 	}
 	if u.Status != int16(adminv1.Status_STATUS_ENABLED) {
 		_ = s.repo.AddLoginLog(ctx, &model.SysLoginLog{Username: username, Status: 2, IP: ip, Msg: "登录失败：账号已停用"})

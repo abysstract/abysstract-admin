@@ -473,6 +473,8 @@ vi.mock("@ant-design/icons", () => {
     default: Icon,
     // ProLayout（pro-components 3）在模块加载时调用 createFromIconfontCN。
     createFromIconfontCN: () => Icon,
+    ArrowRightOutlined: Icon,
+    CheckOutlined: Icon,
     DeleteOutlined: Icon,
     EllipsisOutlined: Icon,
     ReloadOutlined: Icon,

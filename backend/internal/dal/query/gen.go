@@ -17,47 +17,51 @@ import (
 
 func Use(db *gorm.DB, opts ...gen.DOOption) *Query {
 	return &Query{
-		db:               db,
-		SysAccessLog:     newSysAccessLog(db, opts...),
-		SysConfig:        newSysConfig(db, opts...),
-		SysDept:          newSysDept(db, opts...),
-		SysDictDatum:     newSysDictDatum(db, opts...),
-		SysDictType:      newSysDictType(db, opts...),
-		SysLoginAttempt:  newSysLoginAttempt(db, opts...),
-		SysLoginLog:      newSysLoginLog(db, opts...),
-		SysMenu:          newSysMenu(db, opts...),
-		SysModuleBinding: newSysModuleBinding(db, opts...),
-		SysNotice:        newSysNotice(db, opts...),
-		SysOperLog:       newSysOperLog(db, opts...),
-		SysRefreshToken:  newSysRefreshToken(db, opts...),
-		SysRole:          newSysRole(db, opts...),
-		SysRoleDept:      newSysRoleDept(db, opts...),
-		SysRoleMenu:      newSysRoleMenu(db, opts...),
-		SysUser:          newSysUser(db, opts...),
-		SysUserRole:      newSysUserRole(db, opts...),
+		db:                db,
+		SysAccessLog:      newSysAccessLog(db, opts...),
+		SysCaptchaUsed:    newSysCaptchaUsed(db, opts...),
+		SysConfig:         newSysConfig(db, opts...),
+		SysDept:           newSysDept(db, opts...),
+		SysDictDatum:      newSysDictDatum(db, opts...),
+		SysDictType:       newSysDictType(db, opts...),
+		SysLoginAttempt:   newSysLoginAttempt(db, opts...),
+		SysLoginIPAttempt: newSysLoginIPAttempt(db, opts...),
+		SysLoginLog:       newSysLoginLog(db, opts...),
+		SysMenu:           newSysMenu(db, opts...),
+		SysModuleBinding:  newSysModuleBinding(db, opts...),
+		SysNotice:         newSysNotice(db, opts...),
+		SysOperLog:        newSysOperLog(db, opts...),
+		SysRefreshToken:   newSysRefreshToken(db, opts...),
+		SysRole:           newSysRole(db, opts...),
+		SysRoleDept:       newSysRoleDept(db, opts...),
+		SysRoleMenu:       newSysRoleMenu(db, opts...),
+		SysUser:           newSysUser(db, opts...),
+		SysUserRole:       newSysUserRole(db, opts...),
 	}
 }
 
 type Query struct {
 	db *gorm.DB
 
-	SysAccessLog     sysAccessLog
-	SysConfig        sysConfig
-	SysDept          sysDept
-	SysDictDatum     sysDictDatum
-	SysDictType      sysDictType
-	SysLoginAttempt  sysLoginAttempt
-	SysLoginLog      sysLoginLog
-	SysMenu          sysMenu
-	SysModuleBinding sysModuleBinding
-	SysNotice        sysNotice
-	SysOperLog       sysOperLog
-	SysRefreshToken  sysRefreshToken
-	SysRole          sysRole
-	SysRoleDept      sysRoleDept
-	SysRoleMenu      sysRoleMenu
-	SysUser          sysUser
-	SysUserRole      sysUserRole
+	SysAccessLog      sysAccessLog
+	SysCaptchaUsed    sysCaptchaUsed
+	SysConfig         sysConfig
+	SysDept           sysDept
+	SysDictDatum      sysDictDatum
+	SysDictType       sysDictType
+	SysLoginAttempt   sysLoginAttempt
+	SysLoginIPAttempt sysLoginIPAttempt
+	SysLoginLog       sysLoginLog
+	SysMenu           sysMenu
+	SysModuleBinding  sysModuleBinding
+	SysNotice         sysNotice
+	SysOperLog        sysOperLog
+	SysRefreshToken   sysRefreshToken
+	SysRole           sysRole
+	SysRoleDept       sysRoleDept
+	SysRoleMenu       sysRoleMenu
+	SysUser           sysUser
+	SysUserRole       sysUserRole
 }
 
 func (q *Query) Available() bool { return q.db != nil }
@@ -66,24 +70,26 @@ func (q *Query) UnderlyingDB() *gorm.DB { return q.db }
 
 func (q *Query) clone(db *gorm.DB) *Query {
 	return &Query{
-		db:               db,
-		SysAccessLog:     q.SysAccessLog.clone(db),
-		SysConfig:        q.SysConfig.clone(db),
-		SysDept:          q.SysDept.clone(db),
-		SysDictDatum:     q.SysDictDatum.clone(db),
-		SysDictType:      q.SysDictType.clone(db),
-		SysLoginAttempt:  q.SysLoginAttempt.clone(db),
-		SysLoginLog:      q.SysLoginLog.clone(db),
-		SysMenu:          q.SysMenu.clone(db),
-		SysModuleBinding: q.SysModuleBinding.clone(db),
-		SysNotice:        q.SysNotice.clone(db),
-		SysOperLog:       q.SysOperLog.clone(db),
-		SysRefreshToken:  q.SysRefreshToken.clone(db),
-		SysRole:          q.SysRole.clone(db),
-		SysRoleDept:      q.SysRoleDept.clone(db),
-		SysRoleMenu:      q.SysRoleMenu.clone(db),
-		SysUser:          q.SysUser.clone(db),
-		SysUserRole:      q.SysUserRole.clone(db),
+		db:                db,
+		SysAccessLog:      q.SysAccessLog.clone(db),
+		SysCaptchaUsed:    q.SysCaptchaUsed.clone(db),
+		SysConfig:         q.SysConfig.clone(db),
+		SysDept:           q.SysDept.clone(db),
+		SysDictDatum:      q.SysDictDatum.clone(db),
+		SysDictType:       q.SysDictType.clone(db),
+		SysLoginAttempt:   q.SysLoginAttempt.clone(db),
+		SysLoginIPAttempt: q.SysLoginIPAttempt.clone(db),
+		SysLoginLog:       q.SysLoginLog.clone(db),
+		SysMenu:           q.SysMenu.clone(db),
+		SysModuleBinding:  q.SysModuleBinding.clone(db),
+		SysNotice:         q.SysNotice.clone(db),
+		SysOperLog:        q.SysOperLog.clone(db),
+		SysRefreshToken:   q.SysRefreshToken.clone(db),
+		SysRole:           q.SysRole.clone(db),
+		SysRoleDept:       q.SysRoleDept.clone(db),
+		SysRoleMenu:       q.SysRoleMenu.clone(db),
+		SysUser:           q.SysUser.clone(db),
+		SysUserRole:       q.SysUserRole.clone(db),
 	}
 }
 
@@ -97,66 +103,72 @@ func (q *Query) WriteDB() *Query {
 
 func (q *Query) ReplaceDB(db *gorm.DB) *Query {
 	return &Query{
-		db:               db,
-		SysAccessLog:     q.SysAccessLog.replaceDB(db),
-		SysConfig:        q.SysConfig.replaceDB(db),
-		SysDept:          q.SysDept.replaceDB(db),
-		SysDictDatum:     q.SysDictDatum.replaceDB(db),
-		SysDictType:      q.SysDictType.replaceDB(db),
-		SysLoginAttempt:  q.SysLoginAttempt.replaceDB(db),
-		SysLoginLog:      q.SysLoginLog.replaceDB(db),
-		SysMenu:          q.SysMenu.replaceDB(db),
-		SysModuleBinding: q.SysModuleBinding.replaceDB(db),
-		SysNotice:        q.SysNotice.replaceDB(db),
-		SysOperLog:       q.SysOperLog.replaceDB(db),
-		SysRefreshToken:  q.SysRefreshToken.replaceDB(db),
-		SysRole:          q.SysRole.replaceDB(db),
-		SysRoleDept:      q.SysRoleDept.replaceDB(db),
-		SysRoleMenu:      q.SysRoleMenu.replaceDB(db),
-		SysUser:          q.SysUser.replaceDB(db),
-		SysUserRole:      q.SysUserRole.replaceDB(db),
+		db:                db,
+		SysAccessLog:      q.SysAccessLog.replaceDB(db),
+		SysCaptchaUsed:    q.SysCaptchaUsed.replaceDB(db),
+		SysConfig:         q.SysConfig.replaceDB(db),
+		SysDept:           q.SysDept.replaceDB(db),
+		SysDictDatum:      q.SysDictDatum.replaceDB(db),
+		SysDictType:       q.SysDictType.replaceDB(db),
+		SysLoginAttempt:   q.SysLoginAttempt.replaceDB(db),
+		SysLoginIPAttempt: q.SysLoginIPAttempt.replaceDB(db),
+		SysLoginLog:       q.SysLoginLog.replaceDB(db),
+		SysMenu:           q.SysMenu.replaceDB(db),
+		SysModuleBinding:  q.SysModuleBinding.replaceDB(db),
+		SysNotice:         q.SysNotice.replaceDB(db),
+		SysOperLog:        q.SysOperLog.replaceDB(db),
+		SysRefreshToken:   q.SysRefreshToken.replaceDB(db),
+		SysRole:           q.SysRole.replaceDB(db),
+		SysRoleDept:       q.SysRoleDept.replaceDB(db),
+		SysRoleMenu:       q.SysRoleMenu.replaceDB(db),
+		SysUser:           q.SysUser.replaceDB(db),
+		SysUserRole:       q.SysUserRole.replaceDB(db),
 	}
 }
 
 type queryCtx struct {
-	SysAccessLog     *sysAccessLogDo
-	SysConfig        *sysConfigDo
-	SysDept          *sysDeptDo
-	SysDictDatum     *sysDictDatumDo
-	SysDictType      *sysDictTypeDo
-	SysLoginAttempt  *sysLoginAttemptDo
-	SysLoginLog      *sysLoginLogDo
-	SysMenu          *sysMenuDo
-	SysModuleBinding *sysModuleBindingDo
-	SysNotice        *sysNoticeDo
-	SysOperLog       *sysOperLogDo
-	SysRefreshToken  *sysRefreshTokenDo
-	SysRole          *sysRoleDo
-	SysRoleDept      *sysRoleDeptDo
-	SysRoleMenu      *sysRoleMenuDo
-	SysUser          *sysUserDo
-	SysUserRole      *sysUserRoleDo
+	SysAccessLog      *sysAccessLogDo
+	SysCaptchaUsed    *sysCaptchaUsedDo
+	SysConfig         *sysConfigDo
+	SysDept           *sysDeptDo
+	SysDictDatum      *sysDictDatumDo
+	SysDictType       *sysDictTypeDo
+	SysLoginAttempt   *sysLoginAttemptDo
+	SysLoginIPAttempt *sysLoginIPAttemptDo
+	SysLoginLog       *sysLoginLogDo
+	SysMenu           *sysMenuDo
+	SysModuleBinding  *sysModuleBindingDo
+	SysNotice         *sysNoticeDo
+	SysOperLog        *sysOperLogDo
+	SysRefreshToken   *sysRefreshTokenDo
+	SysRole           *sysRoleDo
+	SysRoleDept       *sysRoleDeptDo
+	SysRoleMenu       *sysRoleMenuDo
+	SysUser           *sysUserDo
+	SysUserRole       *sysUserRoleDo
 }
 
 func (q *Query) WithContext(ctx context.Context) *queryCtx {
 	return &queryCtx{
-		SysAccessLog:     q.SysAccessLog.WithContext(ctx),
-		SysConfig:        q.SysConfig.WithContext(ctx),
-		SysDept:          q.SysDept.WithContext(ctx),
-		SysDictDatum:     q.SysDictDatum.WithContext(ctx),
-		SysDictType:      q.SysDictType.WithContext(ctx),
-		SysLoginAttempt:  q.SysLoginAttempt.WithContext(ctx),
-		SysLoginLog:      q.SysLoginLog.WithContext(ctx),
-		SysMenu:          q.SysMenu.WithContext(ctx),
-		SysModuleBinding: q.SysModuleBinding.WithContext(ctx),
-		SysNotice:        q.SysNotice.WithContext(ctx),
-		SysOperLog:       q.SysOperLog.WithContext(ctx),
-		SysRefreshToken:  q.SysRefreshToken.WithContext(ctx),
-		SysRole:          q.SysRole.WithContext(ctx),
-		SysRoleDept:      q.SysRoleDept.WithContext(ctx),
-		SysRoleMenu:      q.SysRoleMenu.WithContext(ctx),
-		SysUser:          q.SysUser.WithContext(ctx),
-		SysUserRole:      q.SysUserRole.WithContext(ctx),
+		SysAccessLog:      q.SysAccessLog.WithContext(ctx),
+		SysCaptchaUsed:    q.SysCaptchaUsed.WithContext(ctx),
+		SysConfig:         q.SysConfig.WithContext(ctx),
+		SysDept:           q.SysDept.WithContext(ctx),
+		SysDictDatum:      q.SysDictDatum.WithContext(ctx),
+		SysDictType:       q.SysDictType.WithContext(ctx),
+		SysLoginAttempt:   q.SysLoginAttempt.WithContext(ctx),
+		SysLoginIPAttempt: q.SysLoginIPAttempt.WithContext(ctx),
+		SysLoginLog:       q.SysLoginLog.WithContext(ctx),
+		SysMenu:           q.SysMenu.WithContext(ctx),
+		SysModuleBinding:  q.SysModuleBinding.WithContext(ctx),
+		SysNotice:         q.SysNotice.WithContext(ctx),
+		SysOperLog:        q.SysOperLog.WithContext(ctx),
+		SysRefreshToken:   q.SysRefreshToken.WithContext(ctx),
+		SysRole:           q.SysRole.WithContext(ctx),
+		SysRoleDept:       q.SysRoleDept.WithContext(ctx),
+		SysRoleMenu:       q.SysRoleMenu.WithContext(ctx),
+		SysUser:           q.SysUser.WithContext(ctx),
+		SysUserRole:       q.SysUserRole.WithContext(ctx),
 	}
 }
 

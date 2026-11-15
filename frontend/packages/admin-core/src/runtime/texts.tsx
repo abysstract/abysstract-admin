@@ -59,6 +59,22 @@ export interface AdminTexts {
     readonly invalidCredentials: string;
     /** 服务没有给出可读原因时的兜底文案。账号锁定、停用等原因由服务端返回，原样显示。 */
     readonly cannotLogin: string;
+    /** 验证码字段的标签。 */
+    readonly captcha: string;
+    /** 需要验证码但还没完成，标在验证码下方。 */
+    readonly captchaRequired: string;
+    /** 验证码没通过或已过期，标在验证码下方。 */
+    readonly captchaInvalid: string;
+    /** 内置滑块的操作提示。 */
+    readonly slideHint: string;
+    /** 内置滑块完成拖动后的状态。 */
+    readonly slideDone: string;
+    /** 换一张验证图片。 */
+    readonly captchaRefresh: string;
+    /** 验证码加载失败。 */
+    readonly captchaLoadFailed: string;
+    /** 服务端启用了需要宿主组件的验证码，但 AdminHost.login.captcha 没有配置。 */
+    readonly captchaUnsupported: string;
   };
 }
 
@@ -113,6 +129,14 @@ export const defaultAdminTexts: AdminTexts = {
     submit: "登录",
     invalidCredentials: "用户名或密码不正确",
     cannotLogin: "无法登录，请稍后重试",
+    captcha: "安全验证",
+    captchaRequired: "请完成安全验证",
+    captchaInvalid: "验证未通过，请重试",
+    slideHint: "向右拖动滑块，使拼图与缺口对齐",
+    slideDone: "已完成，正在登录",
+    captchaRefresh: "换一张",
+    captchaLoadFailed: "验证图片加载失败",
+    captchaUnsupported: "当前无法显示安全验证，请联系管理员",
   },
 };
 

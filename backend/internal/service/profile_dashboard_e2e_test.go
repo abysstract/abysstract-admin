@@ -18,6 +18,8 @@ import (
 	"github.com/abysstract/abysstract-admin/backend/internal/jwt"
 	"github.com/abysstract/abysstract-admin/backend/internal/repo"
 	"github.com/abysstract/abysstract-admin/backend/internal/service"
+
+	"github.com/abysstract/abysstract-admin/backend/accesslog"
 )
 
 // newProfileDashboardServer 启动一个仅含 Auth + Profile + Dashboard 的 in-process server，
@@ -43,7 +45,7 @@ func newProfileDashboardServer(t *testing.T, r *repo.Repo, mgr *jwt.Manager) *ht
 	server := connect.NewServer(
 		interceptor.NewAuthInterceptor(permRegistry, mgr, r.TokenVersion, r.PwdResetRequired),
 		interceptor.NewPermissionInterceptor(permRegistry, r.PermsOf),
-		interceptor.NewOperLogInterceptor(operLogger, false),
+		interceptor.NewOperLogInterceptor(operLogger, accesslog.ProxyPolicy{}),
 	)
 
 	mux := http.NewServeMux()

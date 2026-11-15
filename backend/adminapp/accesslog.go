@@ -59,13 +59,14 @@ func OpenAccessLog(ctx context.Context, cfg adminconfig.Config, db *gorm.DB, log
 }
 
 // AccessLogCapture returns the capture options of the admin application:
-// ADMIN_TRUST_PROXY for the client IP, the X-Request-Id assigned by the
+// ADMIN_TRUST_PROXY and ADMIN_TRUSTED_PROXIES for the client IP, the X-Request-Id assigned by the
 // application, and no entries for health probes, metrics or CORS preflight.
 func AccessLogCapture(cfg adminconfig.Config) accesslog.CaptureOptions {
 	return accesslog.CaptureOptions{
-		TrustProxy: cfg.TrustProxy,
-		RequestID:  observ.RequestIDFromContext,
-		Skip:       skipAccessLog,
+		TrustProxy:     cfg.TrustProxy,
+		TrustedProxies: cfg.TrustedProxies,
+		RequestID:      observ.RequestIDFromContext,
+		Skip:           skipAccessLog,
 	}
 }
 

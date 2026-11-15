@@ -189,6 +189,7 @@ func RegisterBuiltinPermissions(reg permission.Registrar) error {
 
 var builtinPublicProcedures = []string{
 	adminv1connect.AuthServiceLoginProcedure,
+	adminv1connect.AuthServiceGetCaptchaProcedure,
 	adminv1connect.AuthServiceRefreshTokenProcedure,
 }
 

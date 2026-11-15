@@ -14,6 +14,8 @@ import (
 	"github.com/abysstract/abysstract-admin/backend/permission"
 	"github.com/abysstract/abysstract-admin/backend/resource"
 	"github.com/abysstract/abysstract-admin/backend/storage"
+
+	"github.com/abysstract/abysstract-admin/backend/captcha"
 )
 
 // Runtime is the shared infrastructure supplied by the application to a
@@ -33,6 +35,10 @@ type Runtime struct {
 	// enrich the current request with accesslog.SetAttr. It is borrowed:
 	// modules must not close it.
 	AccessLog *accesslog.Logger
+	// Captcha is the login captcha, or nil when none is configured. The
+	// system module uses it for Login; other modules may reuse it for their
+	// own forms.
+	Captcha captcha.Verifier
 }
 
 // Definition declares one module. Static Services, Permissions, HTTP, and

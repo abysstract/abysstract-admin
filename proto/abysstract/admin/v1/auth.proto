@@ -8,6 +8,33 @@ import "abysstract/admin/v1/user.proto";
 message LoginRequest {
   string username = 1;
   string password = 2;
+  // 验证码挑战 ID：GetCaptcha 返回的 id。第三方验证（Turnstile、hCaptcha）不需要。
+  string captcha_id = 3;
+  // 验证码答案：第三方验证组件给出的 token，或对 GetCaptcha 挑战的作答（格式由 kind 决定）。
+  string captcha = 4;
+}
+
+// 登录失败时附在 Connect 错误上的 detail，告诉客户端下一次登录是否需要验证码。
+// 只在需要验证码或验证码有问题时附带。
+message LoginChallenge {
+  bool captcha_required = 1; // 下一次登录需要带验证码
+  CaptchaError captcha_error = 2; // 本次被拒是因为验证码
+}
+
+enum CaptchaError {
+  CAPTCHA_ERROR_UNSPECIFIED = 0;
+  CAPTCHA_ERROR_MISSING = 1; // 需要验证码但没有提供
+  CAPTCHA_ERROR_INVALID = 2; // 验证码错误、过期或已使用
+}
+
+message GetCaptchaRequest {}
+
+// 一个验证码挑战。未启用验证码时 GetCaptcha 返回 FailedPrecondition。
+message GetCaptchaResponse {
+  string kind = 1; // 渲染组件：slide（内置滑块）、turnstile、hcaptcha 或应用自定义
+  string payload = 2; // 交给组件的 JSON，格式由 kind 决定
+  string id = 3; // 登录时作为 captcha_id 提交；第三方验证为空
+  int64 expires_in = 4; // 挑战有效期（秒）；0 表示由第三方决定
 }
 
 message LoginResponse {
@@ -47,9 +74,10 @@ message GetUserInfoResponse {
   bool pwd_reset_required = 5; // true 表示首次登录/被重置后需改密，前端应弹出改密对话框
 }
 
-// 认证服务（Login / RefreshToken 无需鉴权，其余需要 Bearer token）
+// 认证服务（Login / GetCaptcha / RefreshToken 无需鉴权，其余需要 Bearer token）
 service AuthService {
   rpc Login(LoginRequest) returns (LoginResponse);
+  rpc GetCaptcha(GetCaptchaRequest) returns (GetCaptchaResponse);
   rpc Logout(LogoutRequest) returns (LogoutResponse);
   rpc GetUserInfo(GetUserInfoRequest) returns (GetUserInfoResponse);
   rpc ChangePassword(ChangePasswordRequest) returns (ChangePasswordResponse);

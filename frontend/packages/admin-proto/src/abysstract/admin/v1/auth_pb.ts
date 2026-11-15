@@ -2,8 +2,8 @@
 // @generated from file abysstract/admin/v1/auth.proto (package abysstract.admin.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
+import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import type { Menu } from "./menu_pb.js";
 import { file_abysstract_admin_v1_menu } from "./menu_pb.js";
 import type { User } from "./user_pb.js";
@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file abysstract/admin/v1/auth.proto.
  */
 export const file_abysstract_admin_v1_auth: GenFile = /*@__PURE__*/
-  fileDesc("Ch5hYnlzc3RyYWN0L2FkbWluL3YxL2F1dGgucHJvdG8SE2FieXNzdHJhY3QuYWRtaW4udjEiMgoMTG9naW5SZXF1ZXN0EhAKCHVzZXJuYW1lGAEgASgJEhAKCHBhc3N3b3JkGAIgASgJIkkKDUxvZ2luUmVzcG9uc2USDQoFdG9rZW4YASABKAkSEgoKZXhwaXJlc19pbhgCIAEoAxIVCg1yZWZyZXNoX3Rva2VuGAMgASgJIg8KDUxvZ291dFJlcXVlc3QiEAoOTG9nb3V0UmVzcG9uc2UiQwoVQ2hhbmdlUGFzc3dvcmRSZXF1ZXN0EhQKDG9sZF9wYXNzd29yZBgBIAEoCRIUCgxuZXdfcGFzc3dvcmQYAiABKAkiGAoWQ2hhbmdlUGFzc3dvcmRSZXNwb25zZSIsChNSZWZyZXNoVG9rZW5SZXF1ZXN0EhUKDXJlZnJlc2hfdG9rZW4YASABKAkiUAoUUmVmcmVzaFRva2VuUmVzcG9uc2USDQoFdG9rZW4YASABKAkSEgoKZXhwaXJlc19pbhgCIAEoAxIVCg1yZWZyZXNoX3Rva2VuGAMgASgJIhQKEkdldFVzZXJJbmZvUmVxdWVzdCKoAQoTR2V0VXNlckluZm9SZXNwb25zZRInCgR1c2VyGAEgASgLMhkuYWJ5c3N0cmFjdC5hZG1pbi52MS5Vc2VyEg0KBXJvbGVzGAIgAygJEhMKC3Blcm1pc3Npb25zGAMgAygJEigKBW1lbnVzGAQgAygLMhkuYWJ5c3N0cmFjdC5hZG1pbi52MS5NZW51EhoKEnB3ZF9yZXNldF9yZXF1aXJlZBgFIAEoCDLiAwoLQXV0aFNlcnZpY2USTgoFTG9naW4SIS5hYnlzc3RyYWN0LmFkbWluLnYxLkxvZ2luUmVxdWVzdBoiLmFieXNzdHJhY3QuYWRtaW4udjEuTG9naW5SZXNwb25zZRJRCgZMb2dvdXQSIi5hYnlzc3RyYWN0LmFkbWluLnYxLkxvZ291dFJlcXVlc3QaIy5hYnlzc3RyYWN0LmFkbWluLnYxLkxvZ291dFJlc3BvbnNlEmAKC0dldFVzZXJJbmZvEicuYWJ5c3N0cmFjdC5hZG1pbi52MS5HZXRVc2VySW5mb1JlcXVlc3QaKC5hYnlzc3RyYWN0LmFkbWluLnYxLkdldFVzZXJJbmZvUmVzcG9uc2USaQoOQ2hhbmdlUGFzc3dvcmQSKi5hYnlzc3RyYWN0LmFkbWluLnYxLkNoYW5nZVBhc3N3b3JkUmVxdWVzdBorLmFieXNzdHJhY3QuYWRtaW4udjEuQ2hhbmdlUGFzc3dvcmRSZXNwb25zZRJjCgxSZWZyZXNoVG9rZW4SKC5hYnlzc3RyYWN0LmFkbWluLnYxLlJlZnJlc2hUb2tlblJlcXVlc3QaKS5hYnlzc3RyYWN0LmFkbWluLnYxLlJlZnJlc2hUb2tlblJlc3BvbnNlQuIBChdjb20uYWJ5c3N0cmFjdC5hZG1pbi52MUIJQXV0aFByb3RvUAFaTmdpdGh1Yi5jb20vYWJ5c3N0cmFjdC9hYnlzc3RyYWN0LWFkbWluL2JhY2tlbmQvZ2VuL2FieXNzdHJhY3QvYWRtaW4vdjE7YWRtaW52MaICA0FBWKoCE0FieXNzdHJhY3QuQWRtaW4uVjHKAhNBYnlzc3RyYWN0XEFkbWluXFYx4gIfQWJ5c3N0cmFjdFxBZG1pblxWMVxHUEJNZXRhZGF0YeoCFUFieXNzdHJhY3Q6OkFkbWluOjpWMWIGcHJvdG8z", [file_abysstract_admin_v1_menu, file_abysstract_admin_v1_user]);
+  fileDesc("Ch5hYnlzc3RyYWN0L2FkbWluL3YxL2F1dGgucHJvdG8SE2FieXNzdHJhY3QuYWRtaW4udjEiVwoMTG9naW5SZXF1ZXN0EhAKCHVzZXJuYW1lGAEgASgJEhAKCHBhc3N3b3JkGAIgASgJEhIKCmNhcHRjaGFfaWQYAyABKAkSDwoHY2FwdGNoYRgEIAEoCSJkCg5Mb2dpbkNoYWxsZW5nZRIYChBjYXB0Y2hhX3JlcXVpcmVkGAEgASgIEjgKDWNhcHRjaGFfZXJyb3IYAiABKA4yIS5hYnlzc3RyYWN0LmFkbWluLnYxLkNhcHRjaGFFcnJvciITChFHZXRDYXB0Y2hhUmVxdWVzdCJTChJHZXRDYXB0Y2hhUmVzcG9uc2USDAoEa2luZBgBIAEoCRIPCgdwYXlsb2FkGAIgASgJEgoKAmlkGAMgASgJEhIKCmV4cGlyZXNfaW4YBCABKAMiSQoNTG9naW5SZXNwb25zZRINCgV0b2tlbhgBIAEoCRISCgpleHBpcmVzX2luGAIgASgDEhUKDXJlZnJlc2hfdG9rZW4YAyABKAkiDwoNTG9nb3V0UmVxdWVzdCIQCg5Mb2dvdXRSZXNwb25zZSJDChVDaGFuZ2VQYXNzd29yZFJlcXVlc3QSFAoMb2xkX3Bhc3N3b3JkGAEgASgJEhQKDG5ld19wYXNzd29yZBgCIAEoCSIYChZDaGFuZ2VQYXNzd29yZFJlc3BvbnNlIiwKE1JlZnJlc2hUb2tlblJlcXVlc3QSFQoNcmVmcmVzaF90b2tlbhgBIAEoCSJQChRSZWZyZXNoVG9rZW5SZXNwb25zZRINCgV0b2tlbhgBIAEoCRISCgpleHBpcmVzX2luGAIgASgDEhUKDXJlZnJlc2hfdG9rZW4YAyABKAkiFAoSR2V0VXNlckluZm9SZXF1ZXN0IqgBChNHZXRVc2VySW5mb1Jlc3BvbnNlEicKBHVzZXIYASABKAsyGS5hYnlzc3RyYWN0LmFkbWluLnYxLlVzZXISDQoFcm9sZXMYAiADKAkSEwoLcGVybWlzc2lvbnMYAyADKAkSKAoFbWVudXMYBCADKAsyGS5hYnlzc3RyYWN0LmFkbWluLnYxLk1lbnUSGgoScHdkX3Jlc2V0X3JlcXVpcmVkGAUgASgIKmMKDENhcHRjaGFFcnJvchIdChlDQVBUQ0hBX0VSUk9SX1VOU1BFQ0lGSUVEEAASGQoVQ0FQVENIQV9FUlJPUl9NSVNTSU5HEAESGQoVQ0FQVENIQV9FUlJPUl9JTlZBTElEEAIywQQKC0F1dGhTZXJ2aWNlEk4KBUxvZ2luEiEuYWJ5c3N0cmFjdC5hZG1pbi52MS5Mb2dpblJlcXVlc3QaIi5hYnlzc3RyYWN0LmFkbWluLnYxLkxvZ2luUmVzcG9uc2USXQoKR2V0Q2FwdGNoYRImLmFieXNzdHJhY3QuYWRtaW4udjEuR2V0Q2FwdGNoYVJlcXVlc3QaJy5hYnlzc3RyYWN0LmFkbWluLnYxLkdldENhcHRjaGFSZXNwb25zZRJRCgZMb2dvdXQSIi5hYnlzc3RyYWN0LmFkbWluLnYxLkxvZ291dFJlcXVlc3QaIy5hYnlzc3RyYWN0LmFkbWluLnYxLkxvZ291dFJlc3BvbnNlEmAKC0dldFVzZXJJbmZvEicuYWJ5c3N0cmFjdC5hZG1pbi52MS5HZXRVc2VySW5mb1JlcXVlc3QaKC5hYnlzc3RyYWN0LmFkbWluLnYxLkdldFVzZXJJbmZvUmVzcG9uc2USaQoOQ2hhbmdlUGFzc3dvcmQSKi5hYnlzc3RyYWN0LmFkbWluLnYxLkNoYW5nZVBhc3N3b3JkUmVxdWVzdBorLmFieXNzdHJhY3QuYWRtaW4udjEuQ2hhbmdlUGFzc3dvcmRSZXNwb25zZRJjCgxSZWZyZXNoVG9rZW4SKC5hYnlzc3RyYWN0LmFkbWluLnYxLlJlZnJlc2hUb2tlblJlcXVlc3QaKS5hYnlzc3RyYWN0LmFkbWluLnYxLlJlZnJlc2hUb2tlblJlc3BvbnNlQuIBChdjb20uYWJ5c3N0cmFjdC5hZG1pbi52MUIJQXV0aFByb3RvUAFaTmdpdGh1Yi5jb20vYWJ5c3N0cmFjdC9hYnlzc3RyYWN0LWFkbWluL2JhY2tlbmQvZ2VuL2FieXNzdHJhY3QvYWRtaW4vdjE7YWRtaW52MaICA0FBWKoCE0FieXNzdHJhY3QuQWRtaW4uVjHKAhNBYnlzc3RyYWN0XEFkbWluXFYx4gIfQWJ5c3N0cmFjdFxBZG1pblxWMVxHUEJNZXRhZGF0YeoCFUFieXNzdHJhY3Q6OkFkbWluOjpWMWIGcHJvdG8z", [file_abysstract_admin_v1_menu, file_abysstract_admin_v1_user]);
 
 /**
  * @generated from message abysstract.admin.v1.LoginRequest
@@ -29,6 +29,20 @@ export type LoginRequest = Message<"abysstract.admin.v1.LoginRequest"> & {
    * @generated from field: string password = 2;
    */
   password: string;
+
+  /**
+   * 验证码挑战 ID：GetCaptcha 返回的 id。第三方验证（Turnstile、hCaptcha）不需要。
+   *
+   * @generated from field: string captcha_id = 3;
+   */
+  captchaId: string;
+
+  /**
+   * 验证码答案：第三方验证组件给出的 token，或对 GetCaptcha 挑战的作答（格式由 kind 决定）。
+   *
+   * @generated from field: string captcha = 4;
+   */
+  captcha: string;
 };
 
 /**
@@ -37,6 +51,90 @@ export type LoginRequest = Message<"abysstract.admin.v1.LoginRequest"> & {
  */
 export const LoginRequestSchema: GenMessage<LoginRequest> = /*@__PURE__*/
   messageDesc(file_abysstract_admin_v1_auth, 0);
+
+/**
+ * 登录失败时附在 Connect 错误上的 detail，告诉客户端下一次登录是否需要验证码。
+ * 只在需要验证码或验证码有问题时附带。
+ *
+ * @generated from message abysstract.admin.v1.LoginChallenge
+ */
+export type LoginChallenge = Message<"abysstract.admin.v1.LoginChallenge"> & {
+  /**
+   * 下一次登录需要带验证码
+   *
+   * @generated from field: bool captcha_required = 1;
+   */
+  captchaRequired: boolean;
+
+  /**
+   * 本次被拒是因为验证码
+   *
+   * @generated from field: abysstract.admin.v1.CaptchaError captcha_error = 2;
+   */
+  captchaError: CaptchaError;
+};
+
+/**
+ * Describes the message abysstract.admin.v1.LoginChallenge.
+ * Use `create(LoginChallengeSchema)` to create a new message.
+ */
+export const LoginChallengeSchema: GenMessage<LoginChallenge> = /*@__PURE__*/
+  messageDesc(file_abysstract_admin_v1_auth, 1);
+
+/**
+ * @generated from message abysstract.admin.v1.GetCaptchaRequest
+ */
+export type GetCaptchaRequest = Message<"abysstract.admin.v1.GetCaptchaRequest"> & {
+};
+
+/**
+ * Describes the message abysstract.admin.v1.GetCaptchaRequest.
+ * Use `create(GetCaptchaRequestSchema)` to create a new message.
+ */
+export const GetCaptchaRequestSchema: GenMessage<GetCaptchaRequest> = /*@__PURE__*/
+  messageDesc(file_abysstract_admin_v1_auth, 2);
+
+/**
+ * 一个验证码挑战。未启用验证码时 GetCaptcha 返回 FailedPrecondition。
+ *
+ * @generated from message abysstract.admin.v1.GetCaptchaResponse
+ */
+export type GetCaptchaResponse = Message<"abysstract.admin.v1.GetCaptchaResponse"> & {
+  /**
+   * 渲染组件：slide（内置滑块）、turnstile、hcaptcha 或应用自定义
+   *
+   * @generated from field: string kind = 1;
+   */
+  kind: string;
+
+  /**
+   * 交给组件的 JSON，格式由 kind 决定
+   *
+   * @generated from field: string payload = 2;
+   */
+  payload: string;
+
+  /**
+   * 登录时作为 captcha_id 提交；第三方验证为空
+   *
+   * @generated from field: string id = 3;
+   */
+  id: string;
+
+  /**
+   * 挑战有效期（秒）；0 表示由第三方决定
+   *
+   * @generated from field: int64 expires_in = 4;
+   */
+  expiresIn: bigint;
+};
+
+/**
+ * Describes the message abysstract.admin.v1.GetCaptchaResponse.
+ * Use `create(GetCaptchaResponseSchema)` to create a new message.
+ */
+export const GetCaptchaResponseSchema: GenMessage<GetCaptchaResponse> = /*@__PURE__*/
+  messageDesc(file_abysstract_admin_v1_auth, 3);
 
 /**
  * @generated from message abysstract.admin.v1.LoginResponse
@@ -69,7 +167,7 @@ export type LoginResponse = Message<"abysstract.admin.v1.LoginResponse"> & {
  * Use `create(LoginResponseSchema)` to create a new message.
  */
 export const LoginResponseSchema: GenMessage<LoginResponse> = /*@__PURE__*/
-  messageDesc(file_abysstract_admin_v1_auth, 1);
+  messageDesc(file_abysstract_admin_v1_auth, 4);
 
 /**
  * @generated from message abysstract.admin.v1.LogoutRequest
@@ -82,7 +180,7 @@ export type LogoutRequest = Message<"abysstract.admin.v1.LogoutRequest"> & {
  * Use `create(LogoutRequestSchema)` to create a new message.
  */
 export const LogoutRequestSchema: GenMessage<LogoutRequest> = /*@__PURE__*/
-  messageDesc(file_abysstract_admin_v1_auth, 2);
+  messageDesc(file_abysstract_admin_v1_auth, 5);
 
 /**
  * @generated from message abysstract.admin.v1.LogoutResponse
@@ -95,7 +193,7 @@ export type LogoutResponse = Message<"abysstract.admin.v1.LogoutResponse"> & {
  * Use `create(LogoutResponseSchema)` to create a new message.
  */
 export const LogoutResponseSchema: GenMessage<LogoutResponse> = /*@__PURE__*/
-  messageDesc(file_abysstract_admin_v1_auth, 3);
+  messageDesc(file_abysstract_admin_v1_auth, 6);
 
 /**
  * 改密请求：旧密码 + 新密码。服务端校验旧密码 + 复杂度策略，成功后递增 token_version。
@@ -119,7 +217,7 @@ export type ChangePasswordRequest = Message<"abysstract.admin.v1.ChangePasswordR
  * Use `create(ChangePasswordRequestSchema)` to create a new message.
  */
 export const ChangePasswordRequestSchema: GenMessage<ChangePasswordRequest> = /*@__PURE__*/
-  messageDesc(file_abysstract_admin_v1_auth, 4);
+  messageDesc(file_abysstract_admin_v1_auth, 7);
 
 /**
  * @generated from message abysstract.admin.v1.ChangePasswordResponse
@@ -132,7 +230,7 @@ export type ChangePasswordResponse = Message<"abysstract.admin.v1.ChangePassword
  * Use `create(ChangePasswordResponseSchema)` to create a new message.
  */
 export const ChangePasswordResponseSchema: GenMessage<ChangePasswordResponse> = /*@__PURE__*/
-  messageDesc(file_abysstract_admin_v1_auth, 5);
+  messageDesc(file_abysstract_admin_v1_auth, 8);
 
 /**
  * 刷新令牌：用未过期且未吊销的 refresh_token 换取新的访问令牌。
@@ -152,7 +250,7 @@ export type RefreshTokenRequest = Message<"abysstract.admin.v1.RefreshTokenReque
  * Use `create(RefreshTokenRequestSchema)` to create a new message.
  */
 export const RefreshTokenRequestSchema: GenMessage<RefreshTokenRequest> = /*@__PURE__*/
-  messageDesc(file_abysstract_admin_v1_auth, 6);
+  messageDesc(file_abysstract_admin_v1_auth, 9);
 
 /**
  * @generated from message abysstract.admin.v1.RefreshTokenResponse
@@ -185,7 +283,7 @@ export type RefreshTokenResponse = Message<"abysstract.admin.v1.RefreshTokenResp
  * Use `create(RefreshTokenResponseSchema)` to create a new message.
  */
 export const RefreshTokenResponseSchema: GenMessage<RefreshTokenResponse> = /*@__PURE__*/
-  messageDesc(file_abysstract_admin_v1_auth, 7);
+  messageDesc(file_abysstract_admin_v1_auth, 10);
 
 /**
  * @generated from message abysstract.admin.v1.GetUserInfoRequest
@@ -198,7 +296,7 @@ export type GetUserInfoRequest = Message<"abysstract.admin.v1.GetUserInfoRequest
  * Use `create(GetUserInfoRequestSchema)` to create a new message.
  */
 export const GetUserInfoRequestSchema: GenMessage<GetUserInfoRequest> = /*@__PURE__*/
-  messageDesc(file_abysstract_admin_v1_auth, 8);
+  messageDesc(file_abysstract_admin_v1_auth, 11);
 
 /**
  * @generated from message abysstract.admin.v1.GetUserInfoResponse
@@ -243,10 +341,40 @@ export type GetUserInfoResponse = Message<"abysstract.admin.v1.GetUserInfoRespon
  * Use `create(GetUserInfoResponseSchema)` to create a new message.
  */
 export const GetUserInfoResponseSchema: GenMessage<GetUserInfoResponse> = /*@__PURE__*/
-  messageDesc(file_abysstract_admin_v1_auth, 9);
+  messageDesc(file_abysstract_admin_v1_auth, 12);
 
 /**
- * 认证服务（Login / RefreshToken 无需鉴权，其余需要 Bearer token）
+ * @generated from enum abysstract.admin.v1.CaptchaError
+ */
+export enum CaptchaError {
+  /**
+   * @generated from enum value: CAPTCHA_ERROR_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * 需要验证码但没有提供
+   *
+   * @generated from enum value: CAPTCHA_ERROR_MISSING = 1;
+   */
+  MISSING = 1,
+
+  /**
+   * 验证码错误、过期或已使用
+   *
+   * @generated from enum value: CAPTCHA_ERROR_INVALID = 2;
+   */
+  INVALID = 2,
+}
+
+/**
+ * Describes the enum abysstract.admin.v1.CaptchaError.
+ */
+export const CaptchaErrorSchema: GenEnum<CaptchaError> = /*@__PURE__*/
+  enumDesc(file_abysstract_admin_v1_auth, 0);
+
+/**
+ * 认证服务（Login / GetCaptcha / RefreshToken 无需鉴权，其余需要 Bearer token）
  *
  * @generated from service abysstract.admin.v1.AuthService
  */
@@ -258,6 +386,14 @@ export const AuthService: GenService<{
     methodKind: "unary";
     input: typeof LoginRequestSchema;
     output: typeof LoginResponseSchema;
+  },
+  /**
+   * @generated from rpc abysstract.admin.v1.AuthService.GetCaptcha
+   */
+  getCaptcha: {
+    methodKind: "unary";
+    input: typeof GetCaptchaRequestSchema;
+    output: typeof GetCaptchaResponseSchema;
   },
   /**
    * @generated from rpc abysstract.admin.v1.AuthService.Logout

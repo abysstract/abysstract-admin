@@ -1,7 +1,13 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { Button, Card, Flex, Form, Grid, Input, Typography, theme, type GlobalToken } from "antd";
 import { Code, ConnectError } from "@connectrpc/connect";
+import {
+  CaptchaError,
+  LoginChallengeSchema,
+} from "@abysstract/admin-proto/abysstract/admin/v1/auth_pb";
+import { BuiltinLoginCaptcha } from "../components/LoginCaptcha";
+import type { AdminLoginCaptchaChallenge, AdminLoginCaptchaValue } from "../runtime/types";
 import { useAdminHost, useAdminRuntimeState, useSessionSnapshot } from "../runtime/context";
 import { formatErrorMessage, useAppMessage } from "../runtime/message";
 import { useAdminTexts } from "../runtime/texts";
@@ -34,6 +40,31 @@ export default function Login() {
   const [form] = Form.useForm<LoginValues>();
   const [loading, setLoading] = useState(false);
   const attemptRef = useRef(0);
+  // 服务端要求验证码后显示验证组件；结果只能用一次，每次失败后 resetKey + 1 让组件重置。
+  const [captchaShown, setCaptchaShown] = useState(false);
+  const [captchaError, setCaptchaError] = useState<string>();
+  const [resetKey, setResetKey] = useState(0);
+  const captchaRef = useRef<AdminLoginCaptchaValue | undefined>(undefined);
+  // 点了登录才发现需要验证码时，完成验证后自动重新提交。
+  const resubmitRef = useRef(false);
+
+  const loadChallenge = useCallback(async (): Promise<AdminLoginCaptchaChallenge> => {
+    const res = await runtime.clients.auth.getCaptcha({});
+    return { kind: res.kind, payload: res.payload, id: res.id };
+  }, [runtime]);
+
+  const onCaptchaChange = useCallback(
+    (value: AdminLoginCaptchaValue | undefined) => {
+      captchaRef.current = value;
+      if (!value) return;
+      setCaptchaError(undefined);
+      if (resubmitRef.current) {
+        resubmitRef.current = false;
+        form.submit();
+      }
+    },
+    [form],
+  );
 
   useEffect(() => {
     return () => {
@@ -47,6 +78,7 @@ export default function Login() {
 
   const t = texts.login;
   const config = host.login ?? {};
+  const Captcha = config.captcha ?? BuiltinLoginCaptcha;
   const wide = screens.lg === true;
 
   const initialValues = host.developmentLogin
@@ -54,21 +86,52 @@ export default function Login() {
     : undefined;
 
   const onFinish = async (values: LoginValues) => {
+    const captcha = captchaRef.current;
+    if (captchaShown && !captcha) {
+      setCaptchaError(t.captchaRequired);
+      resubmitRef.current = true;
+      return;
+    }
     const attempt = ++attemptRef.current;
     setLoading(true);
     try {
-      const res = await runtime.clients.auth.login(values);
+      const res = await runtime.clients.auth.login({
+        ...values,
+        captchaId: captcha?.id ?? "",
+        captcha: captcha?.token ?? "",
+      });
       if (attempt !== attemptRef.current || runtime.session.isDisposed()) return;
       runtime.session.applyToken(res.token);
       // 进入首页本身就是结果，不再弹“登录成功”。
       navigate("/", { replace: true });
     } catch (e) {
       if (attempt !== attemptRef.current || runtime.session.isDisposed()) return;
-      if (e instanceof ConnectError && e.code === Code.Unauthenticated) {
+      const challenge =
+        e instanceof ConnectError ? e.findDetails(LoginChallengeSchema)[0] : undefined;
+      if (captcha) {
+        // 验证结果已被这次请求用掉。
+        captchaRef.current = undefined;
+        setResetKey((k) => k + 1);
+      }
+      if (challenge?.captchaRequired) setCaptchaShown(true);
+      if (challenge?.captchaError === CaptchaError.MISSING) {
+        setCaptchaError(captchaShown ? t.captchaRequired : undefined);
+        resubmitRef.current = true;
+      } else if (challenge?.captchaError === CaptchaError.INVALID) {
+        setCaptchaError(t.captchaInvalid);
+        resubmitRef.current = true;
+      } else if (e instanceof ConnectError && e.code === Code.Unauthenticated) {
         // 能对应到字段：标在密码下方，改正前一直显示。
+        setCaptchaError(undefined);
         form.setFields([{ name: "password", errors: [t.invalidCredentials] }]);
-      } else if (e instanceof ConnectError && e.code === Code.PermissionDenied) {
-        // 账号锁定、停用：服务端文案面向用户，带剩余时间等信息，原样显示。
+      } else if (
+        e instanceof ConnectError &&
+        (e.code === Code.PermissionDenied ||
+          e.code === Code.ResourceExhausted ||
+          // 带着验证码时的 Unavailable 来自验证服务，其余是网络问题，走下面的通用文案。
+          (e.code === Code.Unavailable && captcha !== undefined))
+      ) {
+        // 账号锁定、停用、尝试过多、验证服务不可用：服务端文案面向用户，带剩余时间等信息，原样显示。
         message.error(e.rawMessage || t.cannotLogin);
       } else {
         message.error(formatErrorMessage(e, t.cannotLogin));
@@ -126,6 +189,15 @@ export default function Login() {
       >
         <Input.Password autoComplete="current-password" />
       </Form.Item>
+      {captchaShown && (
+        <Form.Item
+          label={t.captcha}
+          validateStatus={captchaError ? "error" : undefined}
+          help={captchaError}
+        >
+          <Captcha onChange={onCaptchaChange} resetKey={resetKey} loadChallenge={loadChallenge} />
+        </Form.Item>
+      )}
       <Form.Item style={{ marginBottom: 0 }}>
         <Button type="primary" htmlType="submit" block loading={loading}>
           {t.submit}
