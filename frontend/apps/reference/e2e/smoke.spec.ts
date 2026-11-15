@@ -30,12 +30,13 @@ test("login and system user form", async ({ page }) => {
   await expect(page.getByText("超级管理员")).toBeVisible({ timeout: 20_000 });
   // The seeded administrator lands on the first authorized page after login.
   await expect(page).toHaveURL(/\/system\/user$/);
-  await expect(page.getByRole("button", { name: /新建用户/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: "新增", exact: true })).toBeVisible();
   await expect(page.getByRole("columnheader", { name: "用户名" })).toBeVisible();
-  await page.getByRole("button", { name: /新建用户/ }).click();
-  const dialog = page.getByRole("dialog");
-  await expect(dialog).toBeVisible();
-  await expect(dialog.locator(".ant-select, [role='combobox']").first()).toBeVisible();
-  await page.locator(".ant-modal-close").click();
-  await expect(dialog).toBeHidden();
+  await page.getByRole("button", { name: "新增", exact: true }).click();
+  // 新增用户在抽屉里编辑，按钮「取消 保存」在抽屉标题栏右侧。
+  const drawer = page.getByRole("dialog");
+  await expect(drawer).toBeVisible();
+  await expect(drawer.locator(".ant-select, [role='combobox']").first()).toBeVisible();
+  await drawer.getByRole("button", { name: "取消" }).click();
+  await expect(drawer).toBeHidden();
 });
