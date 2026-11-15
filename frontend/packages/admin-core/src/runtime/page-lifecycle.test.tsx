@@ -212,7 +212,7 @@ describe("bindAdminAppPageLifecycle", () => {
       window.dispatchEvent(persistedEvent("pageshow", true));
     });
     await waitFor(() => {
-      expect(screen.getByPlaceholderText("用户名")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "登录" })).toBeInTheDocument();
     });
     expect(screen.queryByText("用户A")).not.toBeInTheDocument();
     stop();

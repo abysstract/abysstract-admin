@@ -82,7 +82,7 @@ describe("AuthedApp 路由", () => {
       </MemoryRouter>,
     );
     expect(await screen.findByText("没有可访问的页面")).toBeInTheDocument();
-    expect(screen.queryByPlaceholderText("用户名")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "登录" })).not.toBeInTheDocument();
     app.dispose();
   });
 

@@ -153,7 +153,7 @@ describe("createAdminApp", () => {
         <app.Root />
       </MemoryRouter>,
     );
-    await screen.findByPlaceholderText("用户名");
+    await screen.findByRole("button", { name: "登录" });
     await act(async () => {
       storage.setToken("new-token");
     });
@@ -229,7 +229,7 @@ describe("createAdminApp", () => {
     await act(async () => {
       storage.clearToken();
     });
-    await screen.findByPlaceholderText("用户名");
+    await screen.findByRole("button", { name: "登录" });
     await act(async () => {
       resolveInfo?.({
         permissions: ["*:*:*"],

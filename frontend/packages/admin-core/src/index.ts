@@ -13,5 +13,6 @@ export type {
   AdminApplication,
   AdminFrontendModule,
   AdminHost,
+  AdminLoginConfig,
   AuthStorage,
 } from "./runtime/types";

@@ -283,6 +283,8 @@ vi.mock("antd", () => {
       <div data-testid="tree">{props.children as ReactNode}</div>
     ),
     Card: passThrough,
+    Flex: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
+    Grid: { useBreakpoint: () => ({}) },
     ConfigProvider: Object.assign(passThrough, {
       ConfigContext: createContext<Record<string, unknown>>({}),
     }),
