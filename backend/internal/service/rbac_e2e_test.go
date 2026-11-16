@@ -22,6 +22,8 @@ import (
 	"github.com/abysstract/abysstract-admin/backend/internal/repo"
 	resourcegen "github.com/abysstract/abysstract-admin/backend/internal/resource/gen"
 	"github.com/abysstract/abysstract-admin/backend/internal/service"
+
+	"github.com/abysstract/abysstract-admin/backend/accesslog"
 )
 
 // newRBACServer 启动一个 httptest.Server，挂载完整拦截器链 + 各 service handler。
@@ -64,7 +66,7 @@ func newRBACServer(t *testing.T, r *repo.Repo, mgr *jwt.Manager) *httptest.Serve
 	server := connect.NewServer(
 		interceptor.NewAuthInterceptor(permRegistry, mgr, r.TokenVersion, r.PwdResetRequired),
 		interceptor.NewPermissionInterceptor(permRegistry, r.PermsOf),
-		interceptor.NewOperLogInterceptor(operLogger, false),
+		interceptor.NewOperLogInterceptor(operLogger, accesslog.ProxyPolicy{}),
 	)
 
 	mux := http.NewServeMux()

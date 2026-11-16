@@ -23,6 +23,8 @@ import (
 	"github.com/abysstract/abysstract-admin/backend/internal/repo"
 	"github.com/abysstract/abysstract-admin/backend/module"
 	"github.com/abysstract/abysstract-admin/backend/storage"
+
+	"github.com/abysstract/abysstract-admin/backend/captcha"
 )
 
 // Options creates a public application. DB, when non-nil, is borrowed.
@@ -46,6 +48,10 @@ type Options struct {
 	// AccessLogSinks are added to the sinks named by Config.AccessLogSinks
 	// when AccessLog is nil. The application closes them on shutdown.
 	AccessLogSinks []accesslog.Sink
+	// Captcha, when non-nil, is the login captcha instead of the provider
+	// named by Config.CaptchaProvider (see OpenCaptcha). Modules receive it
+	// through module.Runtime.Captcha.
+	Captcha captcha.Verifier
 }
 
 type appState int
@@ -70,6 +76,7 @@ type App struct {
 	borrowedStore  storage.Storage
 	borrowedAccess *accesslog.Logger
 	accessSinks    []accesslog.Sink
+	captcha        captcha.Verifier
 
 	mu          sync.Mutex
 	state       appState
@@ -177,7 +184,15 @@ func New(options Options) (*App, error) {
 			}
 		}
 	}
+	verifier := options.Captcha
+	if verifier == nil {
+		verifier, err = OpenCaptcha(cfg)
+		if err != nil {
+			return nil, err
+		}
+	}
 	return &App{
+		captcha:        verifier,
 		cfg:            cfg,
 		modules:        ordered,
 		routes:         routes,
@@ -339,6 +354,7 @@ func (a *App) start(ctx context.Context) (http.Handler, error) {
 		DataScope: dataScopeAdapter{repo: store},
 		Storage:   objects,
 		AccessLog: access,
+		Captcha:   a.captcha,
 	}
 	created := make([]createdInstance, 0, len(a.modules))
 	for _, def := range a.modules {
@@ -360,7 +376,7 @@ func (a *App) start(ctx context.Context) (http.Handler, error) {
 		verLoader:   store.TokenVersion,
 		resetLoader: store.PwdResetRequired,
 		permLoader:  store.PermsOf,
-		trustProxy:  a.cfg.TrustProxy,
+		proxies:     a.cfg.ProxyPolicy(),
 		record: func(entry interceptor.OperLogEntry) {
 			_ = store.AddOperLog(context.Background(), operLogModel(entry))
 		},
@@ -372,7 +388,7 @@ func (a *App) start(ctx context.Context) (http.Handler, error) {
 		interceptor.NewPermissionInterceptor(a.registry, store.PermsOf),
 		interceptor.NewOperLogInterceptor(func(ctx context.Context, entry interceptor.OperLogEntry) {
 			_ = store.AddOperLog(ctx, operLogModel(entry))
-		}, a.cfg.TrustProxy),
+		}, a.cfg.ProxyPolicy()),
 	)
 	maxBytes := int(requestMaxBytes(a.cfg))
 	connectOpts := connecthttp.WithReadMaxBytes(maxBytes)

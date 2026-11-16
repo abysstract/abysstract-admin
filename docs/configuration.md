@@ -79,7 +79,9 @@ ADMIN_DB_DRIVER=postgres go run github.com/abysstract/abysstract-admin/backend/c
 | `ADMIN_ADDR` | 监听地址 | `:8080` |
 | `ADMIN_JWT_SECRET` | JWT 签名密钥 | `change-me-in-production` |
 | `ADMIN_CORS_ORIGINS` | 允许的跨域来源，逗号分隔 | 空；开发模式使用通配来源 |
-| `ADMIN_TRUST_PROXY` | 是否信任反向代理的 `X-Forwarded-For` | `false` |
+| `ADMIN_TRUST_PROXY` | 前面有一层反向代理：客户端 IP 取 `X-Forwarded-For` 最右侧的地址 | `false` |
+| `ADMIN_TRUSTED_PROXIES` | 可信代理网段，逗号分隔；多层代理时使用，见[客户端 IP 与审计](#客户端-ip-与审计) | 空 |
+| `ADMIN_CAPTCHA_PROVIDER` | 登录验证码：`slide` / `turnstile` / `hcaptcha`，见[登录安全](#登录安全) | 空，不启用 |
 | `ADMIN_METRICS_TOKEN` | `/metrics` 访问令牌。设置后请求需带 `Authorization: Bearer <token>`；未设置时开发模式开放，生产模式返回 404 | 空 |
 
 其他配置项及默认值见仓库根目录的 [.env.example](../.env.example)。
@@ -125,4 +127,59 @@ scrape_configs:
 
 ### 客户端 IP 与审计
 
-操作日志和请求日志默认记录直连客户端的 IP。通过可信反向代理（如 Nginx）部署时，设置 `ADMIN_TRUST_PROXY=true`，应用将使用 `X-Forwarded-For` 中最左侧的地址作为客户端 IP。
+操作日志、请求日志、登录日志和登录的按 IP 计数使用同一个客户端 IP，默认是直连对端的地址。
+
+代理会把它收到请求的来源地址追加到 `X-Forwarded-For` 的**最右侧**，左侧的内容来自客户端，可以伪造。所以只读可信代理追加的部分：
+
+- 前面只有一层代理（例如同机或内网的 Nginx）：设置 `ADMIN_TRUST_PROXY=true`，取最右侧的地址。
+- 多层代理（例如 CDN → Nginx → 应用）：在 `ADMIN_TRUSTED_PROXIES` 列出所有代理的网段，例如 `10.0.0.0/8,203.0.113.0/24`。直连对端不在其中时忽略 `X-Forwarded-For`；在其中时从右向左跳过这些网段，取第一个不在其中的地址。
+
+只设置 `ADMIN_TRUST_PROXY=true` 却有多层代理时，记录到的会是上一层代理的地址，按 IP 计数也会把所有用户算在一起。
+
+## 登录安全
+
+登录失败按两种方式计数：
+
+| 计数 | 范围 | 作用 |
+| --- | --- | --- |
+| 用户名 | 连续失败，登录成功后清零 | 达到 `ADMIN_LOGIN_MAX_FAILURES` 锁定账号 `ADMIN_LOGIN_LOCKOUT_SECONDS` 秒 |
+| 来源 IP | `ADMIN_LOGIN_IP_WINDOW_SECONDS` 窗口内的失败，登录成功**不**清零；IPv6 按 /64 计数 | 见下文 |
+
+**未启用验证码**时，同一 IP 在窗口内失败 `ADMIN_LOGIN_IP_MAX_FAILURES` 次（默认 30）后，窗口剩余时间内来自它的登录直接拒绝，提示“尝试次数过多”。账号锁定阈值默认 5。
+
+**启用验证码**（`ADMIN_CAPTCHA_PROVIDER`）后：
+
+- 同一用户名连续失败 `ADMIN_LOGIN_CAPTCHA_AFTER` 次（默认 3），或同一 IP 在窗口内失败 `ADMIN_LOGIN_IP_CAPTCHA_AFTER` 次（默认 10），之后的登录要先通过验证码。
+- 账号锁定阈值默认提高到 20。知道用户名的人仍可能让账号被锁，但每次都要先过验证码。显式设置 `ADMIN_LOGIN_MAX_FAILURES` 时以设置为准。
+- 缺少验证码或验证码错误的请求不检查密码，也不计入失败次数。
+- 验证服务不可用时拒绝登录，不会放行。
+
+| `ADMIN_CAPTCHA_PROVIDER` | 说明 | 其他配置 |
+| --- | --- | --- |
+| `slide` | 内置滑块拼图（基于 [go-captcha](https://github.com/wenlng/go-captcha)），不依赖外部服务，内网可用。前端无需配置 | 无 |
+| `turnstile` | Cloudflare Turnstile | `ADMIN_CAPTCHA_SECRET`、`ADMIN_CAPTCHA_SITE_KEY`；前端在 `AdminHost.login.captcha` 渲染对方组件，见[登录页](admin-core-usage.md#登录验证码) |
+| `hcaptcha` | hCaptcha | 同上 |
+
+`slide` 需要应用导入 `github.com/abysstract/abysstract-admin/backend/captcha/slidecaptcha`（内置的 `cmd/server` 已导入）。图片会打包进二进制，约几 MB；不用滑块的应用去掉这个导入即可。
+
+接其他服务（例如极验）时，实现 `captcha.Verifier`，需要后端出题时再实现 `captcha.Challenger`，然后传给 `adminapp.Options.Captcha`，或用 `captcha.Register` 注册后通过 `ADMIN_CAPTCHA_PROVIDER` 选择：
+
+```go
+type geetest struct{ /* ... */ }
+
+// token 是前端组件给出的结果，格式由你的前端组件决定，例如 JSON。
+func (g *geetest) Verify(ctx context.Context, sub captcha.Submission) error {
+	ok, err := g.validate(ctx, sub.Token, sub.RemoteIP)
+	if err != nil {
+		return err // 服务不可用：登录返回 Unavailable
+	}
+	if !ok {
+		return captcha.ErrInvalid
+	}
+	return nil
+}
+
+app, err := adminapp.New(adminapp.Options{Config: cfg, Modules: modules, Captcha: &geetest{}})
+```
+
+后端出题的验证码，答案经 `GetCaptcha` 加密后放在挑战 ID 里交给前端，服务端不保存；每个挑战只能用一次，有效期 2 分钟，已使用的 ID 记在 `sys_captcha_used`。

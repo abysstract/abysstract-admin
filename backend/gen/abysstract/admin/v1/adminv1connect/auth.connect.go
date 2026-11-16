@@ -26,6 +26,8 @@ const (
 const (
 	// AuthServiceLoginProcedure is the procedure name of the AuthService's Login RPC.
 	AuthServiceLoginProcedure = "/abysstract.admin.v1.AuthService/Login"
+	// AuthServiceGetCaptchaProcedure is the procedure name of the AuthService's GetCaptcha RPC.
+	AuthServiceGetCaptchaProcedure = "/abysstract.admin.v1.AuthService/GetCaptcha"
 	// AuthServiceLogoutProcedure is the procedure name of the AuthService's Logout RPC.
 	AuthServiceLogoutProcedure = "/abysstract.admin.v1.AuthService/Logout"
 	// AuthServiceGetUserInfoProcedure is the procedure name of the AuthService's GetUserInfo RPC.
@@ -42,6 +44,13 @@ var (
 			StreamType: connect.StreamTypeUnary,
 			Schema:     v1.File_abysstract_admin_v1_auth_proto.Services().ByName("AuthService").Methods().ByName("Login"),
 			Procedure:  AuthServiceLoginProcedure,
+		}
+	})
+	authServiceGetCaptchaSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_abysstract_admin_v1_auth_proto.Services().ByName("AuthService").Methods().ByName("GetCaptcha"),
+			Procedure:  AuthServiceGetCaptchaProcedure,
 		}
 	})
 	authServiceLogoutSpec = sync.OnceValue(func() connect.Spec {
@@ -77,6 +86,7 @@ var (
 // AuthServiceClient is a client for the abysstract.admin.v1.AuthService service.
 type AuthServiceClient interface {
 	Login(context.Context, *v1.LoginRequest) (*v1.LoginResponse, error)
+	GetCaptcha(context.Context, *v1.GetCaptchaRequest) (*v1.GetCaptchaResponse, error)
 	Logout(context.Context, *v1.LogoutRequest) (*v1.LogoutResponse, error)
 	GetUserInfo(context.Context, *v1.GetUserInfoRequest) (*v1.GetUserInfoResponse, error)
 	ChangePassword(context.Context, *v1.ChangePasswordRequest) (*v1.ChangePasswordResponse, error)
@@ -92,6 +102,7 @@ func NewAuthServiceClient(client *connect.Client) AuthServiceClient {
 // AuthServiceHandler is an implementation of the abysstract.admin.v1.AuthService service.
 type AuthServiceHandler interface {
 	Login(context.Context, *v1.LoginRequest) (*v1.LoginResponse, error)
+	GetCaptcha(context.Context, *v1.GetCaptchaRequest) (*v1.GetCaptchaResponse, error)
 	Logout(context.Context, *v1.LogoutRequest) (*v1.LogoutResponse, error)
 	GetUserInfo(context.Context, *v1.GetUserInfoRequest) (*v1.GetUserInfoResponse, error)
 	ChangePassword(context.Context, *v1.ChangePasswordRequest) (*v1.ChangePasswordResponse, error)
@@ -104,6 +115,7 @@ func RegisterAuthServiceHandler(server *connect.Server, svc AuthServiceHandler) 
 	adapter := authServiceHandler{svc: svc}
 	server.Register(
 		connect.Method{Spec: authServiceLoginSpec(), Handler: adapter.login},
+		connect.Method{Spec: authServiceGetCaptchaSpec(), Handler: adapter.getCaptcha},
 		connect.Method{Spec: authServiceLogoutSpec(), Handler: adapter.logout},
 		connect.Method{Spec: authServiceGetUserInfoSpec(), Handler: adapter.getUserInfo},
 		connect.Method{Spec: authServiceChangePasswordSpec(), Handler: adapter.changePassword},
@@ -116,6 +128,10 @@ type UnimplementedAuthServiceHandler struct{}
 
 func (UnimplementedAuthServiceHandler) Login(context.Context, *v1.LoginRequest) (*v1.LoginResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, "abysstract.admin.v1.AuthService.Login is not implemented")
+}
+
+func (UnimplementedAuthServiceHandler) GetCaptcha(context.Context, *v1.GetCaptchaRequest) (*v1.GetCaptchaResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "abysstract.admin.v1.AuthService.GetCaptcha is not implemented")
 }
 
 func (UnimplementedAuthServiceHandler) Logout(context.Context, *v1.LogoutRequest) (*v1.LogoutResponse, error) {
@@ -141,6 +157,14 @@ type authServiceClient struct {
 func (c *authServiceClient) Login(ctx context.Context, req *v1.LoginRequest) (*v1.LoginResponse, error) {
 	var res v1.LoginResponse
 	if err := c.client.CallUnary(ctx, authServiceLoginSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *authServiceClient) GetCaptcha(ctx context.Context, req *v1.GetCaptchaRequest) (*v1.GetCaptchaResponse, error) {
+	var res v1.GetCaptchaResponse
+	if err := c.client.CallUnary(ctx, authServiceGetCaptchaSpec(), req, &res); err != nil {
 		return nil, err
 	}
 	return &res, nil
@@ -186,6 +210,18 @@ func (h authServiceHandler) login(ctx context.Context, _ connect.Spec, stream co
 		return err
 	}
 	res, err := h.svc.Login(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h authServiceHandler) getCaptcha(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.GetCaptchaRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.GetCaptcha(ctx, &req)
 	if err != nil {
 		return err
 	}

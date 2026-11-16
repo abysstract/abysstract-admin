@@ -71,7 +71,7 @@ func newSystemHandlers(rt module.Runtime) (*systemHandlers, error) {
 	cfg := rt.Config
 	store := repo.New(rt.DB)
 	jwtMgr := jwt.NewManager(cfg.JWTSecret, cfg.JWTExpiresIn)
-	loginSec := repo.NewLoginSecurity(rt.DB, cfg.LoginMaxFailures, cfg.LoginLockoutSeconds)
+	loginSec := repo.NewLoginSecurity(rt.DB, cfg.LoginMaxFailuresFor(rt.Captcha != nil), cfg.LoginLockoutSeconds)
 	refresh := repo.NewRefreshTokenRepo(rt.DB)
 	if rt.Storage == nil {
 		return nil, ErrMissingStorage
@@ -109,7 +109,15 @@ func newSystemHandlers(rt module.Runtime) (*systemHandlers, error) {
 		cfg.JWTExpiresIn,
 		cfg.RefreshTokenEnabled, cfg.JWTRefreshExpiresIn,
 		cfg.TrustProxy,
-	)
+	).UseProxyPolicy(cfg.ProxyPolicy()).UseLoginGuard(&service.LoginGuard{
+		Captcha:        rt.Captcha,
+		IP:             repo.NewLoginIPGuard(rt.DB, cfg.LoginIPWindowSecondsOrDefault()),
+		Used:           repo.NewCaptchaUsedRepo(rt.DB),
+		SealKey:        service.CaptchaSealKey(cfg.JWTSecret),
+		CaptchaAfter:   cfg.LoginCaptchaAfterOrDefault(),
+		IPCaptchaAfter: cfg.LoginIPCaptchaAfterOrDefault(),
+		IPMaxFailures:  cfg.LoginIPMaxFailuresOrDefault(),
+	})
 	if !service.AccessLogReadable(rt.AccessLog) {
 		// Without a Reader the request log page cannot show anything.
 		authSvc.HideMenus(service.AccessLogListPerm)

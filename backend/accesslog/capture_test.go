@@ -172,7 +172,7 @@ func TestMiddlewareAndInterceptorProduceOneEntry(t *testing.T) {
 	})
 	handler := accesslog.Middleware(l, opts)(inner)
 
-	call(t, handler, "deny", map[string]string{"X-Api-Key": "k", "X-Forwarded-For": "203.0.113.9, 10.0.0.1"}, "10.0.0.1:1")
+	call(t, handler, "deny", map[string]string{"X-Api-Key": "k", "X-Forwarded-For": "198.51.100.1, 203.0.113.9"}, "10.0.0.1:1")
 	for _, path := range []string{"/files/a.txt", "/files/missing", "/healthz"} {
 		req := httptest.NewRequest(http.MethodGet, path, nil)
 		req.RemoteAddr = "[::1]:9000"
@@ -250,19 +250,5 @@ func TestErrorIsTruncated(t *testing.T) {
 	got := sink.entries()[0].Error
 	if len(got) > accesslog.MaxErrorLength || len(got) < accesslog.MaxErrorLength-3 || !strings.HasPrefix(long, got) {
 		t.Fatalf("error length = %d", len(got))
-	}
-}
-
-func TestClientIP(t *testing.T) {
-	h := http.Header{}
-	h.Set("X-Forwarded-For", " 198.51.100.7 , 10.0.0.1")
-	if got := accesslog.ClientIP(h, "10.0.0.1:80", true); got != "198.51.100.7" {
-		t.Fatalf("trusted = %q", got)
-	}
-	if got := accesslog.ClientIP(h, "10.0.0.1:80", false); got != "10.0.0.1" {
-		t.Fatalf("untrusted = %q", got)
-	}
-	if got := accesslog.ClientIP(http.Header{}, "pipe", true); got != "pipe" {
-		t.Fatalf("no port = %q", got)
 	}
 }

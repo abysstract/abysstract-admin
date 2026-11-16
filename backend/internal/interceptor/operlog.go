@@ -3,13 +3,14 @@ package interceptor
 import (
 	"context"
 	"encoding/json"
-	"net"
 	"strings"
 	"time"
 
 	"connectrpc.com/connect/v2"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
+
+	"github.com/abysstract/abysstract-admin/backend/accesslog"
 )
 
 // OperLogEntry 一条操作日志。
@@ -30,8 +31,8 @@ const maxParamLen = 1900
 
 // NewOperLogInterceptor 记录写操作（跳过读操作、AuthService、LogService）。
 // 须注册在 Auth/Permission 之后（最内层），以读取 Claims 并仅记录已通过鉴权的调用。
-// trustProxy 为 true 时才信任 X-Forwarded-For，否则使用直连对端地址，避免 IP 伪造。
-func NewOperLogInterceptor(record func(context.Context, OperLogEntry), trustProxy bool) connect.ServerInterceptor {
+// proxies 决定是否以及如何采信 X-Forwarded-For（见 accesslog.ProxyPolicy），零值使用直连对端地址，避免 IP 伪造。
+func NewOperLogInterceptor(record func(context.Context, OperLogEntry), proxies accesslog.ProxyPolicy) connect.ServerInterceptor {
 	return func(next connect.ServerFunc) connect.ServerFunc {
 		return func(ctx context.Context, spec connect.Spec, stream connect.ServerStream) error {
 			proc := spec.Procedure
@@ -49,7 +50,7 @@ func NewOperLogInterceptor(record func(context.Context, OperLogEntry), trustProx
 			entry := OperLogEntry{
 				Title:     titleOf(proc),
 				Method:    proc,
-				OperIP:    clientIP(info, trustProxy),
+				OperIP:    proxies.ClientIP(info.RequestHeader(), info.PeerAddr),
 				OperParam: audit.param,
 				Status:    1,
 				CostMs:    time.Since(start).Milliseconds(),
@@ -110,26 +111,6 @@ func titleOf(procedure string) string {
 	rest := procedure[:i]
 	service := rest[strings.LastIndex(rest, ".")+1:]
 	return service + "." + method
-}
-
-// clientIP 解析客户端 IP。仅在信任反向代理时采用 X-Forwarded-For 最左地址，
-// 否则使用直连对端地址（去掉端口），避免外部伪造 XFF 头污染审计日志。
-func clientIP(info *connect.CallInfo, trustProxy bool) string {
-	if trustProxy {
-		if xff := info.RequestHeader().Get("X-Forwarded-For"); xff != "" {
-			if idx := strings.IndexByte(xff, ','); idx >= 0 {
-				return strings.TrimSpace(xff[:idx])
-			}
-			return strings.TrimSpace(xff)
-		}
-	}
-	if addr := info.PeerAddr; addr != "" {
-		if host, _, err := net.SplitHostPort(addr); err == nil {
-			return host
-		}
-		return addr
-	}
-	return ""
 }
 
 // paramSummary 把请求消息序列化为 JSON 摘要，脱敏敏感字段并截断超长内容。

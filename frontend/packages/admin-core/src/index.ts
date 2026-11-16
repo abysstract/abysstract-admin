@@ -14,5 +14,8 @@ export type {
   AdminFrontendModule,
   AdminHost,
   AdminLoginConfig,
+  AdminLoginCaptchaChallenge,
+  AdminLoginCaptchaProps,
+  AdminLoginCaptchaValue,
   AuthStorage,
 } from "./runtime/types";

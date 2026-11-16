@@ -14,6 +14,8 @@ import (
 	adminv1 "github.com/abysstract/abysstract-admin/backend/gen/abysstract/admin/v1"
 	"github.com/abysstract/abysstract-admin/backend/gen/abysstract/admin/v1/adminv1connect"
 	"github.com/abysstract/abysstract-admin/backend/internal/jwt"
+
+	"github.com/abysstract/abysstract-admin/backend/accesslog"
 )
 
 func TestOperLogThroughHTTP(t *testing.T) {
@@ -46,7 +48,7 @@ func TestOperLogThroughHTTP(t *testing.T) {
 			server := connect.NewServer(
 				NewAuthInterceptor(registry, manager, nil, nil),
 				NewPermissionInterceptor(registry, nil),
-				NewOperLogInterceptor(func(_ context.Context, entry OperLogEntry) { entries = append(entries, entry) }, tc.trustProxy),
+				NewOperLogInterceptor(func(_ context.Context, entry OperLogEntry) { entries = append(entries, entry) }, accesslog.ProxyPolicy{Trust: tc.trustProxy}),
 			)
 			server.Register(connect.Method{
 				Spec: connect.Spec{Procedure: procedure, Schema: adminv1.File_abysstract_admin_v1_user_proto.Services().ByName("UserService").Methods().ByName("CreateUser")},
@@ -95,7 +97,7 @@ func TestOperLogThroughHTTP(t *testing.T) {
 			entry := entries[0]
 			wantIP := "127.0.0.1"
 			if tc.trustProxy {
-				wantIP = "203.0.113.9"
+				wantIP = "198.51.100.2"
 			}
 			if entry.OperIP != wantIP || entry.OperID != 7 || entry.OperName != "auditor" || entry.Method != procedure {
 				t.Fatalf("audit identity: %+v", entry)

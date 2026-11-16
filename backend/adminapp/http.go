@@ -13,6 +13,8 @@ import (
 	"github.com/abysstract/abysstract-admin/backend/internal/interceptor"
 	"github.com/abysstract/abysstract-admin/backend/internal/jwt"
 	"github.com/abysstract/abysstract-admin/backend/module"
+
+	"github.com/abysstract/abysstract-admin/backend/accesslog"
 )
 
 type httpSecurity struct {
@@ -20,7 +22,7 @@ type httpSecurity struct {
 	verLoader   interceptor.TokenVersionLoader
 	resetLoader interceptor.PwdResetRequiredLoader
 	permLoader  interceptor.PermLoader
-	trustProxy  bool
+	proxies     accesslog.ProxyPolicy
 	record      func(interceptor.OperLogEntry)
 }
 
@@ -73,7 +75,7 @@ func wrapHTTPRoute(route preparedRoute, handler http.Handler, sec httpSecurity) 
 			entry := interceptor.OperLogEntry{
 				Title:     route.Route.Name,
 				Method:    route.Route.Method + " " + route.Route.Path,
-				OperIP:    httpClientIP(r, sec.trustProxy),
+				OperIP:    sec.proxies.ClientIP(r.Header, r.RemoteAddr),
 				OperParam: httpBodySummary(r.Header.Get("Content-Type"), body),
 				Status:    1,
 			}
@@ -115,22 +117,6 @@ func shouldAuditHTTP(method string) bool {
 	default:
 		return true
 	}
-}
-
-func httpClientIP(r *http.Request, trustProxy bool) string {
-	if trustProxy {
-		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-			if idx := strings.IndexByte(xff, ','); idx >= 0 {
-				return strings.TrimSpace(xff[:idx])
-			}
-			return strings.TrimSpace(xff)
-		}
-	}
-	host, _, ok := strings.Cut(r.RemoteAddr, ":")
-	if ok {
-		return host
-	}
-	return r.RemoteAddr
 }
 
 func httpBodySummary(contentType string, body []byte) string {

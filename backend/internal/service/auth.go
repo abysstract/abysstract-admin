@@ -6,8 +6,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"net"
-	"strings"
 	"time"
 
 	"github.com/abysstract/abysstract-admin/backend/identity"
@@ -32,7 +30,8 @@ type AuthService struct {
 	// 刷新令牌
 	refreshEnabled   bool
 	refreshExpiresIn time.Duration
-	trustProxy       bool
+	proxies          accesslog.ProxyPolicy
+	guard            *LoginGuard
 	now              func() time.Time
 	// hiddenMenuPerms 中的菜单不出现在 GetUserInfo 的菜单树中（如未配置可查询 sink 时的请求日志）。
 	hiddenMenuPerms map[string]bool
@@ -72,26 +71,23 @@ func NewAuthService(
 		jwtExpiresIn:     jwtExpiresIn,
 		refreshEnabled:   refreshEnabled,
 		refreshExpiresIn: refreshExpiresIn,
-		trustProxy:       trustProxy,
+		proxies:          accesslog.ProxyPolicy{Trust: trustProxy},
 		now:              time.Now,
 	}
 }
 
-// loginIP 解析登录来源 IP。仅在信任反向代理时采用 X-Forwarded-For 最左地址，
-// 否则使用直连对端地址（去端口），避免外部伪造 XFF 头污染登录审计日志。
+// loginIP 解析登录来源 IP（规则见 accesslog.ProxyPolicy）。
 func (s *AuthService) loginIP(header *connect.Header, peerAddr string) string {
-	if s.trustProxy {
-		if xff := header.Get("X-Forwarded-For"); xff != "" {
-			if i := strings.IndexByte(xff, ','); i >= 0 {
-				return strings.TrimSpace(xff[:i])
-			}
-			return strings.TrimSpace(xff)
-		}
+	return s.proxies.ClientIP(header, peerAddr)
+}
+
+// tooManyAttemptsMessage 是来源 IP 失败过多时的文案，剩余时间按分钟向上取整。
+func tooManyAttemptsMessage(remaining time.Duration) string {
+	minutes := int((remaining + time.Minute - 1) / time.Minute)
+	if minutes < 1 {
+		minutes = 1
 	}
-	if host, _, err := net.SplitHostPort(peerAddr); err == nil {
-		return host
-	}
-	return peerAddr
+	return fmt.Sprintf("尝试次数过多，请 %d 分钟后再试", minutes)
 }
 
 // lockedMessage 是账号锁定时返回给登录页的文案，剩余时间按分钟向上取整，至少 1 分钟。
@@ -103,7 +99,7 @@ func lockedMessage(remaining time.Duration) string {
 	return fmt.Sprintf("账号已锁定，请 %d 分钟后再试", minutes)
 }
 
-// Login 验证密码 → 检查账号锁定 → 签发 JWT 与可选 refresh_token。
+// Login 检查账号锁定 → IP 计数与验证码 → 验证密码 → 签发 JWT 与可选 refresh_token。
 // 失败时通过 LoginSecurity 记录失败计数，达到阈值触发锁定（需求 6.6）。
 func (s *AuthService) Login(
 	ctx context.Context, req *adminv1.LoginRequest,
@@ -116,37 +112,25 @@ func (s *AuthService) Login(
 	now := s.now()
 
 	// 1) 锁定检查（需求 6.7）：先于密码校验，避免锁定状态下泄漏任何信息。
-	if s.loginSec != nil {
-		locked, until, err := s.loginSec.IsLocked(ctx, username, now)
-		if err != nil {
-			return nil, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
-		}
-		if locked {
-			_ = s.repo.AddLoginLog(ctx, &model.SysLoginLog{Username: username, Status: 2, IP: ip, Msg: "登录失败：账号锁定中"})
-			return nil, connect.NewError(connect.CodePermissionDenied, lockedMessage(until.Sub(now)))
-		}
+	if err := s.checkLocked(ctx, username, ip, now); err != nil {
+		return nil, err
+	}
+	// 2) 按来源 IP 计数与验证码。
+	ipKey := loginIPKey(ip)
+	if err := s.checkLoginGuard(ctx, req, username, ip, ipKey, now); err != nil {
+		return nil, err
 	}
 
 	u, err := s.repo.VerifyPassword(ctx, username, req.Password)
 	if err != nil {
-		// 2) 失败计数 +1（需求 6.6）。
-		// 计数失败视为基础设施异常，拒绝登录而不是放行：避免攻击者通过打挂
-		// sys_login_attempt 让计数永远写不进而在阈值之外反复尝试。
-		if s.loginSec != nil {
-			if _, _, ferr := s.loginSec.RecordFailure(ctx, username, now); ferr != nil {
-				_ = s.repo.AddLoginLog(ctx, &model.SysLoginLog{Username: username, Status: 2, IP: ip, Msg: "登录失败：计数器异常"})
-				return nil, connect.NewError(connect.CodeInternal, ferr.Error()).WithCause(ferr)
-			}
-		}
-		_ = s.repo.AddLoginLog(ctx, &model.SysLoginLog{Username: username, Status: 2, IP: ip, Msg: "登录失败：用户名或密码错误"})
-		return nil, connect.NewError(connect.CodeUnauthenticated, "用户名或密码错误")
+		return nil, s.recordLoginFailure(ctx, username, ip, ipKey, now)
 	}
 	if u.Status != int16(adminv1.Status_STATUS_ENABLED) {
-		_ = s.repo.AddLoginLog(ctx, &model.SysLoginLog{Username: username, Status: 2, IP: ip, Msg: "登录失败：账号已停用"})
+		s.logLoginFailure(ctx, username, ip, "登录失败：账号已停用")
 		return nil, connect.NewError(connect.CodePermissionDenied, errAccountDisabled.Error()).WithCause(errAccountDisabled)
 	}
 
-	// 3) 成功：重置失败计数（需求 6.7）。
+	// 4) 成功：重置失败计数（需求 6.7）。
 	if s.loginSec != nil {
 		_ = s.loginSec.Reset(ctx, username)
 	}
@@ -155,27 +139,115 @@ func (s *AuthService) Login(
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
 	}
-
 	resp := &adminv1.LoginResponse{Token: token, ExpiresIn: expiresIn}
-
-	// 4) 可选：签发 refresh_token（需求 6.10）。
-	// 绑定当前 user.token_version：RefreshToken RPC 校验 rec.token_version == user.token_version，
-	// 使改密/重置密码后即使有漏网的 refresh 记录也会因版本不匹配被拒绝。
-	if s.refreshEnabled && s.refresh != nil {
-		raw, err := generateRefreshToken()
-		if err != nil {
-			return nil, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
-		}
-		expiresAt := now.Add(s.refreshExpiresIn)
-		if err := s.refresh.Create(ctx, u.ID, hashRefreshToken(raw), expiresAt, u.TokenVersion); err != nil {
-			return nil, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
-		}
-		resp.RefreshToken = raw
+	if resp.RefreshToken, err = s.issueRefreshToken(ctx, u, now); err != nil {
+		return nil, err
 	}
 
 	accesslog.SetPrincipal(ctx, interceptor.UserPrincipal(u.ID, u.Username))
 	_ = s.repo.AddLoginLog(ctx, &model.SysLoginLog{Username: username, Status: 1, IP: ip, Msg: "登录成功"})
 	return resp, nil
+}
+
+// logLoginFailure 写一条失败的登录日志；写日志失败不影响登录结果。
+func (s *AuthService) logLoginFailure(ctx context.Context, username, ip, msg string) {
+	_ = s.repo.AddLoginLog(ctx, &model.SysLoginLog{Username: username, Status: 2, IP: ip, Msg: msg})
+}
+
+// checkLocked 拒绝锁定中的账号。
+func (s *AuthService) checkLocked(ctx context.Context, username, ip string, now time.Time) error {
+	if s.loginSec == nil {
+		return nil
+	}
+	locked, until, err := s.loginSec.IsLocked(ctx, username, now)
+	if err != nil {
+		return connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
+	}
+	if locked {
+		s.logLoginFailure(ctx, username, ip, "登录失败：账号锁定中")
+		return connect.NewError(connect.CodePermissionDenied, lockedMessage(until.Sub(now)))
+	}
+	return nil
+}
+
+// checkLoginGuard 在验证密码前执行 IP 计数与验证码检查：未启用验证码时
+// IP 失败过多直接拒绝；启用后账号或 IP 失败达到阈值要求验证码。
+// 验证码缺失或错误不计入失败次数。
+func (s *AuthService) checkLoginGuard(
+	ctx context.Context, req *adminv1.LoginRequest, username, ip, ipKey string, now time.Time,
+) error {
+	g := s.guard
+	if g == nil {
+		return nil
+	}
+	ipFails, ipUntil, err := g.IP.Failures(ctx, ipKey, now)
+	if err != nil {
+		return connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
+	}
+	if g.Captcha == nil {
+		if int(ipFails) >= g.IPMaxFailures {
+			s.logLoginFailure(ctx, username, ip, "登录失败：来源 IP 尝试次数过多")
+			return connect.NewError(connect.CodeResourceExhausted, tooManyAttemptsMessage(ipUntil.Sub(now)))
+		}
+		return nil
+	}
+	var accountFails int32
+	if s.loginSec != nil {
+		if accountFails, err = s.loginSec.FailCount(ctx, username, now); err != nil {
+			return connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
+		}
+	}
+	if !g.captchaRequired(accountFails, ipFails) {
+		return nil
+	}
+	if cerr, msg := s.checkCaptcha(ctx, req, ip, now); cerr != nil {
+		s.logLoginFailure(ctx, username, ip, msg)
+		return cerr
+	}
+	return nil
+}
+
+// recordLoginFailure 在密码错误时给账号和来源 IP 的失败计数各加一（需求 6.6），
+// 返回给客户端的错误；达到验证码阈值时附带 LoginChallenge。
+// 计数失败视为基础设施异常，拒绝登录而不是放行：避免攻击者通过打挂
+// sys_login_attempt 让计数永远写不进而在阈值之外反复尝试。
+func (s *AuthService) recordLoginFailure(ctx context.Context, username, ip, ipKey string, now time.Time) error {
+	var accountFails, ipFails int32
+	var ferr error
+	if s.loginSec != nil {
+		_, accountFails, ferr = s.loginSec.RecordFailure(ctx, username, now)
+	}
+	if ferr == nil && s.guard != nil {
+		ipFails, ferr = s.guard.IP.RecordFailure(ctx, ipKey, now)
+	}
+	if ferr != nil {
+		s.logLoginFailure(ctx, username, ip, "登录失败：计数器异常")
+		return connect.NewError(connect.CodeInternal, ferr.Error()).WithCause(ferr)
+	}
+	s.logLoginFailure(ctx, username, ip, "登录失败：用户名或密码错误")
+	cerr := connect.NewError(connect.CodeUnauthenticated, "用户名或密码错误")
+	if s.guard.captchaRequired(accountFails, ipFails) {
+		cerr = loginChallengeError(cerr, &adminv1.LoginChallenge{CaptchaRequired: true})
+	}
+	return cerr
+}
+
+// issueRefreshToken 在启用时签发 refresh_token（需求 6.10），未启用返回空串。
+// 绑定当前 user.token_version：RefreshToken RPC 校验 rec.token_version == user.token_version，
+// 使改密/重置密码后即使有漏网的 refresh 记录也会因版本不匹配被拒绝。
+func (s *AuthService) issueRefreshToken(ctx context.Context, u *model.SysUser, now time.Time) (string, error) {
+	if !s.refreshEnabled || s.refresh == nil {
+		return "", nil
+	}
+	raw, err := generateRefreshToken()
+	if err != nil {
+		return "", connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
+	}
+	expiresAt := now.Add(s.refreshExpiresIn)
+	if err := s.refresh.Create(ctx, u.ID, hashRefreshToken(raw), expiresAt, u.TokenVersion); err != nil {
+		return "", connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
+	}
+	return raw, nil
 }
 
 // Logout 吊销该会话对应的 token_version（让所有同 ver 的 token 失效）。

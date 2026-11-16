@@ -61,7 +61,7 @@ curl -s http://localhost:8080/abysstract.admin.v1.LogService/ListAccessLogs \
 | `ADMIN_ACCESS_LOG_FLUSH_INTERVAL_MS` | 不足一批时的最长等待（毫秒），10–60000 | `1000` |
 | `ADMIN_ACCESS_LOG_RETENTION_DAYS` | `db` sink 保留天数，0 为永久保留，最大 3650 | `30` |
 
-客户端 IP 与操作日志一致：设置 `ADMIN_TRUST_PROXY=true` 后取 `X-Forwarded-For` 最左侧的地址，否则取直连地址。
+客户端 IP 与操作日志一致，规则见[客户端 IP 与审计](configuration.md#客户端-ip-与审计)。自建 API 服务时，`CaptureOptions` 的 `TrustProxy`、`TrustedProxies` 与 `ADMIN_TRUST_PROXY`、`ADMIN_TRUSTED_PROXIES` 对应，`adminapp.AccessLogCapture(cfg)` 已经填好。
 
 配置了未注册的 sink 名时，后端启动失败并列出可用的名称。只配置 `stdout` 时，「请求日志」菜单不显示，`ListAccessLogs` 返回 `failed_precondition`，提示需要包含 `db`。
 

@@ -13,6 +13,8 @@
 - 界面文案集中定义：`defaultAdminTexts`、`useAdminTexts()`，宿主通过 `AdminHost.texts` 覆盖其中一部分。见[界面文案](docs/admin-core-usage.md#界面文案)。
 - `ResourceFormDrawer`（`@abysstract/admin-core/resource`）：720 宽的新增、编辑抽屉，「取消 保存」在标题栏右侧。`ResourceForm` 新增 `onCancel`、`actionsContainer`；表单项新增 `span`、`sameRowAsPrevious`。
 - 登录页可配置：`AdminHost.login` 的 `logo`、`subtitle`、`background`、`footer`；登录页文案放在 `texts.login`。见[登录页](docs/admin-core-usage.md#登录页)。
+- 登录失败后要求验证码，并按来源 IP 计数（IPv6 按 /64）。`ADMIN_CAPTCHA_PROVIDER` 可选内置滑块 `slide`（`captcha/slidecaptcha`，基于 go-captcha，不依赖外部服务）、`turnstile`、`hcaptcha`；其他服务实现 `captcha.Verifier` 后传给 `adminapp.Options.Captcha`。新增 `AuthService.GetCaptcha`、`LoginRequest.captcha_id/captcha` 和错误详情 `LoginChallenge`；前端内置滑块，第三方组件通过 `AdminHost.login.captcha` 提供。未启用验证码时，同一 IP 失败过多会暂时拒绝登录。新增迁移 `20261116090000_login_guard`（`sys_login_ip_attempt`、`sys_captcha_used`），升级后执行 `admin-migrations sync` 和 `migrate`。见[登录安全](docs/configuration.md#登录安全)。
+- `ADMIN_TRUSTED_PROXIES`：多层反向代理时列出可信代理网段，客户端 IP 从 `X-Forwarded-For` 右侧跳过这些网段取得。`accesslog.ProxyPolicy` 是对应的公开 API。
 - `ResourceTable` 新增 `query.syncUrl`、列的 `numeric`、自定义行操作的 `danger`、自定义工具栏项的 `placement: "selection"`。
 
 ### Changed
@@ -34,6 +36,8 @@
 - 首页、个人中心、分配菜单加载失败时显示原因和「重试」，不再显示 0 或空白；首页统计卡去掉装饰图标。
 - 登录页改为左右分栏：宽屏左侧是品牌区，默认背景是跟随主题 token 的浅色色块；右侧表单的标签放在输入框上方；窄屏时背景铺满整页，产品名和表单放在卡片里，不再出现横向滚动。用户名或密码不对时，错误标在密码字段下方，不再误报「登录已过期」；账号锁定提示改为「账号已锁定，请 N 分钟后再试」。输入框不再有占位文字，按占位文字查找登录框的测试改用标签。
 - `module new` 生成的列表页不再自己弹成功、失败消息，也不再覆盖批量删除的文案。
+- **安全修复**：`ADMIN_TRUST_PROXY=true` 时客户端 IP 改取 `X-Forwarded-For` **最右侧**的地址（原为最左侧，客户端可以伪造）。操作日志、请求日志、登录日志和 `accesslog.ClientIP` 都受影响。多层代理的部署需要设置 `ADMIN_TRUSTED_PROXIES`，否则记录到的是上一层代理的地址。自定义 HTTP 路由的操作日志记录 IPv6 客户端地址时不再被截断。
+- `ADMIN_LOGIN_MAX_FAILURES` 不设置时自动取值：未启用验证码为 5（与原默认相同），启用验证码为 20。`adminconfig.Config.LoginMaxFailures` 为 0 表示自动，用 `LoginMaxFailuresFor` 取实际阈值。`.env.example` 不再写死 5。
 
 ## [0.6.0] - 2026-11-12
 

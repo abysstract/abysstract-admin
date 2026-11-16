@@ -5,6 +5,7 @@ package adminconfig
 import (
 	"fmt"
 	"log/slog"
+	"net/netip"
 	"net/url"
 	"os"
 	"strconv"
@@ -78,7 +79,10 @@ type Config struct {
 	JWTSecret    string // JWT 签名密钥
 	JWTExpiresIn time.Duration
 	CORSOrigins  []string // 允许的跨域来源（dev 默认本地，prod 必须显式配置）
-	TrustProxy   bool     // 是否信任反向代理的 X-Forwarded-For（取客户端真实 IP）
+	TrustProxy   bool     // 信任一层反向代理：取 X-Forwarded-For 最右侧地址（见 ProxyPolicy）
+	// TrustedProxies 可信代理网段（ADMIN_TRUSTED_PROXIES）。设置后仅当直连对端在其中时才读
+	// X-Forwarded-For，并从右向左跳过这些网段，取第一个不在其中的地址。
+	TrustedProxies []netip.Prefix
 	// MetricsToken 保护 /metrics：设置后需携带 Bearer token；未设置时开发模式开放、生产模式关闭。
 	MetricsToken string
 
@@ -92,8 +96,17 @@ type Config struct {
 	DBMaxIdleConns  int           // 数据库连接池最大空闲连接数（0..MaxOpen）
 
 	// 登录安全（需求 6.6/6.7；具体策略在 repo/loginsec.go 实现）
-	LoginMaxFailures    int // 连续失败锁定阈值（≥1）
+	LoginMaxFailures    int // 连续失败锁定阈值；0 表示自动：未启用验证码 5，启用后 20（见 LoginMaxFailuresFor）
 	LoginLockoutSeconds int // 锁定时长（≥1s）
+
+	// 登录验证码与按 IP 计数（见 login.go 与 docs/configuration.md#登录安全）
+	LoginCaptchaAfter    int    // 同一用户名连续失败达到该次数后要求验证码（≥1）
+	LoginIPCaptchaAfter  int    // 同一 IP 在窗口内失败达到该次数后要求验证码（≥1）
+	LoginIPMaxFailures   int    // 未启用验证码时，同一 IP 在窗口内失败达到该次数后拒绝登录（≥1）
+	LoginIPWindowSeconds int    // IP 失败计数窗口（≥1s）
+	CaptchaProvider      string // 验证码实现名：slide | turnstile | hcaptcha | 应用注册的实现；空值不启用
+	CaptchaSecret        string // 第三方验证服务的服务端密钥
+	CaptchaSiteKey       string // 第三方验证服务的站点密钥，经 GetCaptcha 返回给前端
 
 	// 上传限制（需求 9.1–9.4）
 	UploadMaxBytes int64  // 通用上传大小上限
@@ -150,7 +163,6 @@ func Load() *Config {
 		DBMaxIdleConns:      defaultDBMaxIdleConns,
 		JWTExpiresIn:        defaultJWTExpiresIn,
 		JWTRefreshExpiresIn: defaultJWTRefreshExpiresIn,
-		LoginMaxFailures:    defaultLoginMaxFailures,
 		LoginLockoutSeconds: defaultLoginLockoutSeconds,
 		UploadMaxBytes:      defaultUploadMaxBytes,
 		AvatarMaxBytes:      defaultAvatarMaxBytes,
@@ -179,8 +191,9 @@ func Load() *Config {
 	}
 	c.DBMaxOpenConns = c.getInt("ADMIN_DB_MAX_OPEN_CONNS", c.DBMaxOpenConns)
 	c.DBMaxIdleConns = c.getInt("ADMIN_DB_MAX_IDLE_CONNS", c.DBMaxIdleConns)
-	c.LoginMaxFailures = c.getInt("ADMIN_LOGIN_MAX_FAILURES", defaultLoginMaxFailures)
+	c.LoginMaxFailures = c.getInt("ADMIN_LOGIN_MAX_FAILURES", 0)
 	c.LoginLockoutSeconds = c.getInt("ADMIN_LOGIN_LOCKOUT_SECONDS", defaultLoginLockoutSeconds)
+	c.loadLoginGuard()
 	c.UploadMaxBytes = c.getInt64("ADMIN_UPLOAD_MAX_BYTES", defaultUploadMaxBytes)
 	c.AvatarMaxBytes = c.getInt64("ADMIN_AVATAR_MAX_BYTES", defaultAvatarMaxBytes)
 	c.StorageUploadTTL = c.getDuration("ADMIN_STORAGE_UPLOAD_TTL_SECONDS", defaultStorageUploadTTL)
@@ -301,12 +314,13 @@ func (c *Config) validateRange() error {
 	if c.RefreshTokenEnabled && c.JWTRefreshExpiresIn <= c.JWTExpiresIn {
 		problems = append(problems, "ADMIN_JWT_REFRESH_EXPIRES_SECONDS 必须大于 ADMIN_JWT_EXPIRES_SECONDS")
 	}
-	if c.LoginMaxFailures < 1 {
-		problems = append(problems, "ADMIN_LOGIN_MAX_FAILURES 必须 ≥ 1")
+	if c.LoginMaxFailures < 0 {
+		problems = append(problems, "ADMIN_LOGIN_MAX_FAILURES 必须 ≥ 0（0 表示自动）")
 	}
 	if c.LoginLockoutSeconds < 1 {
 		problems = append(problems, "ADMIN_LOGIN_LOCKOUT_SECONDS 必须 ≥ 1")
 	}
+	problems = append(problems, c.loginGuardProblems()...)
 	if c.UploadMaxBytes <= 0 {
 		problems = append(problems, "ADMIN_UPLOAD_MAX_BYTES 必须 > 0")
 	}
@@ -517,6 +531,9 @@ func (c Config) Clone() Config {
 	if c.AccessLogSinks != nil {
 		out.AccessLogSinks = append([]string(nil), c.AccessLogSinks...)
 	}
+	if c.TrustedProxies != nil {
+		out.TrustedProxies = append([]netip.Prefix(nil), c.TrustedProxies...)
+	}
 	if c.parseErrs != nil {
 		out.parseErrs = append([]string(nil), c.parseErrs...)
 	}
@@ -578,12 +595,19 @@ func (c Config) LogValue() slog.Value {
 		slog.Duration("jwt_expires_in", c.JWTExpiresIn),
 		slog.Int("cors_origin_count", len(c.CORSOrigins)),
 		slog.Bool("trust_proxy", c.TrustProxy),
+		slog.Int("trusted_proxy_count", len(c.TrustedProxies)),
 		slog.Bool("refresh_token_enabled", c.RefreshTokenEnabled),
 		slog.Duration("shutdown_timeout", c.ShutdownTimeout),
 		slog.Int("db_max_open_conns", c.DBMaxOpenConns),
 		slog.Int("db_max_idle_conns", c.DBMaxIdleConns),
 		slog.Int("login_max_failures", c.LoginMaxFailures),
 		slog.Int("login_lockout_seconds", c.LoginLockoutSeconds),
+		slog.Int("login_captcha_after", c.LoginCaptchaAfter),
+		slog.Int("login_ip_captcha_after", c.LoginIPCaptchaAfter),
+		slog.Int("login_ip_max_failures", c.LoginIPMaxFailures),
+		slog.Int("login_ip_window_seconds", c.LoginIPWindowSeconds),
+		slog.String("captcha_provider", c.CaptchaProvider),
+		slog.Bool("captcha_secret_set", c.CaptchaSecret != ""),
 		slog.Int64("upload_max_bytes", c.UploadMaxBytes),
 		slog.Int64("avatar_max_bytes", c.AvatarMaxBytes),
 		slog.String("upload_dir", c.UploadDir),

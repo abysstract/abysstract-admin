@@ -32,6 +32,7 @@ Go 应用按需导入 `github.com/abysstract/abysstract-admin/backend/` 下的�
 | `coremigrations` | 提供系统迁移来源 |
 | `storage`、`storage/localstorage`、`storage/s3storage` | 文件存储接口、对象键工具与驱动，见[文件存储](storage.md) |
 | `accesslog`、`accesslog/stdoutsink`、`accesslog/dbsink` | 请求日志的采集、分发与 sink，见[请求日志](access-log.md) |
+| `captcha`、`captcha/siteverify`、`captcha/slidecaptcha` | 登录验证码接口与实现（Turnstile/hCaptcha、内置滑块），见[登录安全](configuration.md#登录安全) |
 
 前端从 `@abysstract/admin-core` 导入应用与组件（图片直传组件在 `@abysstract/admin-core/upload`），从 `@abysstract/admin-proto` 导入系统协议类型。包的安装方式见下文[安装前端包](#安装前端包)。
 
@@ -249,7 +250,48 @@ const application = createAdminApp({
 ```
 
 - `background` 是 CSS `background` 的值，宽屏用于左侧品牌区，窄屏铺满整页。窄屏时页脚直接显示在背景上，背景图底部宜留浅色区域。不传时是由主题 token 生成的浅色色块，改 `colorPrimary` 或换暗色算法时跟着变。
-- 表单的标签、按钮和错误提示在 `texts.login` 里，可以和其他文案一样覆盖。用户名或密码不对时，错误标在密码字段下方；账号锁定、停用时显示服务端返回的原因。
+- 表单的标签、按钮和错误提示在 `texts.login` 里，可以和其他文案一样覆盖。用户名或密码不对时，错误标在密码字段下方；账号锁定、停用、来源 IP 尝试过多时显示服务端返回的原因。
+
+### 登录验证码
+
+服务端启用验证码（`ADMIN_CAPTCHA_PROVIDER`，见[登录安全](configuration.md#登录安全)）后，失败次数达到阈值时登录表单会多出“安全验证”一栏。完成验证后，如果用户已经点过登录，会自动重新提交。
+
+- `slide`（内置滑块）：前端不需要任何配置。滑块可以拖动，也可以聚焦后用左右方向键移动、回车确认。
+- 第三方服务：在 `host.login.captcha` 提供组件，渲染对方的验证组件，把 token 交给 `onChange`。`loadChallenge()` 返回服务端配置的 `kind` 和 `payload`（其中有 `siteKey`），`resetKey` 变化时重置组件，因为 token 只能用一次。下面以 Cloudflare Turnstile 为例，页面需先加载 `https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit`：
+
+```tsx
+import { useEffect, useRef } from "react";
+import type { AdminLoginCaptchaProps } from "@abysstract/admin-core";
+
+declare const turnstile: {
+  render(el: HTMLElement, options: { sitekey: string; callback(token: string): void; "expired-callback"(): void }): string;
+  remove(id: string): void;
+};
+
+function TurnstileCaptcha({ onChange, resetKey, loadChallenge }: AdminLoginCaptchaProps) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    let widget: string | undefined;
+    let active = true;
+    void loadChallenge().then(({ payload }) => {
+      if (!active || !ref.current) return;
+      const { siteKey } = JSON.parse(payload) as { siteKey: string };
+      widget = turnstile.render(ref.current, {
+        sitekey: siteKey,
+        callback: (token) => onChange({ token }),
+        "expired-callback": () => onChange(undefined),
+      });
+    });
+    return () => {
+      active = false;
+      if (widget) turnstile.remove(widget);
+    };
+  }, [resetKey, loadChallenge, onChange]);
+  return <div ref={ref} />;
+}
+
+createAdminApp({ host: { /* … */ login: { captcha: TurnstileCaptcha } }, modules });
+```
 
 ## 全局 antd 配置
 

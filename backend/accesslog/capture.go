@@ -3,8 +3,8 @@ package accesslog
 import (
 	"context"
 	"errors"
-	"net"
 	"net/http"
+	"net/netip"
 	"strings"
 	"time"
 
@@ -17,10 +17,11 @@ const HeaderRequestID = "X-Request-Id"
 
 // CaptureOptions configures Middleware and Interceptor.
 type CaptureOptions struct {
-	// TrustProxy takes the client IP from the left-most X-Forwarded-For
-	// address. Enable it only behind a reverse proxy that sets the header;
-	// otherwise the peer address is used so clients cannot forge it.
-	TrustProxy bool
+	// TrustProxy and TrustedProxies select the client IP; see ProxyPolicy.
+	// Leave both unset unless a reverse proxy sets X-Forwarded-For, so
+	// clients cannot forge the address.
+	TrustProxy     bool
+	TrustedProxies []netip.Prefix
 	// RequestID returns the request ID of a request context. nil reads the
 	// X-Request-Id request header and, in Middleware, the response header
 	// set by an inner handler.
@@ -31,6 +32,10 @@ type CaptureOptions struct {
 	SkipProcedure func(procedure string) bool
 	// Now returns the current time; nil selects time.Now. Tests use it.
 	Now func() time.Time
+}
+
+func (o CaptureOptions) proxyPolicy() ProxyPolicy {
+	return ProxyPolicy{Trust: o.TrustProxy, Proxies: o.TrustedProxies}
 }
 
 func (o CaptureOptions) now() time.Time {
@@ -62,7 +67,7 @@ func Middleware(l *Logger, opts CaptureOptions) func(http.Handler) http.Handler 
 				Kind:      KindHTTP,
 				Method:    r.Method,
 				Path:      r.URL.Path,
-				ClientIP:  ClientIP(r.Header, r.RemoteAddr, opts.TrustProxy),
+				ClientIP:  opts.proxyPolicy().ClientIP(r.Header, r.RemoteAddr),
 				UserAgent: truncate(r.UserAgent(), maxUserAgentLength),
 			}}
 			if opts.RequestID != nil {
@@ -124,7 +129,7 @@ func Interceptor(l *Logger, opts CaptureOptions) connect.ServerInterceptor {
 				rec = &record{entry: Entry{Time: start}}
 				if info, ok := connect.CallInfoForServerContext(ctx); ok {
 					header := info.RequestHeader()
-					rec.entry.ClientIP = ClientIP(header, info.PeerAddr, opts.TrustProxy)
+					rec.entry.ClientIP = opts.proxyPolicy().ClientIP(header, info.PeerAddr)
 					rec.entry.UserAgent = truncate(header.Get("User-Agent"), maxUserAgentLength)
 					rec.entry.RequestID = header.Get(HeaderRequestID)
 				}
@@ -189,34 +194,6 @@ func serviceOf(procedure string) string {
 		return p[:i]
 	}
 	return ""
-}
-
-// HeaderGetter is satisfied by http.Header and *connect.Header.
-type HeaderGetter interface {
-	Get(key string) string
-}
-
-// ClientIP returns the client address of a request. With trustProxy it is
-// the left-most X-Forwarded-For address when present; otherwise the peer
-// address without its port.
-func ClientIP(header HeaderGetter, peerAddr string, trustProxy bool) string {
-	if trustProxy && header != nil {
-		if xff := header.Get("X-Forwarded-For"); xff != "" {
-			if i := strings.IndexByte(xff, ','); i >= 0 {
-				xff = xff[:i]
-			}
-			if ip := strings.TrimSpace(xff); ip != "" {
-				return truncate(ip, 64)
-			}
-		}
-	}
-	if peerAddr == "" {
-		return ""
-	}
-	if host, _, err := net.SplitHostPort(peerAddr); err == nil {
-		return host
-	}
-	return truncate(peerAddr, 64)
 }
 
 // statusWriter records the response status and keeps the optional

@@ -21,10 +21,63 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type CaptchaError int32
+
+const (
+	CaptchaError_CAPTCHA_ERROR_UNSPECIFIED CaptchaError = 0
+	CaptchaError_CAPTCHA_ERROR_MISSING     CaptchaError = 1 // 需要验证码但没有提供
+	CaptchaError_CAPTCHA_ERROR_INVALID     CaptchaError = 2 // 验证码错误、过期或已使用
+)
+
+// Enum value maps for CaptchaError.
+var (
+	CaptchaError_name = map[int32]string{
+		0: "CAPTCHA_ERROR_UNSPECIFIED",
+		1: "CAPTCHA_ERROR_MISSING",
+		2: "CAPTCHA_ERROR_INVALID",
+	}
+	CaptchaError_value = map[string]int32{
+		"CAPTCHA_ERROR_UNSPECIFIED": 0,
+		"CAPTCHA_ERROR_MISSING":     1,
+		"CAPTCHA_ERROR_INVALID":     2,
+	}
+)
+
+func (x CaptchaError) Enum() *CaptchaError {
+	p := new(CaptchaError)
+	*p = x
+	return p
+}
+
+func (x CaptchaError) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (CaptchaError) Descriptor() protoreflect.EnumDescriptor {
+	return file_abysstract_admin_v1_auth_proto_enumTypes[0].Descriptor()
+}
+
+func (CaptchaError) Type() protoreflect.EnumType {
+	return &file_abysstract_admin_v1_auth_proto_enumTypes[0]
+}
+
+func (x CaptchaError) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use CaptchaError.Descriptor instead.
+func (CaptchaError) EnumDescriptor() ([]byte, []int) {
+	return file_abysstract_admin_v1_auth_proto_rawDescGZIP(), []int{0}
+}
+
 type LoginRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Username      string                 `protobuf:"bytes,1,opt,name=username,proto3" json:"username,omitempty"`
-	Password      string                 `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	Username string                 `protobuf:"bytes,1,opt,name=username,proto3" json:"username,omitempty"`
+	Password string                 `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
+	// 验证码挑战 ID：GetCaptcha 返回的 id。第三方验证（Turnstile、hCaptcha）不需要。
+	CaptchaId string `protobuf:"bytes,3,opt,name=captcha_id,json=captchaId,proto3" json:"captcha_id,omitempty"`
+	// 验证码答案：第三方验证组件给出的 token，或对 GetCaptcha 挑战的作答（格式由 kind 决定）。
+	Captcha       string `protobuf:"bytes,4,opt,name=captcha,proto3" json:"captcha,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -73,6 +126,179 @@ func (x *LoginRequest) GetPassword() string {
 	return ""
 }
 
+func (x *LoginRequest) GetCaptchaId() string {
+	if x != nil {
+		return x.CaptchaId
+	}
+	return ""
+}
+
+func (x *LoginRequest) GetCaptcha() string {
+	if x != nil {
+		return x.Captcha
+	}
+	return ""
+}
+
+// 登录失败时附在 Connect 错误上的 detail，告诉客户端下一次登录是否需要验证码。
+// 只在需要验证码或验证码有问题时附带。
+type LoginChallenge struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	CaptchaRequired bool                   `protobuf:"varint,1,opt,name=captcha_required,json=captchaRequired,proto3" json:"captcha_required,omitempty"`                              // 下一次登录需要带验证码
+	CaptchaError    CaptchaError           `protobuf:"varint,2,opt,name=captcha_error,json=captchaError,proto3,enum=abysstract.admin.v1.CaptchaError" json:"captcha_error,omitempty"` // 本次被拒是因为验证码
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *LoginChallenge) Reset() {
+	*x = LoginChallenge{}
+	mi := &file_abysstract_admin_v1_auth_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LoginChallenge) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LoginChallenge) ProtoMessage() {}
+
+func (x *LoginChallenge) ProtoReflect() protoreflect.Message {
+	mi := &file_abysstract_admin_v1_auth_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LoginChallenge.ProtoReflect.Descriptor instead.
+func (*LoginChallenge) Descriptor() ([]byte, []int) {
+	return file_abysstract_admin_v1_auth_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *LoginChallenge) GetCaptchaRequired() bool {
+	if x != nil {
+		return x.CaptchaRequired
+	}
+	return false
+}
+
+func (x *LoginChallenge) GetCaptchaError() CaptchaError {
+	if x != nil {
+		return x.CaptchaError
+	}
+	return CaptchaError_CAPTCHA_ERROR_UNSPECIFIED
+}
+
+type GetCaptchaRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetCaptchaRequest) Reset() {
+	*x = GetCaptchaRequest{}
+	mi := &file_abysstract_admin_v1_auth_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCaptchaRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCaptchaRequest) ProtoMessage() {}
+
+func (x *GetCaptchaRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_abysstract_admin_v1_auth_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCaptchaRequest.ProtoReflect.Descriptor instead.
+func (*GetCaptchaRequest) Descriptor() ([]byte, []int) {
+	return file_abysstract_admin_v1_auth_proto_rawDescGZIP(), []int{2}
+}
+
+// 一个验证码挑战。未启用验证码时 GetCaptcha 返回 FailedPrecondition。
+type GetCaptchaResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Kind          string                 `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"`                             // 渲染组件：slide（内置滑块）、turnstile、hcaptcha 或应用自定义
+	Payload       string                 `protobuf:"bytes,2,opt,name=payload,proto3" json:"payload,omitempty"`                       // 交给组件的 JSON，格式由 kind 决定
+	Id            string                 `protobuf:"bytes,3,opt,name=id,proto3" json:"id,omitempty"`                                 // 登录时作为 captcha_id 提交；第三方验证为空
+	ExpiresIn     int64                  `protobuf:"varint,4,opt,name=expires_in,json=expiresIn,proto3" json:"expires_in,omitempty"` // 挑战有效期（秒）；0 表示由第三方决定
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetCaptchaResponse) Reset() {
+	*x = GetCaptchaResponse{}
+	mi := &file_abysstract_admin_v1_auth_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCaptchaResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCaptchaResponse) ProtoMessage() {}
+
+func (x *GetCaptchaResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_abysstract_admin_v1_auth_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCaptchaResponse.ProtoReflect.Descriptor instead.
+func (*GetCaptchaResponse) Descriptor() ([]byte, []int) {
+	return file_abysstract_admin_v1_auth_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *GetCaptchaResponse) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
+func (x *GetCaptchaResponse) GetPayload() string {
+	if x != nil {
+		return x.Payload
+	}
+	return ""
+}
+
+func (x *GetCaptchaResponse) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *GetCaptchaResponse) GetExpiresIn() int64 {
+	if x != nil {
+		return x.ExpiresIn
+	}
+	return 0
+}
+
 type LoginResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Token         string                 `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`                                   // JWT
@@ -84,7 +310,7 @@ type LoginResponse struct {
 
 func (x *LoginResponse) Reset() {
 	*x = LoginResponse{}
-	mi := &file_abysstract_admin_v1_auth_proto_msgTypes[1]
+	mi := &file_abysstract_admin_v1_auth_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -96,7 +322,7 @@ func (x *LoginResponse) String() string {
 func (*LoginResponse) ProtoMessage() {}
 
 func (x *LoginResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_abysstract_admin_v1_auth_proto_msgTypes[1]
+	mi := &file_abysstract_admin_v1_auth_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -109,7 +335,7 @@ func (x *LoginResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LoginResponse.ProtoReflect.Descriptor instead.
 func (*LoginResponse) Descriptor() ([]byte, []int) {
-	return file_abysstract_admin_v1_auth_proto_rawDescGZIP(), []int{1}
+	return file_abysstract_admin_v1_auth_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *LoginResponse) GetToken() string {
@@ -141,7 +367,7 @@ type LogoutRequest struct {
 
 func (x *LogoutRequest) Reset() {
 	*x = LogoutRequest{}
-	mi := &file_abysstract_admin_v1_auth_proto_msgTypes[2]
+	mi := &file_abysstract_admin_v1_auth_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -153,7 +379,7 @@ func (x *LogoutRequest) String() string {
 func (*LogoutRequest) ProtoMessage() {}
 
 func (x *LogoutRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_abysstract_admin_v1_auth_proto_msgTypes[2]
+	mi := &file_abysstract_admin_v1_auth_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -166,7 +392,7 @@ func (x *LogoutRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LogoutRequest.ProtoReflect.Descriptor instead.
 func (*LogoutRequest) Descriptor() ([]byte, []int) {
-	return file_abysstract_admin_v1_auth_proto_rawDescGZIP(), []int{2}
+	return file_abysstract_admin_v1_auth_proto_rawDescGZIP(), []int{5}
 }
 
 type LogoutResponse struct {
@@ -177,7 +403,7 @@ type LogoutResponse struct {
 
 func (x *LogoutResponse) Reset() {
 	*x = LogoutResponse{}
-	mi := &file_abysstract_admin_v1_auth_proto_msgTypes[3]
+	mi := &file_abysstract_admin_v1_auth_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -189,7 +415,7 @@ func (x *LogoutResponse) String() string {
 func (*LogoutResponse) ProtoMessage() {}
 
 func (x *LogoutResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_abysstract_admin_v1_auth_proto_msgTypes[3]
+	mi := &file_abysstract_admin_v1_auth_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -202,7 +428,7 @@ func (x *LogoutResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LogoutResponse.ProtoReflect.Descriptor instead.
 func (*LogoutResponse) Descriptor() ([]byte, []int) {
-	return file_abysstract_admin_v1_auth_proto_rawDescGZIP(), []int{3}
+	return file_abysstract_admin_v1_auth_proto_rawDescGZIP(), []int{6}
 }
 
 // 改密请求：旧密码 + 新密码。服务端校验旧密码 + 复杂度策略，成功后递增 token_version。
@@ -216,7 +442,7 @@ type ChangePasswordRequest struct {
 
 func (x *ChangePasswordRequest) Reset() {
 	*x = ChangePasswordRequest{}
-	mi := &file_abysstract_admin_v1_auth_proto_msgTypes[4]
+	mi := &file_abysstract_admin_v1_auth_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -228,7 +454,7 @@ func (x *ChangePasswordRequest) String() string {
 func (*ChangePasswordRequest) ProtoMessage() {}
 
 func (x *ChangePasswordRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_abysstract_admin_v1_auth_proto_msgTypes[4]
+	mi := &file_abysstract_admin_v1_auth_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -241,7 +467,7 @@ func (x *ChangePasswordRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChangePasswordRequest.ProtoReflect.Descriptor instead.
 func (*ChangePasswordRequest) Descriptor() ([]byte, []int) {
-	return file_abysstract_admin_v1_auth_proto_rawDescGZIP(), []int{4}
+	return file_abysstract_admin_v1_auth_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *ChangePasswordRequest) GetOldPassword() string {
@@ -266,7 +492,7 @@ type ChangePasswordResponse struct {
 
 func (x *ChangePasswordResponse) Reset() {
 	*x = ChangePasswordResponse{}
-	mi := &file_abysstract_admin_v1_auth_proto_msgTypes[5]
+	mi := &file_abysstract_admin_v1_auth_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -278,7 +504,7 @@ func (x *ChangePasswordResponse) String() string {
 func (*ChangePasswordResponse) ProtoMessage() {}
 
 func (x *ChangePasswordResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_abysstract_admin_v1_auth_proto_msgTypes[5]
+	mi := &file_abysstract_admin_v1_auth_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -291,7 +517,7 @@ func (x *ChangePasswordResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChangePasswordResponse.ProtoReflect.Descriptor instead.
 func (*ChangePasswordResponse) Descriptor() ([]byte, []int) {
-	return file_abysstract_admin_v1_auth_proto_rawDescGZIP(), []int{5}
+	return file_abysstract_admin_v1_auth_proto_rawDescGZIP(), []int{8}
 }
 
 // 刷新令牌：用未过期且未吊销的 refresh_token 换取新的访问令牌。
@@ -305,7 +531,7 @@ type RefreshTokenRequest struct {
 
 func (x *RefreshTokenRequest) Reset() {
 	*x = RefreshTokenRequest{}
-	mi := &file_abysstract_admin_v1_auth_proto_msgTypes[6]
+	mi := &file_abysstract_admin_v1_auth_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -317,7 +543,7 @@ func (x *RefreshTokenRequest) String() string {
 func (*RefreshTokenRequest) ProtoMessage() {}
 
 func (x *RefreshTokenRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_abysstract_admin_v1_auth_proto_msgTypes[6]
+	mi := &file_abysstract_admin_v1_auth_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -330,7 +556,7 @@ func (x *RefreshTokenRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RefreshTokenRequest.ProtoReflect.Descriptor instead.
 func (*RefreshTokenRequest) Descriptor() ([]byte, []int) {
-	return file_abysstract_admin_v1_auth_proto_rawDescGZIP(), []int{6}
+	return file_abysstract_admin_v1_auth_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *RefreshTokenRequest) GetRefreshToken() string {
@@ -351,7 +577,7 @@ type RefreshTokenResponse struct {
 
 func (x *RefreshTokenResponse) Reset() {
 	*x = RefreshTokenResponse{}
-	mi := &file_abysstract_admin_v1_auth_proto_msgTypes[7]
+	mi := &file_abysstract_admin_v1_auth_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -363,7 +589,7 @@ func (x *RefreshTokenResponse) String() string {
 func (*RefreshTokenResponse) ProtoMessage() {}
 
 func (x *RefreshTokenResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_abysstract_admin_v1_auth_proto_msgTypes[7]
+	mi := &file_abysstract_admin_v1_auth_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -376,7 +602,7 @@ func (x *RefreshTokenResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RefreshTokenResponse.ProtoReflect.Descriptor instead.
 func (*RefreshTokenResponse) Descriptor() ([]byte, []int) {
-	return file_abysstract_admin_v1_auth_proto_rawDescGZIP(), []int{7}
+	return file_abysstract_admin_v1_auth_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *RefreshTokenResponse) GetToken() string {
@@ -408,7 +634,7 @@ type GetUserInfoRequest struct {
 
 func (x *GetUserInfoRequest) Reset() {
 	*x = GetUserInfoRequest{}
-	mi := &file_abysstract_admin_v1_auth_proto_msgTypes[8]
+	mi := &file_abysstract_admin_v1_auth_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -420,7 +646,7 @@ func (x *GetUserInfoRequest) String() string {
 func (*GetUserInfoRequest) ProtoMessage() {}
 
 func (x *GetUserInfoRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_abysstract_admin_v1_auth_proto_msgTypes[8]
+	mi := &file_abysstract_admin_v1_auth_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -433,7 +659,7 @@ func (x *GetUserInfoRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetUserInfoRequest.ProtoReflect.Descriptor instead.
 func (*GetUserInfoRequest) Descriptor() ([]byte, []int) {
-	return file_abysstract_admin_v1_auth_proto_rawDescGZIP(), []int{8}
+	return file_abysstract_admin_v1_auth_proto_rawDescGZIP(), []int{11}
 }
 
 type GetUserInfoResponse struct {
@@ -449,7 +675,7 @@ type GetUserInfoResponse struct {
 
 func (x *GetUserInfoResponse) Reset() {
 	*x = GetUserInfoResponse{}
-	mi := &file_abysstract_admin_v1_auth_proto_msgTypes[9]
+	mi := &file_abysstract_admin_v1_auth_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -461,7 +687,7 @@ func (x *GetUserInfoResponse) String() string {
 func (*GetUserInfoResponse) ProtoMessage() {}
 
 func (x *GetUserInfoResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_abysstract_admin_v1_auth_proto_msgTypes[9]
+	mi := &file_abysstract_admin_v1_auth_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -474,7 +700,7 @@ func (x *GetUserInfoResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetUserInfoResponse.ProtoReflect.Descriptor instead.
 func (*GetUserInfoResponse) Descriptor() ([]byte, []int) {
-	return file_abysstract_admin_v1_auth_proto_rawDescGZIP(), []int{9}
+	return file_abysstract_admin_v1_auth_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *GetUserInfoResponse) GetUser() *User {
@@ -516,10 +742,23 @@ var File_abysstract_admin_v1_auth_proto protoreflect.FileDescriptor
 
 const file_abysstract_admin_v1_auth_proto_rawDesc = "" +
 	"\n" +
-	"\x1eabysstract/admin/v1/auth.proto\x12\x13abysstract.admin.v1\x1a\x1eabysstract/admin/v1/menu.proto\x1a\x1eabysstract/admin/v1/user.proto\"F\n" +
+	"\x1eabysstract/admin/v1/auth.proto\x12\x13abysstract.admin.v1\x1a\x1eabysstract/admin/v1/menu.proto\x1a\x1eabysstract/admin/v1/user.proto\"\x7f\n" +
 	"\fLoginRequest\x12\x1a\n" +
 	"\busername\x18\x01 \x01(\tR\busername\x12\x1a\n" +
-	"\bpassword\x18\x02 \x01(\tR\bpassword\"i\n" +
+	"\bpassword\x18\x02 \x01(\tR\bpassword\x12\x1d\n" +
+	"\n" +
+	"captcha_id\x18\x03 \x01(\tR\tcaptchaId\x12\x18\n" +
+	"\acaptcha\x18\x04 \x01(\tR\acaptcha\"\x83\x01\n" +
+	"\x0eLoginChallenge\x12)\n" +
+	"\x10captcha_required\x18\x01 \x01(\bR\x0fcaptchaRequired\x12F\n" +
+	"\rcaptcha_error\x18\x02 \x01(\x0e2!.abysstract.admin.v1.CaptchaErrorR\fcaptchaError\"\x13\n" +
+	"\x11GetCaptchaRequest\"q\n" +
+	"\x12GetCaptchaResponse\x12\x12\n" +
+	"\x04kind\x18\x01 \x01(\tR\x04kind\x12\x18\n" +
+	"\apayload\x18\x02 \x01(\tR\apayload\x12\x0e\n" +
+	"\x02id\x18\x03 \x01(\tR\x02id\x12\x1d\n" +
+	"\n" +
+	"expires_in\x18\x04 \x01(\x03R\texpiresIn\"i\n" +
 	"\rLoginResponse\x12\x14\n" +
 	"\x05token\x18\x01 \x01(\tR\x05token\x12\x1d\n" +
 	"\n" +
@@ -544,9 +783,15 @@ const file_abysstract_admin_v1_auth_proto_rawDesc = "" +
 	"\x05roles\x18\x02 \x03(\tR\x05roles\x12 \n" +
 	"\vpermissions\x18\x03 \x03(\tR\vpermissions\x12/\n" +
 	"\x05menus\x18\x04 \x03(\v2\x19.abysstract.admin.v1.MenuR\x05menus\x12,\n" +
-	"\x12pwd_reset_required\x18\x05 \x01(\bR\x10pwdResetRequired2\xe2\x03\n" +
+	"\x12pwd_reset_required\x18\x05 \x01(\bR\x10pwdResetRequired*c\n" +
+	"\fCaptchaError\x12\x1d\n" +
+	"\x19CAPTCHA_ERROR_UNSPECIFIED\x10\x00\x12\x19\n" +
+	"\x15CAPTCHA_ERROR_MISSING\x10\x01\x12\x19\n" +
+	"\x15CAPTCHA_ERROR_INVALID\x10\x022\xc1\x04\n" +
 	"\vAuthService\x12N\n" +
-	"\x05Login\x12!.abysstract.admin.v1.LoginRequest\x1a\".abysstract.admin.v1.LoginResponse\x12Q\n" +
+	"\x05Login\x12!.abysstract.admin.v1.LoginRequest\x1a\".abysstract.admin.v1.LoginResponse\x12]\n" +
+	"\n" +
+	"GetCaptcha\x12&.abysstract.admin.v1.GetCaptchaRequest\x1a'.abysstract.admin.v1.GetCaptchaResponse\x12Q\n" +
 	"\x06Logout\x12\".abysstract.admin.v1.LogoutRequest\x1a#.abysstract.admin.v1.LogoutResponse\x12`\n" +
 	"\vGetUserInfo\x12'.abysstract.admin.v1.GetUserInfoRequest\x1a(.abysstract.admin.v1.GetUserInfoResponse\x12i\n" +
 	"\x0eChangePassword\x12*.abysstract.admin.v1.ChangePasswordRequest\x1a+.abysstract.admin.v1.ChangePasswordResponse\x12c\n" +
@@ -565,39 +810,47 @@ func file_abysstract_admin_v1_auth_proto_rawDescGZIP() []byte {
 	return file_abysstract_admin_v1_auth_proto_rawDescData
 }
 
-var file_abysstract_admin_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_abysstract_admin_v1_auth_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_abysstract_admin_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_abysstract_admin_v1_auth_proto_goTypes = []any{
-	(*LoginRequest)(nil),           // 0: abysstract.admin.v1.LoginRequest
-	(*LoginResponse)(nil),          // 1: abysstract.admin.v1.LoginResponse
-	(*LogoutRequest)(nil),          // 2: abysstract.admin.v1.LogoutRequest
-	(*LogoutResponse)(nil),         // 3: abysstract.admin.v1.LogoutResponse
-	(*ChangePasswordRequest)(nil),  // 4: abysstract.admin.v1.ChangePasswordRequest
-	(*ChangePasswordResponse)(nil), // 5: abysstract.admin.v1.ChangePasswordResponse
-	(*RefreshTokenRequest)(nil),    // 6: abysstract.admin.v1.RefreshTokenRequest
-	(*RefreshTokenResponse)(nil),   // 7: abysstract.admin.v1.RefreshTokenResponse
-	(*GetUserInfoRequest)(nil),     // 8: abysstract.admin.v1.GetUserInfoRequest
-	(*GetUserInfoResponse)(nil),    // 9: abysstract.admin.v1.GetUserInfoResponse
-	(*User)(nil),                   // 10: abysstract.admin.v1.User
-	(*Menu)(nil),                   // 11: abysstract.admin.v1.Menu
+	(CaptchaError)(0),              // 0: abysstract.admin.v1.CaptchaError
+	(*LoginRequest)(nil),           // 1: abysstract.admin.v1.LoginRequest
+	(*LoginChallenge)(nil),         // 2: abysstract.admin.v1.LoginChallenge
+	(*GetCaptchaRequest)(nil),      // 3: abysstract.admin.v1.GetCaptchaRequest
+	(*GetCaptchaResponse)(nil),     // 4: abysstract.admin.v1.GetCaptchaResponse
+	(*LoginResponse)(nil),          // 5: abysstract.admin.v1.LoginResponse
+	(*LogoutRequest)(nil),          // 6: abysstract.admin.v1.LogoutRequest
+	(*LogoutResponse)(nil),         // 7: abysstract.admin.v1.LogoutResponse
+	(*ChangePasswordRequest)(nil),  // 8: abysstract.admin.v1.ChangePasswordRequest
+	(*ChangePasswordResponse)(nil), // 9: abysstract.admin.v1.ChangePasswordResponse
+	(*RefreshTokenRequest)(nil),    // 10: abysstract.admin.v1.RefreshTokenRequest
+	(*RefreshTokenResponse)(nil),   // 11: abysstract.admin.v1.RefreshTokenResponse
+	(*GetUserInfoRequest)(nil),     // 12: abysstract.admin.v1.GetUserInfoRequest
+	(*GetUserInfoResponse)(nil),    // 13: abysstract.admin.v1.GetUserInfoResponse
+	(*User)(nil),                   // 14: abysstract.admin.v1.User
+	(*Menu)(nil),                   // 15: abysstract.admin.v1.Menu
 }
 var file_abysstract_admin_v1_auth_proto_depIdxs = []int32{
-	10, // 0: abysstract.admin.v1.GetUserInfoResponse.user:type_name -> abysstract.admin.v1.User
-	11, // 1: abysstract.admin.v1.GetUserInfoResponse.menus:type_name -> abysstract.admin.v1.Menu
-	0,  // 2: abysstract.admin.v1.AuthService.Login:input_type -> abysstract.admin.v1.LoginRequest
-	2,  // 3: abysstract.admin.v1.AuthService.Logout:input_type -> abysstract.admin.v1.LogoutRequest
-	8,  // 4: abysstract.admin.v1.AuthService.GetUserInfo:input_type -> abysstract.admin.v1.GetUserInfoRequest
-	4,  // 5: abysstract.admin.v1.AuthService.ChangePassword:input_type -> abysstract.admin.v1.ChangePasswordRequest
-	6,  // 6: abysstract.admin.v1.AuthService.RefreshToken:input_type -> abysstract.admin.v1.RefreshTokenRequest
-	1,  // 7: abysstract.admin.v1.AuthService.Login:output_type -> abysstract.admin.v1.LoginResponse
-	3,  // 8: abysstract.admin.v1.AuthService.Logout:output_type -> abysstract.admin.v1.LogoutResponse
-	9,  // 9: abysstract.admin.v1.AuthService.GetUserInfo:output_type -> abysstract.admin.v1.GetUserInfoResponse
-	5,  // 10: abysstract.admin.v1.AuthService.ChangePassword:output_type -> abysstract.admin.v1.ChangePasswordResponse
-	7,  // 11: abysstract.admin.v1.AuthService.RefreshToken:output_type -> abysstract.admin.v1.RefreshTokenResponse
-	7,  // [7:12] is the sub-list for method output_type
-	2,  // [2:7] is the sub-list for method input_type
-	2,  // [2:2] is the sub-list for extension type_name
-	2,  // [2:2] is the sub-list for extension extendee
-	0,  // [0:2] is the sub-list for field type_name
+	0,  // 0: abysstract.admin.v1.LoginChallenge.captcha_error:type_name -> abysstract.admin.v1.CaptchaError
+	14, // 1: abysstract.admin.v1.GetUserInfoResponse.user:type_name -> abysstract.admin.v1.User
+	15, // 2: abysstract.admin.v1.GetUserInfoResponse.menus:type_name -> abysstract.admin.v1.Menu
+	1,  // 3: abysstract.admin.v1.AuthService.Login:input_type -> abysstract.admin.v1.LoginRequest
+	3,  // 4: abysstract.admin.v1.AuthService.GetCaptcha:input_type -> abysstract.admin.v1.GetCaptchaRequest
+	6,  // 5: abysstract.admin.v1.AuthService.Logout:input_type -> abysstract.admin.v1.LogoutRequest
+	12, // 6: abysstract.admin.v1.AuthService.GetUserInfo:input_type -> abysstract.admin.v1.GetUserInfoRequest
+	8,  // 7: abysstract.admin.v1.AuthService.ChangePassword:input_type -> abysstract.admin.v1.ChangePasswordRequest
+	10, // 8: abysstract.admin.v1.AuthService.RefreshToken:input_type -> abysstract.admin.v1.RefreshTokenRequest
+	5,  // 9: abysstract.admin.v1.AuthService.Login:output_type -> abysstract.admin.v1.LoginResponse
+	4,  // 10: abysstract.admin.v1.AuthService.GetCaptcha:output_type -> abysstract.admin.v1.GetCaptchaResponse
+	7,  // 11: abysstract.admin.v1.AuthService.Logout:output_type -> abysstract.admin.v1.LogoutResponse
+	13, // 12: abysstract.admin.v1.AuthService.GetUserInfo:output_type -> abysstract.admin.v1.GetUserInfoResponse
+	9,  // 13: abysstract.admin.v1.AuthService.ChangePassword:output_type -> abysstract.admin.v1.ChangePasswordResponse
+	11, // 14: abysstract.admin.v1.AuthService.RefreshToken:output_type -> abysstract.admin.v1.RefreshTokenResponse
+	9,  // [9:15] is the sub-list for method output_type
+	3,  // [3:9] is the sub-list for method input_type
+	3,  // [3:3] is the sub-list for extension type_name
+	3,  // [3:3] is the sub-list for extension extendee
+	0,  // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_abysstract_admin_v1_auth_proto_init() }
@@ -612,13 +865,14 @@ func file_abysstract_admin_v1_auth_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_abysstract_admin_v1_auth_proto_rawDesc), len(file_abysstract_admin_v1_auth_proto_rawDesc)),
-			NumEnums:      0,
-			NumMessages:   10,
+			NumEnums:      1,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_abysstract_admin_v1_auth_proto_goTypes,
 		DependencyIndexes: file_abysstract_admin_v1_auth_proto_depIdxs,
+		EnumInfos:         file_abysstract_admin_v1_auth_proto_enumTypes,
 		MessageInfos:      file_abysstract_admin_v1_auth_proto_msgTypes,
 	}.Build()
 	File_abysstract_admin_v1_auth_proto = out.File
