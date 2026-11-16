@@ -5,8 +5,8 @@ const password = process.env.ADMIN_E2E_PASSWORD ?? "admin123";
 
 async function login(page: Page, user: string, pass: string) {
   await page.goto("/");
-  await page.getByPlaceholder("用户名").fill(user);
-  await page.getByPlaceholder("密码").fill(pass);
+  await page.getByLabel("用户名").fill(user);
+  await page.getByLabel("密码", { exact: true }).fill(pass);
   const loginRequest = page.waitForResponse(
     (response) => response.url().includes("AuthService/Login"),
     { timeout: 20_000 },

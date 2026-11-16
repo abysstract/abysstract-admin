@@ -50,6 +50,16 @@ export interface AdminTexts {
     readonly requiredSelect: (label: string) => string;
     readonly maxLength: (max: number) => string;
   };
+  readonly login: {
+    readonly title: string;
+    readonly username: string;
+    readonly password: string;
+    readonly submit: string;
+    /** 用户名或密码不对，标在密码字段下方。 */
+    readonly invalidCredentials: string;
+    /** 服务没有给出可读原因时的兜底文案。账号锁定、停用等原因由服务端返回，原样显示。 */
+    readonly cannotLogin: string;
+  };
 }
 
 export const defaultAdminTexts: AdminTexts = {
@@ -95,6 +105,14 @@ export const defaultAdminTexts: AdminTexts = {
     required: (label) => `请填写${label}`,
     requiredSelect: (label) => `请选择${label}`,
     maxLength: (max) => `最多 ${max} 个字`,
+  },
+  login: {
+    title: "登录",
+    username: "用户名",
+    password: "密码",
+    submit: "登录",
+    invalidCredentials: "用户名或密码不正确",
+    cannotLogin: "无法登录，请稍后重试",
   },
 };
 

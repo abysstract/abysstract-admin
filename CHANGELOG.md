@@ -12,6 +12,7 @@
 - 后台设计规范 `frontend/packages/admin-core/DESIGN.md`：布局与间距、字体、颜色、反馈、表单、数据列表、按钮、文案、数据格式、详情与概览页模板、空状态与异常状态。随 `@abysstract/admin-core` 一起发布（`node_modules/@abysstract/admin-core/DESIGN.md`），使用方的项目规范只需写本项目的补充。
 - 界面文案集中定义：`defaultAdminTexts`、`useAdminTexts()`，宿主通过 `AdminHost.texts` 覆盖其中一部分。见[界面文案](docs/admin-core-usage.md#界面文案)。
 - `ResourceFormDrawer`（`@abysstract/admin-core/resource`）：720 宽的新增、编辑抽屉，「取消 保存」在标题栏右侧。`ResourceForm` 新增 `onCancel`、`actionsContainer`；表单项新增 `span`、`sameRowAsPrevious`。
+- 登录页可配置：`AdminHost.login` 的 `logo`、`subtitle`、`background`、`footer`；登录页文案放在 `texts.login`。见[登录页](docs/admin-core-usage.md#登录页)。
 - `ResourceTable` 新增 `query.syncUrl`、列的 `numeric`、自定义行操作的 `danger`、自定义工具栏项的 `placement: "selection"`。
 
 ### Changed
@@ -31,6 +32,7 @@
 - 时间统一显示为 `YYYY-MM-DD HH:mm:ss`，不再随浏览器语言变化；空值显示次要色的 `-`。「停用」改用默认灰色 Tag；菜单类型、通知类型等普通分类不再用彩色 Tag。
 - 操作日志、登录日志、请求日志改为与其他列表一致的筛选面板 + 结果面板，关键词和筛选写进地址栏；请求日志点接口名打开详情，详情为两列，次要字段收进「更多信息」。
 - 首页、个人中心、分配菜单加载失败时显示原因和「重试」，不再显示 0 或空白；首页统计卡去掉装饰图标。
+- 登录页改为左右分栏：宽屏左侧是品牌区，默认背景是跟随主题 token 的浅色色块；右侧表单的标签放在输入框上方；窄屏时背景铺满整页，产品名和表单放在卡片里，不再出现横向滚动。用户名或密码不对时，错误标在密码字段下方，不再误报「登录已过期」；账号锁定提示改为「账号已锁定，请 N 分钟后再试」。输入框不再有占位文字，按占位文字查找登录框的测试改用标签。
 - `module new` 生成的列表页不再自己弹成功、失败消息，也不再覆盖批量删除的文案。
 
 ## [0.6.0] - 2026-11-12

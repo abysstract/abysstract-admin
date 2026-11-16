@@ -229,6 +229,28 @@ const application = createAdminApp({
 
 业务页面用 `useAdminTexts()` 读取当前文案，与框架页面保持一致。
 
+## 登录页
+
+宽屏时登录页左侧是品牌区，右侧是登录表单；窄屏（手机、平板竖屏）时背景铺满整页，产品名和表单放在一张卡片里。产品名用 `host.title`，其余部分通过 `host.login` 配置，都可以不传：
+
+```tsx
+const application = createAdminApp({
+  host: {
+    // apiBaseUrl、mode、authStorage、title …
+    login: {
+      logo: <img src="/logo.svg" alt="" width={32} height={32} />,
+      subtitle: "订单与库存管理",
+      background: "url(/login-bg.jpg) center / cover",
+      footer: "© 2026 示例公司",
+    },
+  },
+  modules,
+});
+```
+
+- `background` 是 CSS `background` 的值，宽屏用于左侧品牌区，窄屏铺满整页。窄屏时页脚直接显示在背景上，背景图底部宜留浅色区域。不传时是由主题 token 生成的浅色色块，改 `colorPrimary` 或换暗色算法时跟着变。
+- 表单的标签、按钮和错误提示在 `texts.login` 里，可以和其他文案一样覆盖。用户名或密码不对时，错误标在密码字段下方；账号锁定、停用时显示服务端返回的原因。
+
 ## 全局 antd 配置
 
 `createAdminApp` 的 Root 用一个 antd `ConfigProvider` 包住整个后台。`host.theme` 和 `host.locale` 传给它的同名属性；其余全局配置放在 `host.configProvider`，例如：

@@ -9,7 +9,7 @@ test.use({
 
 test("restores the login page from the browser back/forward cache", async ({ page }) => {
   await page.goto("/login");
-  await expect(page.getByPlaceholder("用户名")).toBeVisible();
+  await expect(page.getByLabel("用户名")).toBeVisible();
   await page.evaluate(() => {
     const state = window as Window & { __adminPageShowPersisted?: boolean };
     state.__adminPageShowPersisted = false;
@@ -19,7 +19,7 @@ test("restores the login page from the browser back/forward cache", async ({ pag
   });
 
   await page.goto("/login?navigation=away");
-  await expect(page.getByPlaceholder("用户名")).toBeVisible();
+  await expect(page.getByLabel("用户名")).toBeVisible();
   await page.goBack({ waitUntil: "commit" });
 
   await expect
@@ -29,5 +29,5 @@ test("restores the login page from the browser back/forward cache", async ({ pag
       ),
     )
     .toBe(true);
-  await expect(page.getByPlaceholder("用户名")).toBeVisible();
+  await expect(page.getByLabel("用户名")).toBeVisible();
 });

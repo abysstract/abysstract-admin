@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"net"
 	"strings"
 	"time"
@@ -93,6 +94,15 @@ func (s *AuthService) loginIP(header *connect.Header, peerAddr string) string {
 	return peerAddr
 }
 
+// lockedMessage 是账号锁定时返回给登录页的文案，剩余时间按分钟向上取整，至少 1 分钟。
+func lockedMessage(remaining time.Duration) string {
+	minutes := int((remaining + time.Minute - 1) / time.Minute)
+	if minutes < 1 {
+		minutes = 1
+	}
+	return fmt.Sprintf("账号已锁定，请 %d 分钟后再试", minutes)
+}
+
 // Login 验证密码 → 检查账号锁定 → 签发 JWT 与可选 refresh_token。
 // 失败时通过 LoginSecurity 记录失败计数，达到阈值触发锁定（需求 6.6）。
 func (s *AuthService) Login(
@@ -112,9 +122,8 @@ func (s *AuthService) Login(
 			return nil, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
 		}
 		if locked {
-			remaining := time.Until(until).Round(time.Second).String()
 			_ = s.repo.AddLoginLog(ctx, &model.SysLoginLog{Username: username, Status: 2, IP: ip, Msg: "登录失败：账号锁定中"})
-			return nil, connect.NewError(connect.CodePermissionDenied, "账号已锁定，剩余 "+remaining)
+			return nil, connect.NewError(connect.CodePermissionDenied, lockedMessage(until.Sub(now)))
 		}
 	}
 
