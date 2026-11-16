@@ -7,6 +7,16 @@
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-16
+
+Go 模块与 `@abysstract/admin-core`、`@abysstract/admin-proto` 同步发布 0.7.0。新增后台设计规范，自带页面与 `ResourceTable`、`ResourceForm` 按规范整改（多项破坏性默认值，见 Changed）；登录页改版，登录失败后要求验证码；请求日志可以在单独的进程中写入。
+
+升级时注意：
+
+- **安全修复**：`ADMIN_TRUST_PROXY=true` 时客户端 IP 改取 `X-Forwarded-For` 最右侧的地址。多层反向代理的部署需要设置 `ADMIN_TRUSTED_PROXIES`。
+- 新增迁移 `20261116090000_login_guard`：先执行 `admin-migrations sync`，再执行 `migrate`。
+- 业务页面会受到表格、表单、行操作和提示消息默认行为变化的影响，按 Changed 中标为破坏性的条目检查；依赖默认文案的测试需要更新。
+
 ### Added
 
 - 后台设计规范 `frontend/packages/admin-core/DESIGN.md`：布局与间距、字体、颜色、反馈、表单、数据列表、按钮、文案、数据格式、详情与概览页模板、空状态与异常状态。随 `@abysstract/admin-core` 一起发布（`node_modules/@abysstract/admin-core/DESIGN.md`），使用方的项目规范只需写本项目的补充。
@@ -22,7 +32,7 @@
 
 ### Changed
 
-框架自带页面（用户、角色、菜单、部门、字典、参数、通知、三个日志页、登录、个人中心、首页）按设计规范整改。以下默认行为有变化，业务页面同样受影响：
+前端：框架自带页面（用户、角色、菜单、部门、字典、参数、通知、三个日志页、登录、个人中心、首页）按设计规范整改。以下默认行为有变化，业务页面同样受影响：
 
 - **破坏性**：`ResourceTable` 默认每页 20 条（原为 10）；只有一页时隐藏分页器，超过 5 页显示快速跳转。需要旧值时设 `query.defaults.pageSize: 10`。
 - **破坏性**：`ResourceTable` 默认把关键词、页码、每页条数和排序写进地址栏参数 `q`、`page`、`size`、`sort`，并在打开页面时读取。同一页面有多个表格，或表格放在抽屉里时，设 `query.syncUrl: false`。
@@ -39,11 +49,14 @@
 - 首页、个人中心、分配菜单加载失败时显示原因和「重试」，不再显示 0 或空白；首页统计卡去掉装饰图标。
 - 登录页改为左右分栏：宽屏左侧是品牌区，默认背景是跟随主题 token 的浅色色块；右侧表单的标签放在输入框上方；窄屏时背景铺满整页，产品名和表单放在卡片里，不再出现横向滚动。用户名或密码不对时，错误标在密码字段下方，不再误报「登录已过期」；账号锁定提示改为「账号已锁定，请 N 分钟后再试」。输入框不再有占位文字，按占位文字查找登录框的测试改用标签。
 - `module new` 生成的列表页不再自己弹成功、失败消息，也不再覆盖批量删除的文案。
+
+后端与部署：
+
 - **安全修复**：`ADMIN_TRUST_PROXY=true` 时客户端 IP 改取 `X-Forwarded-For` **最右侧**的地址（原为最左侧，客户端可以伪造）。操作日志、请求日志、登录日志和 `accesslog.ClientIP` 都受影响。多层代理的部署需要设置 `ADMIN_TRUSTED_PROXIES`，否则记录到的是上一层代理的地址。自定义 HTTP 路由的操作日志记录 IPv6 客户端地址时不再被截断。
 - `ADMIN_LOGIN_MAX_FAILURES` 不设置时自动取值：未启用验证码为 5（与原默认相同），启用验证码为 20。`adminconfig.Config.LoginMaxFailures` 为 0 表示自动，用 `LoginMaxFailuresFor` 取实际阈值。`.env.example` 不再写死 5。
 - 未设置 `CaptureOptions.RequestID` 时，`request_id` 先取 context 中的请求 ID，再取 `X-Request-Id` 请求头；取自请求头的值截断到 128 个字符。
 - `adminapp.AccessLogCapture` 改用 `accesslog.DefaultSkip`，跳过的请求不变。
-- 「系统管理」的排序从 1 改为 1000，排到侧栏最后，1000 以下留给业务模块的一级菜单。登录后默认进入第一个有权限的页面，装了业务模块时会落在业务页而不是「用户管理」。
+- 「系统管理」的排序从 1 改为 1000，排到侧栏最后，1000 以下留给业务模块的一级菜单。登录后默认进入第一个有权限的页面，装了业务模块时会落在业务页而不是「用户管理」。只影响新建的库；已有的库需要时手动执行 `UPDATE sys_menu SET order_num = 1000 WHERE id = 1 AND parent_id = 0 AND order_num = 1;`。
 
 ## [0.6.0] - 2026-11-12
 
@@ -158,7 +171,8 @@ Go 模块与 `@abysstract/admin-core`、`@abysstract/admin-proto` 同步发布 0
 
 - `modelgen` 按 `<前缀>_` 边界选择模块表，`tablePrefix` 不带下划线时不再选中其他模块的表。
 
-[Unreleased]: https://github.com/abysstract/abysstract-admin/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/abysstract/abysstract-admin/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/abysstract/abysstract-admin/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/abysstract/abysstract-admin/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/abysstract/abysstract-admin/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/abysstract/abysstract-admin/compare/v0.3.0...v0.4.0
