@@ -99,7 +99,7 @@ VALUES (1, '超级管理员', 'admin', 1, 1, '内置最高权限角色')
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO sys_menu (id, menu_name, parent_id, order_num, path, component, menu_type, perms, icon) VALUES
-  (1,   '系统管理', 0,   1, 'system',    '',                      'M', '',                   'setting'),
+  (1,   '系统管理', 0,   1000, 'system',    '',                      'M', '',                   'setting'),
   (100, '用户管理', 1,   1, 'user',      'system/user/index',     'C', 'system:user:list',   'user'),
   (101, '角色管理', 1,   2, 'role',      'system/role/index',     'C', 'system:role:list',   'team'),
   (102, '菜单管理', 1,   3, 'menu',      'system/menu/index',     'C', 'system:menu:list',   'menu'),

@@ -28,7 +28,10 @@ test("login and system user form", async ({ page }) => {
   test.setTimeout(180_000);
   await login(page, username, password);
   await expect(page.getByText("超级管理员")).toBeVisible({ timeout: 20_000 });
-  // The seeded administrator lands on the first authorized page after login.
+  // The seeded administrator lands on the first authorized page after login:
+  // product menus sort before 系统管理 (order 1000).
+  await expect(page).toHaveURL(/\/biz\/product$/);
+  await page.goto("/system/user");
   await expect(page).toHaveURL(/\/system\/user$/);
   await expect(page.getByRole("button", { name: "新增", exact: true })).toBeVisible();
   await expect(page.getByRole("columnheader", { name: "用户名" })).toBeVisible();
