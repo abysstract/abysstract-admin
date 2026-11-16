@@ -8,7 +8,7 @@ import (
 )
 
 func TestLoadAccessLogDefaults(t *testing.T) {
-	for _, key := range []string{"ADMIN_ACCESS_LOG_QUEUE_SIZE", "ADMIN_ACCESS_LOG_BATCH_SIZE", "ADMIN_ACCESS_LOG_FLUSH_INTERVAL_MS", "ADMIN_ACCESS_LOG_RETENTION_DAYS"} {
+	for _, key := range []string{"ADMIN_ACCESS_LOG_QUEUE_SIZE", "ADMIN_ACCESS_LOG_BATCH_SIZE", "ADMIN_ACCESS_LOG_FLUSH_INTERVAL_MS", "ADMIN_ACCESS_LOG_RETENTION_DAYS", "ADMIN_ACCESS_LOG_PURGE"} {
 		t.Setenv(key, "")
 	}
 	// Unset (not empty) selects the bundled default.
@@ -21,8 +21,45 @@ func TestLoadAccessLogDefaults(t *testing.T) {
 	if c.AccessLogQueueSize != 4096 || c.AccessLogBatchSize != 200 || c.AccessLogFlushInterval != time.Second || c.AccessLogRetentionDays != 30 {
 		t.Fatalf("defaults = %d %d %s %d", c.AccessLogQueueSize, c.AccessLogBatchSize, c.AccessLogFlushInterval, c.AccessLogRetentionDays)
 	}
-	if c.AccessLogRetention() != 30*24*time.Hour {
-		t.Fatalf("retention = %s", c.AccessLogRetention())
+	if c.AccessLogRetention() != 30*24*time.Hour || c.AccessLogPurgeDisabled {
+		t.Fatalf("retention = %s, purge disabled = %v", c.AccessLogRetention(), c.AccessLogPurgeDisabled)
+	}
+}
+
+func TestLoadAccessLogPurge(t *testing.T) {
+	t.Setenv("ADMIN_ACCESS_LOG_RETENTION_DAYS", "7")
+	for _, tc := range []struct {
+		value    string
+		disabled bool
+	}{
+		{"", false},
+		{"true", false},
+		{"1", false},
+		{"false", true},
+		{" FALSE ", true},
+		{"0", true},
+	} {
+		t.Setenv("ADMIN_ACCESS_LOG_PURGE", tc.value)
+		c := Load()
+		if err := c.Validate(); err != nil && strings.Contains(err.Error(), "ADMIN_ACCESS_LOG_PURGE") {
+			t.Fatalf("%q: %v", tc.value, err)
+		}
+		if c.AccessLogPurgeDisabled != tc.disabled {
+			t.Fatalf("%q: purge disabled = %v", tc.value, c.AccessLogPurgeDisabled)
+		}
+		// Retention days stay as configured; only the effective retention
+		// of this process drops to 0.
+		want := 7 * 24 * time.Hour
+		if tc.disabled {
+			want = 0
+		}
+		if c.AccessLogRetentionDays != 7 || c.AccessLogRetention() != want {
+			t.Fatalf("%q: retention = %d days, %s", tc.value, c.AccessLogRetentionDays, c.AccessLogRetention())
+		}
+	}
+	t.Setenv("ADMIN_ACCESS_LOG_PURGE", "sometimes")
+	if err := Load().Validate(); err == nil || !strings.Contains(err.Error(), "ADMIN_ACCESS_LOG_PURGE") {
+		t.Fatalf("invalid boolean = %v", err)
 	}
 }
 

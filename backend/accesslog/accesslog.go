@@ -68,8 +68,8 @@ type Entry struct {
 	Path   string
 
 	Principal Principal
-	// ClientIP is the peer address, or the left-most X-Forwarded-For address
-	// when the proxy is trusted.
+	// ClientIP is the client address under the capture's ProxyPolicy: the
+	// peer address, or the X-Forwarded-For address the trusted proxies saw.
 	ClientIP  string
 	UserAgent string
 

@@ -22,11 +22,20 @@ type CaptureOptions struct {
 	// clients cannot forge the address.
 	TrustProxy     bool
 	TrustedProxies []netip.Prefix
-	// RequestID returns the request ID of a request context. nil reads the
-	// X-Request-Id request header and, in Middleware, the response header
-	// set by an inner handler.
+	// AssignRequestID gives every request a request ID, for servers without
+	// a request ID middleware of their own: a valid client X-Request-Id
+	// (see ValidRequestID) is kept, otherwise NewRequestID generates one.
+	// The ID is set as the X-Request-Id response header, stored in the
+	// context for RequestIDFromContext and recorded in Entry.RequestID.
+	// Middleware assigns it to every request, skipped ones included;
+	// Interceptor assigns it when it runs without Middleware.
+	AssignRequestID bool
+	// RequestID returns the request ID of a request context. nil uses
+	// RequestIDFromContext, then the X-Request-Id request header and, in
+	// Middleware, the response header set by an inner handler.
 	RequestID func(ctx context.Context) string
-	// Skip excludes HTTP requests from Middleware, such as health probes.
+	// Skip excludes HTTP requests from Middleware; nil logs every request.
+	// DefaultSkip and SkipPaths skip CORS preflight and health probes.
 	Skip func(r *http.Request) bool
 	// SkipProcedure excludes Connect procedures from Interceptor.
 	SkipProcedure func(procedure string) bool
@@ -50,13 +59,20 @@ func (o CaptureOptions) now() time.Time {
 // by Interceptor, which adds the procedure and Connect code; without the
 // Interceptor they are logged as plain HTTP requests.
 //
-// When l is nil the middleware returns next unchanged.
+// When l is nil nothing is logged; the middleware then only assigns request
+// IDs when opts.AssignRequestID is set and otherwise returns next unchanged.
 func Middleware(l *Logger, opts CaptureOptions) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		if l == nil {
-			return next
+			if !opts.AssignRequestID {
+				return next
+			}
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				next.ServeHTTP(w, opts.assignHTTP(w, r))
+			})
 		}
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			r = opts.assignHTTP(w, r)
 			if (opts.Skip != nil && opts.Skip(r)) || Active(r.Context()) {
 				next.ServeHTTP(w, r)
 				return
@@ -70,11 +86,7 @@ func Middleware(l *Logger, opts CaptureOptions) func(http.Handler) http.Handler 
 				ClientIP:  opts.proxyPolicy().ClientIP(r.Header, r.RemoteAddr),
 				UserAgent: truncate(r.UserAgent(), maxUserAgentLength),
 			}}
-			if opts.RequestID != nil {
-				rec.entry.RequestID = opts.RequestID(r.Context())
-			} else {
-				rec.entry.RequestID = r.Header.Get(HeaderRequestID)
-			}
+			rec.entry.RequestID = opts.requestID(r.Context(), r.Header)
 			sw := &statusWriter{ResponseWriter: w}
 			defer func() {
 				status := sw.status
@@ -102,7 +114,8 @@ func Middleware(l *Logger, opts CaptureOptions) func(http.Handler) http.Handler 
 
 // Interceptor captures Connect calls. Register it first (outermost) on the
 // connect.Server so authentication failures are recorded and auth
-// interceptors can call SetPrincipal.
+// interceptors can call SetPrincipal. With a nil l it logs nothing and only
+// assigns request IDs when opts.AssignRequestID is set.
 //
 // Behind Middleware it completes the request's entry with the procedure and
 // Connect code. Used alone, as in a separate API server, it creates and logs
@@ -110,9 +123,15 @@ func Middleware(l *Logger, opts CaptureOptions) func(http.Handler) http.Handler 
 func Interceptor(l *Logger, opts CaptureOptions) connect.ServerInterceptor {
 	return func(next connect.ServerFunc) connect.ServerFunc {
 		if l == nil {
-			return next
+			if !opts.AssignRequestID {
+				return next
+			}
+			return func(ctx context.Context, spec connect.Spec, stream connect.ServerStream) error {
+				return next(opts.assignRPC(ctx), spec, stream)
+			}
 		}
 		return func(ctx context.Context, spec connect.Spec, stream connect.ServerStream) error {
+			ctx = opts.assignRPC(ctx)
 			if opts.SkipProcedure != nil && opts.SkipProcedure(spec.Procedure) {
 				if rec := recordFrom(ctx); rec != nil {
 					rec.mu.Lock()
@@ -126,19 +145,7 @@ func Interceptor(l *Logger, opts CaptureOptions) connect.ServerInterceptor {
 			var start time.Time
 			if own {
 				start = opts.now()
-				rec = &record{entry: Entry{Time: start}}
-				if info, ok := connect.CallInfoForServerContext(ctx); ok {
-					header := info.RequestHeader()
-					rec.entry.ClientIP = opts.proxyPolicy().ClientIP(header, info.PeerAddr)
-					rec.entry.UserAgent = truncate(header.Get("User-Agent"), maxUserAgentLength)
-					rec.entry.RequestID = header.Get(HeaderRequestID)
-				}
-				if opts.RequestID != nil {
-					if id := opts.RequestID(ctx); id != "" {
-						rec.entry.RequestID = id
-					}
-				}
-				ctx = withRecord(ctx, rec)
+				ctx, rec = opts.newRPCRecord(ctx, start)
 			}
 			rec.mu.Lock()
 			rec.rpc = true
@@ -175,6 +182,61 @@ func Interceptor(l *Logger, opts CaptureOptions) connect.ServerInterceptor {
 }
 
 const maxUserAgentLength = 255
+
+// requestID returns the request ID of an HTTP request or Connect call.
+func (o CaptureOptions) requestID(ctx context.Context, header HeaderGetter) string {
+	if o.RequestID != nil {
+		if id := o.RequestID(ctx); id != "" {
+			return id
+		}
+	}
+	if id := RequestIDFromContext(ctx); id != "" {
+		return id
+	}
+	if header == nil {
+		return ""
+	}
+	return truncate(header.Get(HeaderRequestID), MaxRequestIDLength)
+}
+
+// assignHTTP gives r a request ID when AssignRequestID is set and r has none.
+func (o CaptureOptions) assignHTTP(w http.ResponseWriter, r *http.Request) *http.Request {
+	if !o.AssignRequestID || RequestIDFromContext(r.Context()) != "" {
+		return r
+	}
+	id := resolveRequestID(r.Header.Get(HeaderRequestID))
+	w.Header().Set(HeaderRequestID, id)
+	return r.WithContext(WithRequestID(r.Context(), id))
+}
+
+// assignRPC gives a Connect call a request ID when AssignRequestID is set and
+// the context has none, as for a call served without Middleware.
+func (o CaptureOptions) assignRPC(ctx context.Context) context.Context {
+	if !o.AssignRequestID || RequestIDFromContext(ctx) != "" {
+		return ctx
+	}
+	info, ok := connect.CallInfoForServerContext(ctx)
+	if !ok {
+		return ctx
+	}
+	id := resolveRequestID(info.RequestHeader().Get(HeaderRequestID))
+	info.ResponseHeader().Set(HeaderRequestID, id)
+	return WithRequestID(ctx, id)
+}
+
+// newRPCRecord starts the entry of a Connect call served without Middleware.
+func (o CaptureOptions) newRPCRecord(ctx context.Context, start time.Time) (context.Context, *record) {
+	rec := &record{entry: Entry{Time: start}}
+	var header HeaderGetter
+	if info, ok := connect.CallInfoForServerContext(ctx); ok {
+		reqHeader := info.RequestHeader()
+		header = reqHeader
+		rec.entry.ClientIP = o.proxyPolicy().ClientIP(reqHeader, info.PeerAddr)
+		rec.entry.UserAgent = truncate(reqHeader.Get("User-Agent"), maxUserAgentLength)
+	}
+	rec.entry.RequestID = o.requestID(ctx, header)
+	return withRecord(ctx, rec), rec
+}
 
 func errorMessage(err error) string {
 	var ce *connect.Error
