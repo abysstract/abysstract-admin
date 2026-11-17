@@ -7,6 +7,12 @@
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-11-17
+
+Go 模块与 `@abysstract/admin-core`、`@abysstract/admin-proto` 同步发布 0.7.1。重做登录验证码的界面，内置滑块不再依赖 go-captcha；补充说明 0.7.0 中一项未标明的破坏性变化。没有数据库迁移，Proto 没有变化。
+
+升级时注意：滑块的 `Payload` 格式不变，先升级后端时，0.7.0 前端的内置组件仍能正确显示。在测试里按旧文案（如「向右拖动滑块，使拼图与缺口对齐」「已完成，正在登录」）查找验证码的，需要更新。
+
 ### Added
 
 - `slidecaptcha.WithBackgrounds` 与 `slidecaptcha.LoadBackgrounds`：内置滑块可以使用应用自己的背景图（例如 `embed.FS` 中的图片），自己构造 Verifier 后传给 `adminapp.Options.Captcha`。见[登录安全](docs/configuration.md#登录安全)。
@@ -184,7 +190,8 @@ Go 模块与 `@abysstract/admin-core`、`@abysstract/admin-proto` 同步发布 0
 
 - `modelgen` 按 `<前缀>_` 边界选择模块表，`tablePrefix` 不带下划线时不再选中其他模块的表。
 
-[Unreleased]: https://github.com/abysstract/abysstract-admin/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/abysstract/abysstract-admin/compare/v0.7.1...HEAD
+[0.7.1]: https://github.com/abysstract/abysstract-admin/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/abysstract/abysstract-admin/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/abysstract/abysstract-admin/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/abysstract/abysstract-admin/compare/v0.4.0...v0.5.0
