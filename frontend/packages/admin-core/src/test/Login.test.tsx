@@ -85,7 +85,7 @@ const slideChallenge = {
     thumbWidth: 60,
     thumbHeight: 60,
     width: 300,
-    height: 220,
+    height: 150,
   }),
 };
 
@@ -140,33 +140,43 @@ describe("Login 页面", () => {
     app.dispose();
   });
 
-  it("服务端要求验证码后显示内置滑块，登录时带上作答", async () => {
+  it("密码错误时只标密码；之后点登录先打开验证面板，清掉旧错误，验证后自动提交", async () => {
     login.mockRejectedValueOnce(challengeError("用户名或密码错误", { captchaRequired: true }));
     getCaptcha.mockResolvedValue(slideChallenge);
     const app = renderLogin();
     await submit("admin", "wrong");
     expect(await screen.findByText("用户名或密码不正确")).toBeInTheDocument();
-    expect(await screen.findByText("安全验证")).toBeInTheDocument();
-    expect(getCaptcha).toHaveBeenCalledTimes(1);
+    // 这次失败本身不弹验证，先让用户看清密码错误。
+    expect(screen.queryByRole("group", { name: "安全验证" })).not.toBeInTheDocument();
+    expect(getCaptcha).not.toHaveBeenCalled();
 
-    // 没完成验证就提交：标在验证码下方，不发请求。
-    login.mockResolvedValue({ token: "t" });
-    fireEvent.click(screen.getByRole("button", { name: "登录" }));
-    expect(await screen.findByText("请完成安全验证")).toBeInTheDocument();
+    // 再点登录：不发请求，先打开验证面板，密码下的旧错误被清掉。
+    let resolveLogin: (v: { token: string }) => void = () => {};
+    login.mockReturnValueOnce(new Promise((resolve) => (resolveLogin = resolve)));
+    await submit("admin", "admin123");
+    expect(await screen.findByRole("group", { name: "安全验证" })).toBeInTheDocument();
     expect(login).toHaveBeenCalledTimes(1);
+    expect(getCaptcha).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(screen.queryByText("用户名或密码不正确")).not.toBeInTheDocument());
 
-    // 完成后自动重新提交。
+    // 完成后面板收起，按钮进入加载，带着作答自动提交。
     await solveSlide(5);
     await waitFor(() => expect(login).toHaveBeenCalledTimes(2));
     expect(login.mock.calls[1][0]).toMatchObject({
       username: "admin",
+      password: "admin123",
       captchaId: "challenge-1",
       captcha: JSON.stringify({ x: 10 }),
     });
+    expect(screen.queryByRole("group", { name: "安全验证" })).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /登录/ })).toHaveClass("ant-btn-loading"),
+    );
+    resolveLogin({ token: "t" });
     app.dispose();
   });
 
-  it("点登录后才要求验证码时，完成验证即自动提交", async () => {
+  it("点登录后才要求验证码时，打开验证面板，完成即自动提交", async () => {
     login.mockRejectedValueOnce(
       challengeError("请完成人机验证", {
         captchaRequired: true,
@@ -177,13 +187,14 @@ describe("Login 页面", () => {
     getCaptcha.mockResolvedValue(slideChallenge);
     const app = renderLogin();
     await submit("admin", "admin123");
+    expect(await screen.findByRole("group", { name: "安全验证" })).toBeInTheDocument();
     await solveSlide(1);
     await waitFor(() => expect(login).toHaveBeenCalledTimes(2));
     expect(screen.queryByText("用户名或密码不正确")).not.toBeInTheDocument();
     app.dispose();
   });
 
-  it("验证未通过时提示并换一张", async () => {
+  it("验证未通过时在面板里提示并换一张", async () => {
     login.mockRejectedValueOnce(
       challengeError("请完成人机验证", {
         captchaRequired: true,
@@ -200,8 +211,76 @@ describe("Login 页面", () => {
     const app = renderLogin();
     await submit("admin", "admin123");
     await solveSlide(3);
-    expect(await screen.findByText("验证未通过，请重试")).toBeInTheDocument();
+    expect(await screen.findByRole("alert")).toHaveTextContent("验证未通过，再试一次");
+    expect(screen.getByRole("group", { name: "安全验证" })).toBeInTheDocument();
     await waitFor(() => expect(getCaptcha).toHaveBeenCalledTimes(2));
+    app.dispose();
+  });
+
+  it("关闭验证面板回到表单，填过的内容还在", async () => {
+    login.mockRejectedValueOnce(
+      challengeError("请完成人机验证", {
+        captchaRequired: true,
+        captchaError: CaptchaError.MISSING,
+      }),
+    );
+    getCaptcha.mockResolvedValue(slideChallenge);
+    const app = renderLogin();
+    await submit("admin", "admin123");
+    fireEvent.click(await screen.findByRole("button", { name: "关闭" }));
+    expect(screen.queryByRole("group", { name: "安全验证" })).not.toBeInTheDocument();
+    expect(screen.getByLabelText("用户名")).toHaveValue("admin");
+    expect(login).toHaveBeenCalledTimes(1);
+    app.dispose();
+  });
+
+  it("标题右侧可以换一张；图片加载失败时可以重试", async () => {
+    login.mockRejectedValueOnce(
+      challengeError("请完成人机验证", {
+        captchaRequired: true,
+        captchaError: CaptchaError.MISSING,
+      }),
+    );
+    getCaptcha.mockRejectedValueOnce(new Error("network"));
+    getCaptcha.mockResolvedValue(slideChallenge);
+    const app = renderLogin();
+    await submit("admin", "admin123");
+    expect(await screen.findByText("无法加载验证图片")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "重试" }));
+    await screen.findByRole("slider");
+    expect(getCaptcha).toHaveBeenCalledTimes(2);
+    fireEvent.click(screen.getByRole("button", { name: "换一张" }));
+    await waitFor(() => expect(getCaptcha).toHaveBeenCalledTimes(3));
+    app.dispose();
+  });
+
+  it("滑块可以用键盘操作，并带有 aria 属性", async () => {
+    login.mockRejectedValueOnce(
+      challengeError("请完成人机验证", {
+        captchaRequired: true,
+        captchaError: CaptchaError.MISSING,
+      }),
+    );
+    getCaptcha.mockResolvedValue(slideChallenge);
+    const app = renderLogin();
+    await submit("admin", "admin123");
+    const slider = await screen.findByRole("slider", { name: "向右拖动，补全拼图" });
+    await waitFor(() => expect(slider).toHaveAttribute("tabindex", "0"));
+    expect(slider).toHaveAttribute("aria-valuemin", "0");
+    expect(slider).toHaveAttribute("aria-valuemax", "240");
+    expect(slider).toHaveAttribute("aria-valuenow", "0");
+    // 起点时提示可见，回车不提交。
+    expect(screen.getByText("向右拖动，补全拼图")).toBeInTheDocument();
+    fireEvent.keyDown(slider, { key: "Enter" });
+    expect(login).toHaveBeenCalledTimes(1);
+    fireEvent.keyDown(slider, { key: "ArrowRight", shiftKey: true });
+    expect(slider).toHaveAttribute("aria-valuenow", "10");
+    // 离开起点后提示隐藏，不会被滑块挡住。
+    expect(screen.queryByText("向右拖动，补全拼图")).not.toBeInTheDocument();
+    fireEvent.keyDown(slider, { key: "End" });
+    expect(slider).toHaveAttribute("aria-valuenow", "240");
+    fireEvent.keyDown(slider, { key: "Home" });
+    expect(slider).toHaveAttribute("aria-valuenow", "0");
     app.dispose();
   });
 

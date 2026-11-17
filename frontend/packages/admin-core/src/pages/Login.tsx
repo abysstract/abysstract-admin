@@ -1,6 +1,18 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
-import { Button, Card, Flex, Form, Grid, Input, Typography, theme, type GlobalToken } from "antd";
+import {
+  Button,
+  Card,
+  Flex,
+  Form,
+  Grid,
+  Input,
+  Tooltip,
+  Typography,
+  theme,
+  type GlobalToken,
+} from "antd";
+import { CloseOutlined, ReloadOutlined } from "@ant-design/icons";
 import { Code, ConnectError } from "@connectrpc/connect";
 import {
   CaptchaError,
@@ -40,28 +52,45 @@ export default function Login() {
   const [form] = Form.useForm<LoginValues>();
   const [loading, setLoading] = useState(false);
   const attemptRef = useRef(0);
-  // 服务端要求验证码后显示验证组件；结果只能用一次，每次失败后 resetKey + 1 让组件重置。
-  const [captchaShown, setCaptchaShown] = useState(false);
+  // 服务端要求验证码后，之后每次点“登录”先在表单位置显示验证面板，验证通过即自动提交。
+  // 验证结果只能用一次，每次失败后 resetKey + 1 让组件换一张。
+  const [captchaNeeded, setCaptchaNeeded] = useState(false);
+  const [captchaOpen, setCaptchaOpen] = useState(false);
   const [captchaError, setCaptchaError] = useState<string>();
   const [resetKey, setResetKey] = useState(0);
   const captchaRef = useRef<AdminLoginCaptchaValue | undefined>(undefined);
-  // 点了登录才发现需要验证码时，完成验证后自动重新提交。
-  const resubmitRef = useRef(false);
+  const submitRef = useRef<HTMLButtonElement>(null);
 
   const loadChallenge = useCallback(async (): Promise<AdminLoginCaptchaChallenge> => {
     const res = await runtime.clients.auth.getCaptcha({});
     return { kind: res.kind, payload: res.payload, id: res.id };
   }, [runtime]);
 
+  const openCaptcha = useCallback(
+    (error?: string) => {
+      // 验证面板盖住表单，上一次的字段错误不再有意义。
+      form.setFields([{ name: "password", errors: [] }]);
+      setCaptchaError(error);
+      setCaptchaOpen(true);
+    },
+    [form],
+  );
+
+  const closeCaptcha = useCallback(() => {
+    setCaptchaOpen(false);
+    setCaptchaError(undefined);
+    // 回到表单后焦点放回“登录”按钮。
+    setTimeout(() => submitRef.current?.focus());
+  }, []);
+
   const onCaptchaChange = useCallback(
     (value: AdminLoginCaptchaValue | undefined) => {
       captchaRef.current = value;
       if (!value) return;
+      // 验证通过：收起面板，按钮进入加载，自动提交。
+      setCaptchaOpen(false);
       setCaptchaError(undefined);
-      if (resubmitRef.current) {
-        resubmitRef.current = false;
-        form.submit();
-      }
+      form.submit();
     },
     [form],
   );
@@ -87,9 +116,8 @@ export default function Login() {
 
   const onFinish = async (values: LoginValues) => {
     const captcha = captchaRef.current;
-    if (captchaShown && !captcha) {
-      setCaptchaError(t.captchaRequired);
-      resubmitRef.current = true;
+    if (captchaNeeded && !captcha) {
+      openCaptcha();
       return;
     }
     const attempt = ++attemptRef.current;
@@ -113,16 +141,13 @@ export default function Login() {
         captchaRef.current = undefined;
         setResetKey((k) => k + 1);
       }
-      if (challenge?.captchaRequired) setCaptchaShown(true);
+      if (challenge?.captchaRequired) setCaptchaNeeded(true);
       if (challenge?.captchaError === CaptchaError.MISSING) {
-        setCaptchaError(captchaShown ? t.captchaRequired : undefined);
-        resubmitRef.current = true;
+        openCaptcha();
       } else if (challenge?.captchaError === CaptchaError.INVALID) {
-        setCaptchaError(t.captchaInvalid);
-        resubmitRef.current = true;
+        openCaptcha(t.captchaInvalid);
       } else if (e instanceof ConnectError && e.code === Code.Unauthenticated) {
         // 能对应到字段：标在密码下方，改正前一直显示。
-        setCaptchaError(undefined);
         form.setFields([{ name: "password", errors: [t.invalidCredentials] }]);
       } else if (
         e instanceof ConnectError &&
@@ -166,9 +191,69 @@ export default function Login() {
 
   const background = config.background ?? defaultBackground(token);
 
+  const captchaTitleId = "admin-login-captcha-title";
+  // 验证面板：标题行（标题在左，“换一张”“关闭”在右）+ 验证组件 + 错误。
+  // 宽屏时标题顶替“登录”标题，用同一级；窄屏时在产品名下方，用分组标题级。
+  const captchaPanel = (level: 4 | 5) =>
+    captchaOpen && (
+      <div
+        role="group"
+        aria-labelledby={captchaTitleId}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") closeCaptcha();
+        }}
+      >
+        <Flex
+          align="center"
+          justify="space-between"
+          gap={token.marginXS}
+          style={{ marginBottom: level === 4 ? token.marginLG : token.marginXS }}
+        >
+          <Typography.Title level={level} id={captchaTitleId} style={{ margin: 0 }}>
+            {t.captcha}
+          </Typography.Title>
+          <Flex gap={token.marginXXS}>
+            {!config.captcha && (
+              <Tooltip title={t.captchaRefresh}>
+                <Button
+                  type="text"
+                  icon={<ReloadOutlined />}
+                  aria-label={t.captchaRefresh}
+                  onClick={() => {
+                    setCaptchaError(undefined);
+                    setResetKey((k) => k + 1);
+                  }}
+                />
+              </Tooltip>
+            )}
+            <Tooltip title={texts.action.close}>
+              <Button
+                type="text"
+                icon={<CloseOutlined />}
+                aria-label={texts.action.close}
+                onClick={closeCaptcha}
+              />
+            </Tooltip>
+          </Flex>
+        </Flex>
+        <Captcha onChange={onCaptchaChange} resetKey={resetKey} loadChallenge={loadChallenge} />
+        {captchaError && (
+          <Typography.Text
+            type="danger"
+            role="alert"
+            style={{ display: "block", marginTop: token.marginXS }}
+          >
+            {captchaError}
+          </Typography.Text>
+        )}
+      </div>
+    );
+
   const loginForm = (
     <Form
       form={form}
+      // 验证面板显示时表单保留在原位（不卸载，填过的内容还在），只是隐藏。
+      style={captchaOpen ? { display: "none" } : undefined}
       layout="vertical"
       requiredMark={false}
       size="large"
@@ -189,17 +274,8 @@ export default function Login() {
       >
         <Input.Password autoComplete="current-password" />
       </Form.Item>
-      {captchaShown && (
-        <Form.Item
-          label={t.captcha}
-          validateStatus={captchaError ? "error" : undefined}
-          help={captchaError}
-        >
-          <Captcha onChange={onCaptchaChange} resetKey={resetKey} loadChallenge={loadChallenge} />
-        </Form.Item>
-      )}
       <Form.Item style={{ marginBottom: 0 }}>
-        <Button type="primary" htmlType="submit" block loading={loading}>
+        <Button ref={submitRef} type="primary" htmlType="submit" block loading={loading}>
           {t.submit}
         </Button>
       </Form.Item>
@@ -217,6 +293,7 @@ export default function Login() {
         <Flex vertical justify="center" style={{ flex: 1, width: "100%", maxWidth: 400 }}>
           <Card>
             <div style={{ marginBottom: token.marginLG }}>{brand(4)}</div>
+            {captchaPanel(5)}
             {loginForm}
           </Card>
         </Flex>
@@ -248,9 +325,12 @@ export default function Login() {
         style={{ flex: 1, minWidth: 0, padding: token.padding }}
       >
         <div style={{ width: "100%", maxWidth: 360 }}>
-          <Typography.Title level={4} style={{ marginTop: 0, marginBottom: token.marginLG }}>
-            {t.title}
-          </Typography.Title>
+          {!captchaOpen && (
+            <Typography.Title level={4} style={{ marginTop: 0, marginBottom: token.marginLG }}>
+              {t.title}
+            </Typography.Title>
+          )}
+          {captchaPanel(4)}
           {loginForm}
         </div>
       </Flex>

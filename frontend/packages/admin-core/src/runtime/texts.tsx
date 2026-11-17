@@ -17,6 +17,7 @@ export interface AdminTexts {
     readonly clearFilters: string;
     readonly clearSelection: string;
     readonly more: string;
+    readonly close: string;
   };
   readonly table: {
     readonly actionColumn: string;
@@ -59,17 +60,17 @@ export interface AdminTexts {
     readonly invalidCredentials: string;
     /** 服务没有给出可读原因时的兜底文案。账号锁定、停用等原因由服务端返回，原样显示。 */
     readonly cannotLogin: string;
-    /** 验证码字段的标签。 */
+    /** 验证面板的标题。 */
     readonly captcha: string;
-    /** 需要验证码但还没完成，标在验证码下方。 */
+    /** @deprecated 自 0.7.1 起不再显示：点“登录”时直接打开验证面板。 */
     readonly captchaRequired: string;
-    /** 验证码没通过或已过期，标在验证码下方。 */
+    /** 验证码没通过或已过期，显示在验证面板里。 */
     readonly captchaInvalid: string;
-    /** 内置滑块的操作提示。 */
+    /** 内置滑块的操作提示，显示在滑轨起点右侧，也是滑块的无障碍名称。 */
     readonly slideHint: string;
-    /** 内置滑块完成拖动后的状态。 */
+    /** 内置滑块拖完后的状态，供读屏软件朗读。 */
     readonly slideDone: string;
-    /** 换一张验证图片。 */
+    /** 验证面板标题右侧的按钮：内置滑块换一张图片。 */
     readonly captchaRefresh: string;
     /** 验证码加载失败。 */
     readonly captchaLoadFailed: string;
@@ -92,6 +93,7 @@ export const defaultAdminTexts: AdminTexts = {
     clearFilters: "清除筛选",
     clearSelection: "取消选择",
     more: "更多",
+    close: "关闭",
   },
   table: {
     actionColumn: "操作",
@@ -131,11 +133,11 @@ export const defaultAdminTexts: AdminTexts = {
     cannotLogin: "无法登录，请稍后重试",
     captcha: "安全验证",
     captchaRequired: "请完成安全验证",
-    captchaInvalid: "验证未通过，请重试",
-    slideHint: "向右拖动滑块，使拼图与缺口对齐",
-    slideDone: "已完成，正在登录",
+    captchaInvalid: "验证未通过，再试一次",
+    slideHint: "向右拖动，补全拼图",
+    slideDone: "验证通过",
     captchaRefresh: "换一张",
-    captchaLoadFailed: "验证图片加载失败",
+    captchaLoadFailed: "无法加载验证图片",
     captchaUnsupported: "当前无法显示安全验证，请联系管理员",
   },
 };

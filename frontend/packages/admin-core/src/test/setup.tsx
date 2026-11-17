@@ -478,6 +478,7 @@ vi.mock("@ant-design/icons", () => {
     DeleteOutlined: Icon,
     EllipsisOutlined: Icon,
     ReloadOutlined: Icon,
+    CloseOutlined: Icon,
     DownloadOutlined: Icon,
     KeyOutlined: Icon,
     LoadingOutlined: Icon,

@@ -7,6 +7,19 @@
 
 ## [Unreleased]
 
+### Added
+
+- `slidecaptcha.WithBackgrounds` 与 `slidecaptcha.LoadBackgrounds`：内置滑块可以使用应用自己的背景图（例如 `embed.FS` 中的图片），自己构造 Verifier 后传给 `adminapp.Options.Captcha`。见[登录安全](docs/configuration.md#登录安全)。
+
+### Changed
+
+- 登录验证码重做：
+  - 不再把验证码嵌在表单里。需要验证时，点“登录”会先在表单的位置显示“安全验证”面板，宽度与表单一致；验证通过后面板收起，“登录”按钮进入加载并自动提交。面板标题右侧是“换一张”和“关闭”，关闭后回到表单，填过的内容保留。宽屏时面板标题顶替“登录”标题。打开面板时清掉密码字段上一次的错误。
+  - 内置滑块的图片和滑轨与输入框等宽，滑轨与大号输入框等高、圆角一致；拖过的部分用主色浅底填充，完成状态不再变绿。提示只在起点显示，不会被滑块挡住。键盘支持方向键（Shift 加速）、Home、End、回车。
+  - `captcha/slidecaptcha` 不再依赖 go-captcha 和它的示例图库，默认背景按随机种子即时生成（中性色抽象图形），内置 server 的二进制约小 1 MB；拼图块去掉白色光晕，改为细描边。图片尺寸从 300×220 改为 400×200，`Payload` 字段不变，`@abysstract/admin-core` 0.7.0 的内置组件仍能正确显示。
+  - 文案：`slideHint` 改为「向右拖动，补全拼图」，`slideDone` 改为「验证通过」（只供读屏软件朗读），`captchaInvalid` 改为「验证未通过，再试一次」，`captchaLoadFailed` 改为「无法加载验证图片」。`captchaRequired` 不再显示，保留字段以兼容已有的覆盖。新增 `action.close`（「关闭」）；图片加载失败时的按钮改用 `action.retry`（「重试」）。
+- 补充说明 0.7.0：**破坏性**：`ResourceSearchBar` 清空关键词后会立即用空字符串调用 `onSearch` 重新查询（原来要再点“查询”）。在 `onSearch` 里把空关键词当作无效输入、提示或忽略的页面需要调整。0.7.0 的更新日志写了这项变化，但没有标为破坏性。
+
 ## [0.7.0] - 2026-11-16
 
 Go 模块与 `@abysstract/admin-core`、`@abysstract/admin-proto` 同步发布 0.7.0。新增后台设计规范，自带页面与 `ResourceTable`、`ResourceForm` 按规范整改（多项破坏性默认值，见 Changed）；登录页改版，登录失败后要求验证码；请求日志可以在单独的进程中写入。

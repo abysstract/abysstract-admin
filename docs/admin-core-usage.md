@@ -254,9 +254,9 @@ const application = createAdminApp({
 
 ### 登录验证码
 
-服务端启用验证码（`ADMIN_CAPTCHA_PROVIDER`，见[登录安全](configuration.md#登录安全)）后，失败次数达到阈值时登录表单会多出“安全验证”一栏。完成验证后，如果用户已经点过登录，会自动重新提交。
+服务端启用验证码（`ADMIN_CAPTCHA_PROVIDER`，见[登录安全](configuration.md#登录安全)）后，失败次数达到阈值时，用户点“登录”会先在表单的位置显示“安全验证”面板，宽度与表单一致；验证通过后面板收起，自动提交。面板标题右侧有“换一张”（仅内置滑块）和“关闭”，关闭后回到表单，填过的内容保留。
 
-- `slide`（内置滑块）：前端不需要任何配置。滑块可以拖动，也可以聚焦后用左右方向键移动、回车确认。
+- `slide`（内置滑块）：前端不需要任何配置。图片和滑轨与输入框等宽，滑轨与大号输入框等高。滑块可以拖动，也可以用方向键移动（按住 Shift 移动得更快）、Home/End 到两端、回车确认。
 - 第三方服务：在 `host.login.captcha` 提供组件，渲染对方的验证组件，把 token 交给 `onChange`。`loadChallenge()` 返回服务端配置的 `kind` 和 `payload`（其中有 `siteKey`），`resetKey` 变化时重置组件，因为 token 只能用一次。下面以 Cloudflare Turnstile 为例，页面需先加载 `https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit`：
 
 ```tsx

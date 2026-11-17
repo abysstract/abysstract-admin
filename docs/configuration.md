@@ -156,11 +156,25 @@ scrape_configs:
 
 | `ADMIN_CAPTCHA_PROVIDER` | 说明 | 其他配置 |
 | --- | --- | --- |
-| `slide` | 内置滑块拼图（基于 [go-captcha](https://github.com/wenlng/go-captcha)），不依赖外部服务，内网可用。前端无需配置 | 无 |
+| `slide` | 内置滑块拼图，不依赖外部服务，内网可用。前端无需配置 | 无 |
 | `turnstile` | Cloudflare Turnstile | `ADMIN_CAPTCHA_SECRET`、`ADMIN_CAPTCHA_SITE_KEY`；前端在 `AdminHost.login.captcha` 渲染对方组件，见[登录页](admin-core-usage.md#登录验证码) |
 | `hcaptcha` | hCaptcha | 同上 |
 
-`slide` 需要应用导入 `github.com/abysstract/abysstract-admin/backend/captcha/slidecaptcha`（内置的 `cmd/server` 已导入）。图片会打包进二进制，约几 MB；不用滑块的应用去掉这个导入即可。
+`slide` 需要应用导入 `github.com/abysstract/abysstract-admin/backend/captcha/slidecaptcha`（内置的 `cmd/server` 已导入）。默认背景按随机种子即时生成（中性色的抽象图形），不打包图片。想用自己的图片时，自己构造 Verifier 传给 `adminapp.Options.Captcha`，图片会按 400×200 缩放裁切：
+
+```go
+//go:embed captcha/*.jpg
+var captchaImages embed.FS
+
+images, err := slidecaptcha.LoadBackgrounds(captchaImages, "captcha/*.jpg")
+if err != nil {
+	return err
+}
+verifier, _ := slidecaptcha.New(slidecaptcha.WithBackgrounds(images...))
+opts.Captcha = verifier
+```
+
+细节丰富、颜色多变的图片更难被程序找到缺口。
 
 接其他服务（例如极验）时，实现 `captcha.Verifier`，需要后端出题时再实现 `captcha.Challenger`，然后传给 `adminapp.Options.Captcha`，或用 `captcha.Register` 注册后通过 `ADMIN_CAPTCHA_PROVIDER` 选择：
 
