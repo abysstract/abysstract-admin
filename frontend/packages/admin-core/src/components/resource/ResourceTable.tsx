@@ -46,7 +46,7 @@ import type { ResourceSchema, SortableFieldName } from "./schema";
 import { formatErrorMessage, useAppFeedback } from "../../runtime/message";
 import { useAdminTexts } from "../../runtime/texts";
 import { ResourceFormDrawer } from "./ResourceFormDrawer";
-import { readUrlQuery, writeUrlQuery } from "./urlQuery";
+import { readUrlFilters, readUrlQuery, writeUrlQuery, type UrlFilterType } from "./urlQuery";
 import { AdminButtonSpacing } from "../AdminButtonSpacing";
 import { ResourceSearchBar, useResourceSurfaceStyle } from "./ResourceSearchBar";
 import "./ResourceTable.css";
@@ -520,6 +520,16 @@ async function loadAllPages<
   return { items, total, pageNum: 1, pageSize };
 }
 
+function sameFilters(left: object | undefined, right: object | undefined): boolean {
+  const a = (left ?? {}) as Record<string, unknown>;
+  const b = (right ?? {}) as Record<string, unknown>;
+  const names = new Set([...Object.keys(a), ...Object.keys(b)]);
+  for (const name of names) {
+    if (a[name] !== b[name]) return false;
+  }
+  return true;
+}
+
 /** 表格默认每页条数（见 DESIGN.md「导航」：表格 20）。 */
 export const DEFAULT_RESOURCE_PAGE_SIZE = 20;
 
@@ -550,6 +560,7 @@ function ProductionResourceTable<
     renderError,
     onError,
     emptyText,
+    filterControls,
     reload: externalReload,
   } = props;
   const isReadOnly = props.readOnly === true;
@@ -620,8 +631,38 @@ function ProductionResourceTable<
       pageNum: defaults.pageNum ?? 1,
       pageSize: defaults.pageSize ?? DEFAULT_RESOURCE_PAGE_SIZE,
       ...(defaults.orders !== undefined ? { orders: defaults.orders } : {}),
+      ...(defaults.filters !== undefined ? { filters: defaults.filters } : {}),
     } as TQuery;
   }, [queryConfig]);
+
+  // Filters before the address bar is applied; "clear filters" returns here.
+  const baseFilters = useMemo<Partial<TFilters> | undefined>(
+    () => queryConfig?.initial?.filters ?? queryConfig?.defaults?.filters,
+    [queryConfig],
+  );
+
+  // Structured filters that round-trip through the address bar: the schema's
+  // filterable fields plus any filter the page sets in defaults/initial.
+  const urlFilterTypes = useMemo<Record<string, UrlFilterType>>(() => {
+    const types: Record<string, UrlFilterType> = {};
+    for (const field of schema.fields) {
+      if (field.filterable && field.tsType !== "unknown") types[field.name] = field.tsType;
+    }
+    const declared = {
+      ...(queryConfig?.defaults?.filters ?? {}),
+      ...(queryConfig?.initial?.filters ?? {}),
+    } as Record<string, unknown>;
+    for (const [name, value] of Object.entries(declared)) {
+      const type = typeof value;
+      if (
+        types[name] === undefined &&
+        (type === "bigint" || type === "number" || type === "string" || type === "boolean")
+      ) {
+        types[name] = type;
+      }
+    }
+    return types;
+  }, [queryConfig, schema.fields]);
 
   const initialQuery = useMemo<TQuery>(() => {
     const defaults = queryConfig?.defaults ?? {};
@@ -633,7 +674,11 @@ function ProductionResourceTable<
         : undefined;
     const keyword = fromUrl.keyword ?? initial.keyword ?? defaults.keyword;
     const orders = urlOrder ?? initial.orders ?? defaults.orders;
-    const filters = initial.filters ?? defaults.filters;
+    const urlFilters = syncUrl ? readUrlFilters(urlFilterTypes) : {};
+    const filters =
+      Object.keys(urlFilters).length > 0
+        ? ({ ...(initial.filters ?? defaults.filters), ...urlFilters } as Partial<TFilters>)
+        : (initial.filters ?? defaults.filters);
     return {
       pageNum: fromUrl.pageNum ?? initial.pageNum ?? defaults.pageNum ?? 1,
       pageSize:
@@ -689,6 +734,7 @@ function ProductionResourceTable<
         writeUrlQuery(
           nextQuery as ResourceListQuery<object, string>,
           defaultQuery as ResourceListQuery<object, string>,
+          urlFilterTypes,
         );
       }
       try {
@@ -710,7 +756,17 @@ function ProductionResourceTable<
         if (loadID === latestLoad.current) setLoading(false);
       }
     },
-    [canList, defaultQuery, onError, operations, permissions.list, queryConfig, syncUrl, treeData],
+    [
+      canList,
+      defaultQuery,
+      onError,
+      operations,
+      permissions.list,
+      queryConfig,
+      syncUrl,
+      treeData,
+      urlFilterTypes,
+    ],
   );
 
   const reload = useCallback(async (): Promise<void> => {
@@ -810,9 +866,26 @@ function ProductionResourceTable<
     runQuery({ ...currentQuery, pageNum: 1, keyword: nextKeyword });
   };
 
+  const setFilters = useCallback(
+    (next: Partial<TFilters>): void => {
+      // A filter change restarts from the first page, like a new keyword.
+      runQuery({ ...currentQuery, pageNum: 1, filters: next } as TQuery);
+    },
+    [currentQuery, runQuery],
+  );
+
+  const filtersChanged = !sameFilters(currentQuery.filters, baseFilters);
+
   const clearFilters = (): void => {
     setKeyword("");
-    search("");
+    const rest: Record<string, unknown> = { ...currentQuery };
+    delete rest.filters;
+    runQuery({
+      ...rest,
+      pageNum: 1,
+      keyword: "",
+      ...(baseFilters !== undefined ? { filters: baseFilters } : {}),
+    } as TQuery);
   };
 
   const confirmPending = async (): Promise<void> => {
@@ -1018,7 +1091,7 @@ function ProductionResourceTable<
       ))
     : null;
 
-  const filtered = (currentQuery.keyword ?? "") !== "";
+  const filtered = (currentQuery.keyword ?? "") !== "" || filtersChanged;
   const emptyContent = loading ? (
     texts.table.loading
   ) : emptyText !== undefined ? (
@@ -1097,7 +1170,18 @@ function ProductionResourceTable<
         onKeywordChange={setKeyword}
         onSearch={(next) => search(next)}
         onReload={() => void reload()}
-      />
+      >
+        {filterControls?.({
+          filters: (currentQuery.filters ?? {}) as Partial<TFilters>,
+          setFilters,
+          setFilter: (name, value) => {
+            const next = { ...(currentQuery.filters ?? {}) } as Record<string, unknown>;
+            if (value === undefined) delete next[name as string];
+            else next[name as string] = value;
+            setFilters(next as Partial<TFilters>);
+          },
+        })}
+      </ResourceSearchBar>
       <div className="resource-table__content" style={surfaceStyle}>
         {errorContent ?? (
           <ProTable<TEntity & Record<string, unknown>, TQuery>

@@ -1,6 +1,6 @@
 import type { ResourceListQuery } from "./operations";
 
-// 列表的关键词、页码、每页条数和排序写进地址栏（见 DESIGN.md「导航」：可分享的位置都在地址里）。
+// 列表的关键词、页码、每页条数、排序和结构化筛选写进地址栏（见 DESIGN.md「导航」：可分享的位置都在地址里）。
 
 export type UrlQueryState = {
   readonly keyword?: string;
@@ -10,6 +10,70 @@ export type UrlQueryState = {
 };
 
 const URL_PARAMS = { keyword: "q", page: "page", size: "size", sort: "sort" } as const;
+
+/** Value types a structured filter can carry in the address bar. */
+export type UrlFilterType = "bigint" | "number" | "string" | "boolean";
+
+const RESERVED_PARAMS: ReadonlySet<string> = new Set(Object.values(URL_PARAMS));
+
+/**
+ * Query parameter of a structured filter: its own name (`?deptId=3`), so the
+ * address stays readable. A filter named like a list parameter (`q`, `page`,
+ * `size`, `sort`) is written as `f.<name>`.
+ */
+export function urlFilterParam(name: string): string {
+  return RESERVED_PARAMS.has(name) ? `f.${name}` : name;
+}
+
+function encodeFilterValue(value: unknown): string | undefined {
+  switch (typeof value) {
+    case "bigint":
+    case "boolean":
+      return String(value);
+    case "number":
+      return Number.isFinite(value) ? String(value) : undefined;
+    case "string":
+      return value;
+    default:
+      return undefined;
+  }
+}
+
+function decodeFilterValue(text: string, type: UrlFilterType): unknown {
+  switch (type) {
+    case "bigint":
+      return /^-?\d+$/.test(text) ? BigInt(text) : undefined;
+    case "number": {
+      if (text.trim() === "") return undefined;
+      const value = Number(text);
+      return Number.isFinite(value) ? value : undefined;
+    }
+    case "boolean":
+      return text === "true" ? true : text === "false" ? false : undefined;
+    case "string":
+      return text;
+  }
+}
+
+/**
+ * Reads the structured filters named in `types` from the address bar. Values
+ * that do not parse as the declared type are ignored, so a hand-edited or
+ * outdated link falls back to the page defaults instead of failing.
+ */
+export function readUrlFilters(
+  types: Readonly<Record<string, UrlFilterType>>,
+): Record<string, unknown> {
+  if (typeof window === "undefined") return {};
+  const params = new URLSearchParams(window.location.search);
+  const filters: Record<string, unknown> = {};
+  for (const [name, type] of Object.entries(types)) {
+    const text = params.get(urlFilterParam(name));
+    if (text === null) continue;
+    const value = decodeFilterValue(text, type);
+    if (value !== undefined) filters[name] = value;
+  }
+  return filters;
+}
 
 export function readUrlQuery(): UrlQueryState {
   if (typeof window === "undefined") return {};
@@ -28,9 +92,16 @@ export function readUrlQuery(): UrlQueryState {
   };
 }
 
+/**
+ * Writes the list state to the address bar with `replaceState`. Only values
+ * that differ from `defaults` are written. Structured filters are written for
+ * the names in `filterTypes`; a filter equal to its default, or unset, is
+ * removed from the address.
+ */
 export function writeUrlQuery(
   query: ResourceListQuery<object, string>,
   defaults: ResourceListQuery<object, string>,
+  filterTypes: Readonly<Record<string, UrlFilterType>> = {},
 ): void {
   if (typeof window === "undefined") return;
   const url = new URL(window.location.href);
@@ -49,6 +120,20 @@ export function writeUrlQuery(
     URL_PARAMS.sort,
     order === undefined || sameAsDefault ? undefined : `${order.desc ? "-" : ""}${order.field}`,
   );
+  const filters = (query.filters ?? {}) as Readonly<Record<string, unknown>>;
+  const defaultFilters = (defaults.filters ?? {}) as Readonly<Record<string, unknown>>;
+  for (const name of Object.keys(filterTypes)) {
+    const value = filters[name];
+    const param = urlFilterParam(name);
+    if (value === undefined || value === defaultFilters[name]) {
+      url.searchParams.delete(param);
+      continue;
+    }
+    const text = encodeFilterValue(value);
+    // An empty string is a real filter value ("equals empty"), so keep `name=`.
+    if (text === undefined) url.searchParams.delete(param);
+    else url.searchParams.set(param, text);
+  }
   if (url.href !== window.location.href) {
     // Keep the router's history state so back/forward still restores this entry.
     window.history.replaceState(window.history.state, "", url);

@@ -44,10 +44,24 @@ export interface ResourceQueryConfig<TSchema extends ResourceSchema, TFilters ex
   readonly initial?: Partial<ResourceListQuery<TFilters, SortableFieldName<TSchema>>>;
   readonly onChange?: (query: ResourceListQuery<TFilters, SortableFieldName<TSchema>>) => void;
   /**
-   * 把关键词、页码、每页条数和排序写进地址栏查询参数（`q`、`page`、`size`、`sort`），
-   * 刷新或分享链接后看到同一画面。默认开启；同一页面有多个表格、或表格在抽屉里时关闭。
+   * 把关键词、页码、每页条数、排序（`q`、`page`、`size`、`sort`）和结构化筛选写进地址栏，
+   * 刷新、后退、分享链接或在新标签页打开后看到同一画面。筛选参数用筛选名本身（如 `?deptId=3`），
+   * 与上面四个参数同名的写成 `f.<名称>`；只写与默认值不同的值，读取时忽略无法解析的值。
+   * 默认开启；同一页面有多个表格、或表格在抽屉里时关闭。
    */
   readonly syncUrl?: boolean;
+}
+
+/** `filterControls` 收到的当前筛选与修改方法。修改后从第一页重新查询。 */
+export interface ResourceFilterControlsContext<TFilters extends object> {
+  readonly filters: Partial<TFilters>;
+  /** 替换全部筛选。 */
+  readonly setFilters: (filters: Partial<TFilters>) => void;
+  /** 修改一项筛选；`undefined` 表示去掉该项。 */
+  readonly setFilter: <TName extends keyof TFilters>(
+    name: TName,
+    value: TFilters[TName] | undefined,
+  ) => void;
 }
 
 /**
@@ -187,6 +201,11 @@ export interface ResourceTableProductionProps<
   readonly rowActions?: readonly ResourceRowActionOverride<TEntity, TKey>[];
   readonly toolbar?: readonly ResourceToolbarOverride<TEntity, TKey>[];
   readonly query?: ResourceQueryConfig<TSchema, TFilters>;
+  /**
+   * 搜索栏中关键词输入框之后的筛选控件（下拉、开关等）。筛选状态由表格持有：
+   * 控件读 `filters`，改动时调 `setFilter` / `setFilters`，表格从第一页重新查询并同步地址栏。
+   */
+  readonly filterControls?: (context: ResourceFilterControlsContext<TFilters>) => ReactNode;
   /** Optional client-side tree projection over the standard flat List result. */
   readonly treeData?: ResourceTableTreeConfig<TEntity>;
   readonly form?: ResourceTableFormIntegration<
@@ -225,6 +244,11 @@ export interface ResourceTableReadOnlyProps<
   readonly rowActions?: readonly ResourceCustomRowActionOverride<TEntity, TKey>[];
   readonly toolbar?: readonly ResourceCustomToolbarOverride<TEntity, TKey>[];
   readonly query?: ResourceQueryConfig<TSchema, TFilters>;
+  /**
+   * 搜索栏中关键词输入框之后的筛选控件（下拉、开关等）。筛选状态由表格持有：
+   * 控件读 `filters`，改动时调 `setFilter` / `setFilters`，表格从第一页重新查询并同步地址栏。
+   */
+  readonly filterControls?: (context: ResourceFilterControlsContext<TFilters>) => ReactNode;
   /** Optional client-side tree projection over the standard flat List result. */
   readonly treeData?: ResourceTableTreeConfig<TEntity>;
   readonly emptyText?: ReactNode;

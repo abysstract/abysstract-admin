@@ -14,6 +14,7 @@
 - 资源 JSON 新增 `"standardOperations": {"create": false, "update": false, "delete": false}`：关闭标准写操作后只生成 List 和 Get，不生成写 RPC、权限和按钮菜单，新生成的列表页使用 `ResourceTable` 只读模式。目前三项须一起关闭。见[关闭标准写操作](docs/module-guide.md#关闭标准写操作)。
 - 模块 seed 菜单新增 `"hidden": true`：页面有路由和权限检查，但不进侧边栏（`sys_menu.visible = 2`），用于有独立地址、只经链接进入的详情页；`module update` 升级时同步该值。登录后的菜单接口返回这类菜单，前端为其注册路由并在侧边栏中隐藏；首页跳转跳过隐藏页面。admin-core 导出 `MENU_HIDDEN` 与 `isHiddenMenu`。见[Seed 声明](docs/module-guide.md#seed-声明)。
 - `ResourceTable` 自定义行操作新增 `href`：渲染为真正的链接，普通点击在应用内跳转，中键、Ctrl/⌘ 点击在新的浏览器标签页打开。
+- `ResourceTable` 的结构化筛选：新增 `filterControls`（搜索栏中的筛选控件，收到 `filters`、`setFilter`、`setFilters`），筛选由表格持有，改动后从第一页重新查询。`syncUrl` 开启（默认）时筛选与关键词、页码、排序一起写进地址栏，参数名用筛选名本身（如 `?deptId=3`，与 `q`/`page`/`size`/`sort` 同名的写成 `f.<名称>`），只写与默认值不同的值，读取时忽略无法解析的值；刷新、后退、分享和在新标签页打开都会恢复筛选。有筛选时空状态也显示「清除筛选」，它同时把筛选恢复为页面的初始值。见[结构化筛选](docs/admin-core-usage.md#结构化筛选)。
 - `schema.OmitOperations`：从 `StandardOperations` 中去掉指定的标准操作。只含 List（及 Get）的 `Generated` Resource 由 `resourcegen` 生成只读 Controller 和 `ResourceReadOperations`，`Partial` 的只读 Controller 也可以包含 Get。
 
 ### Documentation

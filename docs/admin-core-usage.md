@@ -181,15 +181,44 @@ npm install /absolute/path/to/abysstract-admin-proto-VERSION.tgz /absolute/path/
 | 行为 | 默认 | 调整方式 |
 |---|---|---|
 | 每页条数 | 20；只有一页时隐藏分页器，超过 5 页显示快速跳转 | `query.defaults.pageSize` |
-| 地址栏 | 关键词、页码、每页条数、排序写进 `q`、`page`、`size`、`sort` 参数，刷新或分享链接后是同一画面 | 同一页面有多个表格，或表格在抽屉里时，设 `query.syncUrl: false` |
+| 地址栏 | 关键词、页码、每页条数、排序写进 `q`、`page`、`size`、`sort` 参数，结构化筛选用筛选名本身（如 `deptId=3`），刷新、后退、分享链接或在新标签页打开后是同一画面 | 同一页面有多个表格，或表格在抽屉里时，设 `query.syncUrl: false` |
 | 新增、编辑 | 720 宽抽屉，标题栏右侧是「取消 保存」，成功后提示「已创建」「已保存」，失败时抽屉不关、提示原因 | `form.createConfig` / `form.editConfig` |
 | 表单排布 | 标签在上；每个字段单独一行，宽度按类型（数字 6、文本和下拉 12、长文本 24）；布尔字段用 Checkbox；长文本自动增高 | 表单项的 `span`、`sameRowAsPrevious` |
 | 操作列 | 最多露出两个文字链接，其余收进「⋯」，删除排在最后 | 自定义行操作设 `danger: true` 会排到最后 |
 | 没有权限的操作 | 不显示 | — |
 | 删除 | 确认框写清后果，按钮是「删除 / 取消」；成功提示「已删除」，失败用 `Modal.error` 说明原因 | — |
 | 批量操作 | 选中行后出现在表格底部 | 自定义工具栏项设 `placement: "selection"` |
-| 空状态 | 「还没有记录」+「新增」；有关键词时「没有符合条件的记录」+「清除筛选」 | `emptyText` |
+| 空状态 | 「还没有记录」+「新增」；有关键词或筛选时「没有符合条件的记录」+「清除筛选」 | `emptyText` |
 | 数字列 | — | 列的 `numeric: true`：右对齐、等宽数字 |
+
+### 结构化筛选
+
+`List` 请求中的筛选字段（Resource 中 `Filterable()` 并在 List binding 中映射的字段）通过 `filterControls` 放进搜索栏。筛选状态由表格持有：控件读 `filters`，改动时调 `setFilter`（`undefined` 去掉该项）或 `setFilters`，表格从第一页重新查询，并把筛选写进地址栏：
+
+```tsx
+<ResourceTable<typeof productSchema, Product, bigint, ProductFilters, ProductCreateValues, ProductUpdateValues>
+  schema={productSchema}
+  operations={operations}
+  access={access}
+  filterControls={({ filters, setFilter }) => (
+    <DeptSelect
+      allowClear
+      placeholder="部门"
+      value={filters.deptId}
+      onChange={(deptId) => setFilter("deptId", deptId ?? undefined)}
+    />
+  )}
+/>
+```
+
+地址栏中的筛选参数：
+
+- 参数名是筛选名本身，如 `?deptId=3&q=abc`；与 `q`、`page`、`size`、`sort` 同名的筛选写成 `f.<名称>`。
+- 只写与默认值（`query.initial.filters`，没有时 `query.defaults.filters`）不同的筛选。值按 schema 中字段的类型读取：`bigint` 和 `number` 写成十进制，布尔写成 `true` / `false`，字符串原样写入（空字符串是有效的筛选值，写成 `deptName=`）。
+- 读取时忽略无法按类型解析的值（例如手改成 `deptId=abc`），该项回到默认值，页面照常加载。
+- 同步的筛选是 schema 中 `filterable` 的字段，以及页面在 `query.defaults.filters` / `query.initial.filters` 中给出的筛选。
+
+页面初始筛选写在 `query.initial.filters`；地址栏中的筛选优先。「清除筛选」把关键词清空，筛选回到这个初始值。
 
 `onError` 只在列表加载失败时调用；新增、编辑、删除的结果由 `ResourceTable` 自己提示，页面不用再在 `onSuccess` 或 `onError` 里弹消息。
 

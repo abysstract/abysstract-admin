@@ -59,6 +59,7 @@ export type { ResourceFormDrawerProps } from "./ResourceFormDrawer";
 export { ResourceFormDrawer } from "./ResourceFormDrawer";
 export type {
   ResourceQueryConfig,
+  ResourceFilterControlsContext,
   ResourceTableTreeConfig,
   ResourceRowKey,
   ResourceTableErrorBoundary,
