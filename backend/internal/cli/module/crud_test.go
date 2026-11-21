@@ -118,3 +118,67 @@ func TestCRUDCreateOnlyAndReadOnlyFields(t *testing.T) {
 		}
 	}
 }
+
+func TestCRUDStandardWritesOff(t *testing.T) {
+	no, yes := false, true
+	spec := crudSpec{Name: "Entry", Table: "notes_entry", Title: "记录", UpdatedAt: "update_time", Fields: []crudField{{Column: "message", Label: "内容"}}}
+	spec.StandardOperations = &crudStandardOperations{Create: &no, Update: &yes, Delete: &no}
+	if err := validateCRUD("notes", spec); err == nil || !strings.Contains(err.Error(), "together") {
+		t.Fatalf("partial standard writes accepted: %v", err)
+	}
+	spec.StandardOperations = &crudStandardOperations{Create: &no, Delete: &no}
+	if err := validateCRUD("notes", spec); err == nil {
+		t.Fatal("omitted update flag must count as on")
+	}
+	spec.StandardOperations = &crudStandardOperations{Create: &no, Update: &no, Delete: &no}
+	if err := validateCRUD("notes", spec); err != nil {
+		t.Fatal(err)
+	}
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	pool, err := db.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = pool.Close() })
+	if err := db.Exec("CREATE TABLE notes_entry (id INTEGER PRIMARY KEY AUTOINCREMENT, message TEXT NOT NULL, update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)").Error; err != nil {
+		t.Fatal(err)
+	}
+	view, err := inspectCRUD(db, "sqlite", moduleView{Module: "notes"}, "backend/internal/modules/notes", spec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	view.moduleView = moduleView{Module: "notes", Backend: "b", DefinitionDir: "d", ProtoDir: "p", Frontend: "f"}
+	files, menus, err := renderCRUD(view)
+	if err != nil {
+		t.Fatal(err)
+	}
+	proto := string(files["p/company/notes/v1/entry.proto"])
+	for _, want := range []string{"rpc ListEntries(", "rpc GetEntry(", "message CreateEntryRequest", "message UpdateEntryRequest"} {
+		if !strings.Contains(proto, want) {
+			t.Errorf("proto lacks %q:\n%s", want, proto)
+		}
+	}
+	for _, forbidden := range []string{"rpc CreateEntry", "rpc UpdateEntry", "rpc DeleteEntry", "rpc BatchDeleteEntries", "CreateEntryResponse", "DeleteEntryRequest"} {
+		if strings.Contains(proto, forbidden) {
+			t.Errorf("proto has %q:\n%s", forbidden, proto)
+		}
+	}
+	definition := string(files["d/entry.gen.go"])
+	if !strings.Contains(definition, "schema.OmitOperations(schema.StandardOperations(") || strings.Contains(definition, `"CreateEntry"`) {
+		t.Errorf("definition:\n%s", definition)
+	}
+	page := string(files["f/pages/EntryList.tsx"])
+	if !strings.Contains(page, "    readOnly\n") || strings.Contains(page, "EntryCreateValues") || strings.Contains(page, "rowActions") {
+		t.Errorf("page:\n%s", page)
+	}
+	var permissions []string
+	for _, m := range menus {
+		permissions = append(permissions, m.Permission)
+	}
+	if strings.Join(permissions, ",") != "biz:notes:entry:list,biz:notes:entry:list" {
+		t.Errorf("menus: %v", permissions)
+	}
+}

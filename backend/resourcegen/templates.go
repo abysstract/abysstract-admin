@@ -648,7 +648,7 @@ func buildTSFacadeView(p *schema.Plan, v *goPlan) *tsFacadeView {
 // facade so a Partial Resource cannot accidentally acquire fake CRUD methods.
 func buildTSReadFacadeView(p *schema.Plan, v *goPlan) *tsReadFacadeView {
 	list := p.Operation(schema.OperationList)
-	if p.Res.Mode != schema.Partial || list == nil || list.List == nil || v.TSServiceModule == "" {
+	if (p.Res.Mode != schema.Partial && !hasGeneratedReadController(p)) || list == nil || list.List == nil || v.TSServiceModule == "" {
 		return nil
 	}
 	facade := &tsReadFacadeView{

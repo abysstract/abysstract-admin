@@ -24,7 +24,25 @@ type crudSpec struct {
 	UpdatedAt  string          `json:"updatedAt"`
 	Fields     []crudField     `json:"fields"`
 	Operations []crudOperation `json:"operations,omitempty"`
+	// StandardOperations turns standard writes off. Omitted flags stay on.
+	StandardOperations *crudStandardOperations `json:"standardOperations,omitempty"`
 }
+
+// crudStandardOperations switches the standard write RPCs. Delete covers
+// both Delete and BatchDelete. List and Get are always generated.
+type crudStandardOperations struct {
+	Create *bool `json:"create,omitempty"`
+	Update *bool `json:"update,omitempty"`
+	Delete *bool `json:"delete,omitempty"`
+}
+
+// readOnly reports whether the standard writes are turned off. Turning off
+// only some of them is rejected by validateCRUD.
+func (s crudSpec) readOnly() bool {
+	o := s.StandardOperations
+	return o != nil && o.Create != nil && !*o.Create && o.Update != nil && !*o.Update && o.Delete != nil && !*o.Delete
+}
+
 type crudOperation struct {
 	Method   string `json:"method"`
 	Request  string `json:"request"`
@@ -60,12 +78,15 @@ type crudView struct {
 	moduleView
 	File, TSFile, Var, Name, Plural, Model, Title, AuditGo, AuditJSON string
 	Timestamp                                                         bool
-	Resources                                                         []crudView
-	Reserved                                                          []retiredField
-	Operations                                                        []crudOperation
-	CustomImports                                                     []string
-	CustomProtoMappings                                               []protoMapping
-	Fields                                                            []crudFieldView
+	// ReadOnly omits the standard write RPCs, their permissions and the
+	// page's create/edit/delete actions.
+	ReadOnly            bool
+	Resources           []crudView
+	Reserved            []retiredField
+	Operations          []crudOperation
+	CustomImports       []string
+	CustomProtoMappings []protoMapping
+	Fields              []crudFieldView
 }
 
 // moduleView holds the module paths from its declaration. Generated Go code
@@ -135,6 +156,17 @@ func validateCRUD(module string, spec crudSpec) error {
 	if len(spec.Fields) == 0 {
 		return fmt.Errorf("resource declaration requires fields")
 	}
+	if o := spec.StandardOperations; o != nil {
+		set := 0
+		for _, flag := range []*bool{o.Create, o.Update, o.Delete} {
+			if flag != nil && !*flag {
+				set++
+			}
+		}
+		if set != 0 && set != 3 {
+			return fmt.Errorf("standardOperations: turn create, update and delete off together; turning off only some standard writes is not supported")
+		}
+	}
 	methods := map[string]bool{"List" + inflection.Plural(spec.Name): true, "Get" + spec.Name: true, "Create" + spec.Name: true, "Update" + spec.Name: true, "Delete" + spec.Name: true, "BatchDelete" + inflection.Plural(spec.Name): true}
 	actions := map[string]bool{"list": true, "add": true, "edit": true, "remove": true}
 	for _, op := range spec.Operations {
@@ -197,6 +229,7 @@ func inspectCRUD(db *gorm.DB, driver string, module moduleView, modelOutput stri
 func inspectCRUDModel(module string, spec crudSpec, driver string, meta crudModel) (crudView, error) {
 	view := crudView{moduleView: moduleView{Module: module}, Name: spec.Name, Plural: inflection.Plural(spec.Name), Title: spec.Title}
 	view.Operations = spec.Operations
+	view.ReadOnly = spec.readOnly()
 	imports := map[string]bool{}
 	for _, op := range spec.Operations {
 		if !imports[op.Proto] {
@@ -285,7 +318,11 @@ func renderCRUD(view crudView) (map[string][]byte, []moduleseed.Menu, error) {
 	menus := []moduleseed.Menu{
 		{Key: page, Parent: root, Name: view.Title + "列表", Path: view.File, Type: "C", Component: "biz/" + view.Module + "/" + view.File, Permission: "biz:" + view.Module + ":" + view.File + ":list"},
 	}
-	for i, action := range []struct{ key, title string }{{"list", "查询"}, {"add", "新增"}, {"edit", "修改"}, {"remove", "删除"}} {
+	actions := []struct{ key, title string }{{"list", "查询"}, {"add", "新增"}, {"edit", "修改"}, {"remove", "删除"}}
+	if view.ReadOnly {
+		actions = actions[:1]
+	}
+	for i, action := range actions {
 		menus = append(menus, moduleseed.Menu{Key: prefix + "." + action.key + ".button", Parent: page, Name: view.Title + action.title, Type: "F", Permission: "biz:" + view.Module + ":" + view.File + ":" + action.key, Order: i + 1})
 	}
 	for _, op := range view.Operations {

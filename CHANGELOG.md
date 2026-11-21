@@ -11,6 +11,8 @@
 
 - `host.apiBaseUrl` 接受以 `/` 开头的同源路径（如 `/` 或 `/api`），按 `window.location` 解析，同一份前端构建可以部署在任何域名下。自带后台的生产构建未设置 `VITE_API_BASE` 时使用 `/`（原来启动报错）。反向代理需要转发的路径见[同源部署](docs/deployment.md#同源部署反向代理)。
 - JSON 资源字段新增 `createOnly`（只在新增时填写）和 `readOnly`（只返回，不接受写入），分别对应 `schema.CreateOnly()` 和 `schema.ReadOnly()`。见[模块指南](docs/module-guide.md)。
+- 资源 JSON 新增 `"standardOperations": {"create": false, "update": false, "delete": false}`：关闭标准写操作后只生成 List 和 Get，不生成写 RPC、权限和按钮菜单，新生成的列表页使用 `ResourceTable` 只读模式。目前三项须一起关闭。见[关闭标准写操作](docs/module-guide.md#关闭标准写操作)。
+- `schema.OmitOperations`：从 `StandardOperations` 中去掉指定的标准操作。只含 List（及 Get）的 `Generated` Resource 由 `resourcegen` 生成只读 Controller 和 `ResourceReadOperations`，`Partial` 的只读 Controller 也可以包含 Get。
 
 ### Fixed
 

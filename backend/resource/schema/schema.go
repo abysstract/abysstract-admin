@@ -193,6 +193,27 @@ func StandardOperations(c StandardOperationsConfig) []Operation {
 	return out
 }
 
+// OmitOperations returns ops without the operations of the given kinds. A
+// read-only Resource uses it to drop the standard writes from
+// StandardOperations, so their RPCs and permissions are not generated:
+//
+//	schema.OmitOperations(schema.StandardOperations(cfg),
+//		schema.OperationCreate, schema.OperationUpdate,
+//		schema.OperationDelete, schema.OperationBatchDelete)
+func OmitOperations(ops []Operation, kinds ...OperationKind) []Operation {
+	omit := make(map[OperationKind]bool, len(kinds))
+	for _, kind := range kinds {
+		omit[kind] = true
+	}
+	out := make([]Operation, 0, len(ops))
+	for _, op := range ops {
+		if !omit[op.Kind] {
+			out = append(out, op)
+		}
+	}
+	return out
+}
+
 func mergeBinding(base, override OperationBinding) OperationBinding {
 	if override.Identifier != "" {
 		base.Identifier = override.Identifier

@@ -121,6 +121,25 @@
 
 `readOnly` 不能与 `createOnly`、`required`、`maxLength` 同时使用（它们只约束写入的值）。新增时不会写入 `readOnly` 列，所以该列须可为空或有数据库默认值，否则 `generate` 报错。把已有字段改为 `createOnly` 或 `readOnly` 会从请求中去掉该字段，仍发送它的旧客户端不会报错，值被忽略。
 
+### 关闭标准写操作
+
+写入走应用自己的服务（导入、审批、外部同步）或数据只供查看时，在资源 JSON 中关闭标准写操作：
+
+```json
+{
+  "name": "Entry",
+  "table": "notes_entry",
+  "title": "记录",
+  "updatedAt": "update_time",
+  "standardOperations": { "create": false, "update": false, "delete": false },
+  "fields": [{ "column": "message", "label": "内容" }]
+}
+```
+
+`generate` 只生成 `List` 和 `Get` 两个标准 RPC：`Create`、`Update`、`Delete`、`BatchDelete` 不出现在 Proto 服务中，也不注册对应的权限和“新增 / 修改 / 删除”按钮菜单。Proto 中保留 `Create<Resource>Request` 和 `Update<Resource>Request` 两个消息，它们是 Resource 声明的字段约定，重新开启时沿用。新生成的列表页使用 `ResourceTable` 的只读模式（`readOnly`），没有新增按钮和编辑、删除行操作；需要写入时在页面加自定义按钮，调用 `operations` 中声明的专用方法（`operations.custom.<方法名>`）。
+
+`delete` 同时控制单条删除和批量删除。目前只能三项一起关闭，只关闭其中一部分时 `generate` 报错。页面文件只在首次生成时创建：给已有资源关闭写操作后，页面仍引用已删除的新增、编辑类型，需要改成只读模式（参照新生成的页面），或删除页面文件后重新执行 `generate`。已分配的 `add`、`edit`、`remove` 权限在 `module update` 同步菜单后移除。
+
 ## 后端服务与前端页面
 
 后端模块通过 `NewModule() (module.Definition, error)` 返回定义。`Services` 声明服务描述，`Permissions` 注册操作权限；`Create` 使用 `module.Runtime` 创建 Controller、Adapter 并提供实际服务注册。手写 `module.go` 调用生成的模块创建函数，专用服务在此组合。应用的 `internal/app/modules.go` 调用生成的 `selectedModules()` 取得已安装模块。
