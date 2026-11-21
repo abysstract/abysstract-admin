@@ -17,18 +17,19 @@
 - `ResourceTable` 的结构化筛选：新增 `filterControls`（搜索栏中的筛选控件，收到 `filters`、`setFilter`、`setFilters`），筛选由表格持有，改动后从第一页重新查询。`syncUrl` 开启（默认）时筛选与关键词、页码、排序一起写进地址栏，参数名用筛选名本身（如 `?deptId=3`，与 `q`/`page`/`size`/`sort` 同名的写成 `f.<名称>`），只写与默认值不同的值，读取时忽略无法解析的值；刷新、后退、分享和在新标签页打开都会恢复筛选。有筛选时空状态也显示「清除筛选」，它同时把筛选恢复为页面的初始值。见[结构化筛选](docs/admin-core-usage.md#结构化筛选)。
 - `schema.OmitOperations`：从 `StandardOperations` 中去掉指定的标准操作。只含 List（及 Get）的 `Generated` Resource 由 `resourcegen` 生成只读 Controller 和 `ResourceReadOperations`，`Partial` 的只读 Controller 也可以包含 Get。
 
-### Documentation
-
-- [配置说明](docs/configuration.md#迁移版本的顺序)：`admin-migrations sync` 与预先命名的业务迁移之间的版本顺序规则。
-- [配置说明](docs/configuration.md#应用自己的配置)：`adminconfig.Load()` 之后用 `os.Getenv` 读取放在 `.env` 中的应用配置，以及读取的时机和命名建议。
-
 ### Changed
 
+- **破坏性（少见）**：登录后的菜单接口除 `visible = 1` 外也返回 `visible = 2` 的目录和页面（新的“隐藏菜单”：有路由，不进侧边栏）。已有数据中把 `visible` 手工设为 `2` 表示“完全隐藏”的菜单，升级后会注册路由（仍检查权限、仍不显示在侧边栏）；要完全停用这类菜单，把状态改为停用。
 - `module resource` 用列注释的第一个分句作为字段的初始 `label`（如 `COMMENT '卡片编号，全局唯一'` 得到“卡片编号”），没有注释时仍用列名。只影响新创建的资源 JSON。
 
 ### Fixed
 
 - `module generate`：手写的 `.proto` 以注释开头时，protoc-gen-go / protoc-gen-es 会把注释复制到生成文件中“Code generated”标记的上方，第二次生成因此报 `unmanaged destination`。现在在文件头部（第一行代码之前的注释）中任何位置找到标记都视为生成文件。
+
+### Documentation
+
+- [配置说明](docs/configuration.md#迁移版本的顺序)：`admin-migrations sync` 与预先命名的业务迁移之间的版本顺序规则。
+- [配置说明](docs/configuration.md#应用自己的配置)：`adminconfig.Load()` 之后用 `os.Getenv` 读取放在 `.env` 中的应用配置，以及读取的时机和命名建议。
 
 ## [0.7.1] - 2026-11-17
 
