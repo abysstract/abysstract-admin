@@ -12,6 +12,8 @@
 - `host.apiBaseUrl` 接受以 `/` 开头的同源路径（如 `/` 或 `/api`），按 `window.location` 解析，同一份前端构建可以部署在任何域名下。自带后台的生产构建未设置 `VITE_API_BASE` 时使用 `/`（原来启动报错）。反向代理需要转发的路径见[同源部署](docs/deployment.md#同源部署反向代理)。
 - JSON 资源字段新增 `createOnly`（只在新增时填写）和 `readOnly`（只返回，不接受写入），分别对应 `schema.CreateOnly()` 和 `schema.ReadOnly()`。见[模块指南](docs/module-guide.md)。
 - 资源 JSON 新增 `"standardOperations": {"create": false, "update": false, "delete": false}`：关闭标准写操作后只生成 List 和 Get，不生成写 RPC、权限和按钮菜单，新生成的列表页使用 `ResourceTable` 只读模式。目前三项须一起关闭。见[关闭标准写操作](docs/module-guide.md#关闭标准写操作)。
+- 模块 seed 菜单新增 `"hidden": true`：页面有路由和权限检查，但不进侧边栏（`sys_menu.visible = 2`），用于有独立地址、只经链接进入的详情页；`module update` 升级时同步该值。登录后的菜单接口返回这类菜单，前端为其注册路由并在侧边栏中隐藏；首页跳转跳过隐藏页面。admin-core 导出 `MENU_HIDDEN` 与 `isHiddenMenu`。见[Seed 声明](docs/module-guide.md#seed-声明)。
+- `ResourceTable` 自定义行操作新增 `href`：渲染为真正的链接，普通点击在应用内跳转，中键、Ctrl/⌘ 点击在新的浏览器标签页打开。
 - `schema.OmitOperations`：从 `StandardOperations` 中去掉指定的标准操作。只含 List（及 Get）的 `Generated` Resource 由 `resourcegen` 生成只读 Controller 和 `ResourceReadOperations`，`Partial` 的只读 Controller 也可以包含 Get。
 
 ### Fixed

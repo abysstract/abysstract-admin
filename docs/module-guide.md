@@ -163,7 +163,19 @@
 }
 ```
 
-父菜单排在子菜单前，`key` 是稳定的归属标识。页面 `component` 对应前端模块配置的页面 key，`permission` 对应后端动作权限。示例角色的 `dataScope: 1` 表示全部数据范围，取值见[权限说明](permission.md#数据范围)。普通角色通过系统角色管理授权。
+父菜单排在子菜单前，`key` 是稳定的归属标识。只经链接进入的页面（例如有独立地址的详情页）在菜单上加 `"hidden": true`：仍创建路由并检查权限，但不显示在侧边栏，数据库中记为 `visible = 2`。`hidden` 用于目录（`M`）和页面（`C`），隐藏目录下的页面一并隐藏。路径可以带路由参数，页面用 react-router 的 `useParams` 读取：
+
+```json
+{"key": "notes.note.detail", "parent": "notes.root", "name": "笔记详情", "path": "note/:id", "component": "biz/notes/note-detail", "type": "C", "permission": "biz:notes:note:list", "hidden": true}
+```
+
+指向这类页面的入口用真正的链接，中键或 Ctrl/⌘ 点击会在新的浏览器标签页打开：页面中用 `<Link to={`/notes/note/${id}`}>`，`ResourceTable` 的行操作用自定义操作的 `href`：
+
+```tsx
+rowActions={[{ action: "custom", name: "view", title: "查看", permission: "biz:notes:note:list", merge: "append", href: ({ entity }) => `/notes/note/${entity.id}` }]}
+```
+
+页面 `component` 对应前端模块配置的页面 key，`permission` 对应后端动作权限。示例角色的 `dataScope: 1` 表示全部数据范围，取值见[权限说明](permission.md#数据范围)。普通角色通过系统角色管理授权。
 
 首次安装和编辑 Seed 后都执行 `update`，命令根据安装状态创建相应迁移。归属记录存放在 `sys_module_binding`。快照保存到 `backend/migrations/modules/`，各方言 Go 迁移内嵌声明并调用公共 `moduleseed`；删除业务源码后这些历史文件继续保留。
 

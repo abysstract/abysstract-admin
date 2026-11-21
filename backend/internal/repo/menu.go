@@ -13,7 +13,14 @@ import (
 // ErrHasChildren 存在子节点，不允许删除。
 var ErrHasChildren = resource.ErrHasChildren
 
-// MenusOf 返回用户可见的目录/菜单（仅 M 目录、C 菜单，启用且可见），用于前端动态菜单与路由。
+// routedMenuVisibility lists the sys_menu.visible values that get a route:
+// 1 shows the menu in the sidebar, 2 (moduleseed.MenuHidden) keeps the route
+// and permission check without a sidebar entry. Other values hide the menu
+// and its route.
+var routedMenuVisibility = []int16{1, 2}
+
+// MenusOf 返回用户可访问的目录/菜单（仅 M 目录、C 菜单，启用，可见或隐藏 visible=2），用于前端动态菜单与路由。
+// 隐藏菜单有路由但不进侧边栏，由前端按 visible 区分。
 // admin 角色返回全部；其余按角色-菜单授权返回，并自动补齐缺失的祖先目录以保证树完整。
 func (r *Repo) MenusOf(ctx context.Context, userID int64) ([]*model.SysMenu, error) {
 	keys, err := r.RoleKeysOf(ctx, userID)
@@ -32,7 +39,7 @@ func (r *Repo) MenusOf(ctx context.Context, userID int64) ([]*model.SysMenu, err
 	if isAdmin {
 		if err = r.db.WithContext(ctx).Model(&model.SysMenu{}).
 			Where("menu_type IN ?", []string{"M", "C"}).
-			Where("status = 1 AND visible = 1").
+			Where("status = 1 AND visible IN ?", routedMenuVisibility).
 			Find(&list).Error; err != nil {
 			return nil, err
 		}
@@ -46,7 +53,7 @@ func (r *Repo) MenusOf(ctx context.Context, userID int64) ([]*model.SysMenu, err
 		Join(rm, rm.MenuID.EqCol(m.ID)).
 		Join(ur, ur.RoleID.EqCol(rm.RoleID)).
 		Join(role, role.ID.EqCol(ur.RoleID), role.Status.Eq(1), role.DelFlag.Eq(0)).
-		Where(ur.UserID.Eq(userID), m.MenuType.In("M", "C"), m.Status.Eq(1), m.Visible.Eq(1)).
+		Where(ur.UserID.Eq(userID), m.MenuType.In("M", "C"), m.Status.Eq(1), m.Visible.In(routedMenuVisibility...)).
 		Distinct(m.ALL).Find()
 	if err != nil {
 		return nil, err
@@ -67,7 +74,7 @@ func (r *Repo) MenusOf(ctx context.Context, userID int64) ([]*model.SysMenu, err
 		var parents []*model.SysMenu
 		if err := r.db.WithContext(ctx).
 			Where("id IN ? AND menu_type IN ?", missing, []string{"M", "C"}).
-			Where("status = 1 AND visible = 1").
+			Where("status = 1 AND visible IN ?", routedMenuVisibility).
 			Find(&parents).Error; err != nil {
 			return nil, err
 		}

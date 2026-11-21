@@ -134,6 +134,7 @@ func upgradeMenus(tx *gorm.DB, previous []Menu, nextMenus map[string]Menu, owned
 			{"menu_type", row.MenuType, old.Type, next.Type},
 			{"perms", row.Perms, old.Permission, next.Permission},
 			{"icon", row.Icon, old.Icon, next.Icon},
+			{"visible", row.Visible, old.visible(), next.visible()},
 		} {
 			if field.current == field.old && field.old != field.next {
 				updates[field.column] = field.next

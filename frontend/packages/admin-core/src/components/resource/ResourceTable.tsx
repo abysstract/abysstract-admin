@@ -4,11 +4,13 @@ import {
   useMemo,
   useRef,
   useState,
+  type MouseEvent,
   type ReactElement,
   type ReactNode,
 } from "react";
 import { EllipsisOutlined } from "@ant-design/icons";
 import { Button, Dropdown, Empty, Modal, Space, type ButtonProps } from "antd";
+import { useHref, useInRouterContext, useLinkClickHandler } from "react-router-dom";
 import { ProTable, type ProColumns } from "@ant-design/pro-components";
 import type { FilterValue, SorterResult, TablePaginationConfig } from "antd/es/table/interface";
 
@@ -105,6 +107,8 @@ type RowAction =
       readonly title: ReactNode;
       readonly onClick: () => void;
       readonly danger?: boolean;
+      /** Link target: rendered as an anchor instead of a click handler. */
+      readonly href?: string;
     }
   | { readonly key: string; readonly kind: "node"; readonly node: ReactNode };
 
@@ -129,6 +133,57 @@ function ActionButton({
   );
 }
 
+type RowLinkProps = {
+  readonly to: string;
+  readonly title: ReactNode;
+  readonly danger?: boolean;
+  /** "button": inline link button; "text": a plain anchor inside the "⋯" menu. */
+  readonly variant: "button" | "text";
+};
+
+/**
+ * A row action that opens another page. It is a real anchor (`href`), so the
+ * browser opens it in a new tab on middle-click, Ctrl/⌘-click or from the
+ * context menu; a plain left click navigates inside the app.
+ */
+function RowLink(props: RowLinkProps): ReactElement {
+  return useInRouterContext() ? (
+    <RouterRowLink {...props} />
+  ) : (
+    <RowAnchor {...props} href={props.to} />
+  );
+}
+
+function RouterRowLink(props: RowLinkProps): ReactElement {
+  const href = useHref(props.to);
+  const navigate = useLinkClickHandler<HTMLElement>(props.to);
+  return <RowAnchor {...props} href={href} onClick={navigate} />;
+}
+
+function RowAnchor({
+  href,
+  title,
+  danger,
+  variant,
+  onClick,
+}: RowLinkProps & {
+  readonly href: string;
+  readonly onClick?: (event: MouseEvent<HTMLElement>) => void;
+}): ReactElement {
+  if (variant === "text") {
+    return (
+      <a href={href} onClick={onClick}>
+        {title}
+      </a>
+    );
+  }
+  return (
+    <Button type="link" size="small" danger={danger} href={href} onClick={onClick}>
+      {title}
+    </Button>
+  );
+}
+
 function RowActions({
   actions,
   moreLabel,
@@ -148,24 +203,43 @@ function RowActions({
       {nodes.map((action) => (
         <span key={action.key}>{action.node}</span>
       ))}
-      {inline.map((action) => (
-        <ActionButton
-          key={action.key}
-          title={action.title}
-          danger={action.danger}
-          onClick={action.onClick}
-        />
-      ))}
+      {inline.map((action) =>
+        action.href !== undefined ? (
+          <RowLink
+            key={action.key}
+            to={action.href}
+            title={action.title}
+            danger={action.danger}
+            variant="button"
+          />
+        ) : (
+          <ActionButton
+            key={action.key}
+            title={action.title}
+            danger={action.danger}
+            onClick={action.onClick}
+          />
+        ),
+      )}
       {folded.length > 0 ? (
         <Dropdown
           trigger={["click"]}
           menu={{
             items: folded.map((action) => ({
               key: action.key,
-              label: action.title,
+              label:
+                action.href !== undefined ? (
+                  <RowLink to={action.href} title={action.title} variant="text" />
+                ) : (
+                  action.title
+                ),
               danger: action.danger,
             })),
-            onClick: ({ key }) => folded.find((action) => action.key === key)?.onClick(),
+            // Link items navigate through their anchor.
+            onClick: ({ key }) => {
+              const action = folded.find((item) => item.key === key);
+              if (action?.href === undefined) action?.onClick();
+            },
           }}
         >
           <Button type="link" size="small" aria-label={moreLabel} icon={<EllipsisOutlined />} />
@@ -893,6 +967,7 @@ function ProductionResourceTable<
             kind: "button",
             title: override.title ?? override.name,
             danger: override.danger,
+            href: override.href?.(context),
             onClick: () => void override.onClick?.(context),
           };
       (override.danger ? dangerous : actions).push(action);

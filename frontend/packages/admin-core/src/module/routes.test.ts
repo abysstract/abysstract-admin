@@ -1,7 +1,9 @@
 import { create } from "@bufbuild/protobuf";
 import { describe, expect, it } from "vitest";
 import { MenuSchema, type Menu } from "@abysstract/admin-proto/abysstract/admin/v1/menu_pb";
-import { compileMenuPages, normalizeMenuPath } from "./routes";
+import { compileMenuPages, MENU_HIDDEN, normalizeMenuPath } from "./routes";
+import { buildLayoutRoutes } from "../menu";
+import type { ModuleRegistry } from "./registry";
 
 function menu(partial: {
   menuName: string;
@@ -9,6 +11,7 @@ function menu(partial: {
   path?: string;
   component?: string;
   icon?: string;
+  visible?: number;
   children?: Menu[];
 }): Menu {
   return create(MenuSchema, partial);
@@ -38,9 +41,70 @@ describe("compileMenuPages", () => {
       }),
     ];
     expect(compileMenuPages(tree)).toEqual({
-      pages: [{ path: "/system/user", component: "system/user/index", menuName: "用户管理" }],
+      pages: [
+        {
+          path: "/system/user",
+          component: "system/user/index",
+          menuName: "用户管理",
+          hidden: false,
+        },
+      ],
       conflicts: [],
     });
+  });
+
+  it("keeps routes of hidden menus and marks them hidden", () => {
+    const tree = [
+      menu({
+        menuName: "卡片",
+        menuType: "M",
+        path: "cards",
+        visible: 1,
+        children: [
+          menu({
+            menuName: "卡片列表",
+            menuType: "C",
+            path: "list",
+            component: "cards/list",
+            visible: 1,
+          }),
+          menu({
+            menuName: "卡片详情",
+            menuType: "C",
+            path: "detail/:code",
+            component: "cards/detail",
+            visible: MENU_HIDDEN,
+          }),
+        ],
+      }),
+      menu({
+        menuName: "内部",
+        menuType: "M",
+        path: "internal",
+        visible: MENU_HIDDEN,
+        children: [
+          menu({
+            menuName: "工具",
+            menuType: "C",
+            path: "tool",
+            component: "internal/tool",
+            visible: 1,
+          }),
+        ],
+      }),
+    ];
+    expect(compileMenuPages(tree).pages.map((page) => [page.path, page.hidden])).toEqual([
+      ["/cards/list", false],
+      ["/cards/detail/:code", true],
+      ["/internal/tool", true],
+    ]);
+    const registry = { icon: () => undefined } as unknown as ModuleRegistry;
+    const layout = buildLayoutRoutes(tree, registry);
+    expect(layout[0].routes?.map((route) => [route.path, route.hideInMenu ?? false])).toEqual([
+      ["/cards/list", false],
+      ["/cards/detail/:code", true],
+    ]);
+    expect(layout[1].hideInMenu).toBe(true);
   });
 
   it("detects the same normalized path from different parents", () => {
@@ -106,7 +170,7 @@ describe("compileMenuPages", () => {
       }),
     ]);
     expect(compiled.pages).toEqual([
-      { path: "/system/role", component: "system/role/index", menuName: "角色管理" },
+      { path: "/system/role", component: "system/role/index", menuName: "角色管理", hidden: false },
     ]);
   });
 });
