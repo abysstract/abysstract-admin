@@ -16,6 +16,11 @@
 - `ResourceTable` 自定义行操作新增 `href`：渲染为真正的链接，普通点击在应用内跳转，中键、Ctrl/⌘ 点击在新的浏览器标签页打开。
 - `schema.OmitOperations`：从 `StandardOperations` 中去掉指定的标准操作。只含 List（及 Get）的 `Generated` Resource 由 `resourcegen` 生成只读 Controller 和 `ResourceReadOperations`，`Partial` 的只读 Controller 也可以包含 Get。
 
+### Documentation
+
+- [配置说明](docs/configuration.md#迁移版本的顺序)：`admin-migrations sync` 与预先命名的业务迁移之间的版本顺序规则。
+- [配置说明](docs/configuration.md#应用自己的配置)：`adminconfig.Load()` 之后用 `os.Getenv` 读取放在 `.env` 中的应用配置，以及读取的时机和命名建议。
+
 ### Changed
 
 - `module resource` 用列注释的第一个分句作为字段的初始 `label`（如 `COMMENT '卡片编号，全局唯一'` 得到“卡片编号”），没有注释时仍用列名。只影响新创建的资源 JSON。
