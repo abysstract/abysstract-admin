@@ -7,6 +7,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- `host.apiBaseUrl` 接受以 `/` 开头的同源路径（如 `/` 或 `/api`），按 `window.location` 解析，同一份前端构建可以部署在任何域名下。自带后台的生产构建未设置 `VITE_API_BASE` 时使用 `/`（原来启动报错）。反向代理需要转发的路径见[同源部署](docs/deployment.md#同源部署反向代理)。
+
 ## [0.7.1] - 2026-11-17
 
 Go 模块与 `@abysstract/admin-core`、`@abysstract/admin-proto` 同步发布 0.7.1。重做登录验证码的界面，内置滑块不再依赖 go-captcha；补充说明 0.7.0 中一项未标明的破坏性变化。没有数据库迁移，Proto 没有变化。

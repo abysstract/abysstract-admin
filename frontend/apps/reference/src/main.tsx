@@ -13,8 +13,8 @@ import "@abysstract/admin-core/styles.css";
 
 const mode = import.meta.env.PROD ? "production" : "development";
 const configuredBase = (import.meta.env.VITE_API_BASE as string | undefined)?.trim() ?? "";
-const apiBaseUrl =
-  configuredBase || (mode === "development" ? "http://localhost:8080" : configuredBase);
+// 生产构建未设置时使用同源路径 "/"，由反向代理把 API 请求转发给后端。
+const apiBaseUrl = configuredBase || (mode === "development" ? "http://localhost:8080" : "/");
 
 const application = createAdminApp({
   host: {
