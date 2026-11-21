@@ -91,7 +91,7 @@ go run ./cmd/admin module resource notes notes_note --title 笔记
 - 资源名称为 `Note`，表名为 `notes_note`。
 - 页面标题为“笔记”，由命令中的 `--title 笔记` 指定。
 - 更新时间列为 `update_time`。
-- 普通字段使用列名作为初始显示标签，例如 `title`。
+- 普通字段的初始显示标签取列注释的第一个分句（如 `COMMENT '标题，列表中显示'` 得到“标题”）；列没有注释时使用列名，例如 `title`。
 
 主键 `id` 和更新时间由服务维护。
 

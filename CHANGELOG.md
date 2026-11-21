@@ -16,6 +16,10 @@
 - `ResourceTable` 自定义行操作新增 `href`：渲染为真正的链接，普通点击在应用内跳转，中键、Ctrl/⌘ 点击在新的浏览器标签页打开。
 - `schema.OmitOperations`：从 `StandardOperations` 中去掉指定的标准操作。只含 List（及 Get）的 `Generated` Resource 由 `resourcegen` 生成只读 Controller 和 `ResourceReadOperations`，`Partial` 的只读 Controller 也可以包含 Get。
 
+### Changed
+
+- `module resource` 用列注释的第一个分句作为字段的初始 `label`（如 `COMMENT '卡片编号，全局唯一'` 得到“卡片编号”），没有注释时仍用列名。只影响新创建的资源 JSON。
+
 ### Fixed
 
 - `module generate`：手写的 `.proto` 以注释开头时，protoc-gen-go / protoc-gen-es 会把注释复制到生成文件中“Code generated”标记的上方，第二次生成因此报 `unmanaged destination`。现在在文件头部（第一行代码之前的注释）中任何位置找到标记都视为生成文件。

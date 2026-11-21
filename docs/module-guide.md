@@ -40,7 +40,7 @@
 
 ## 持续开发与文件归属
 
-每个资源在 `resources/<name>.json` 声明业务规则。首次执行 `go run ./cmd/admin module resource notes notes_note --title 笔记` 创建 `resources/note.json`，已有模块增加表也使用此入口。`--name` 指定 Go 风格资源名，默认从表名去掉模块前缀后转换；文件名由资源名转为 snake_case。`--title` 默认使用资源名，`--updated-at` 默认使用 `update_time`。`--dry-run` 展示路径和 JSON，命令只读取数据库。
+每个资源在 `resources/<name>.json` 声明业务规则。首次执行 `go run ./cmd/admin module resource notes notes_note --title 笔记` 创建 `resources/note.json`，已有模块增加表也使用此入口。`--name` 指定 Go 风格资源名，默认从表名去掉模块前缀后转换；文件名由资源名转为 snake_case。`--title` 默认使用资源名，`--updated-at` 默认使用 `update_time`。`--dry-run` 展示路径和 JSON，命令只读取数据库。字段的初始 `label` 取列注释的第一个分句（到第一个逗号、分号、冒号或句号为止），没有注释时使用列名；SQLite 没有列注释。
 
 工具沿用模型生成器的忽略字段和覆盖规则，为普通字段填写列名和同名标签，主键和更新时间由服务管理。数据库类型和可空性由后续生成时读取；`required`、搜索、排序和长度等业务规则由开发者调整。`NOT NULL` 与字符串非空白校验含义不同，工具保留开发者对 `required` 的选择。JSON 创建后由开发者维护，`module generate` 读取它。
 
