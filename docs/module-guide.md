@@ -108,7 +108,18 @@
 | `resource.package` / `config` / `resources` | 模块 `definition` 包 / `GeneratorConfig` / `Resources` |
 | `seed` | `backend/internal/modules/notes/seed.json` |
 
-`resources/*.json` 的 `name` 是 Go 风格资源名，`table` 是该模块前缀的表，`title` 是页面和菜单标题，`updatedAt` 指向非空时间更新列。`fields` 每项用 `column` 选择数据库列，`label` 指定显示名称；可选规则为 `required`、`searchable`、`sortable`、`maxLength`。字段存储类型由数据库读取。
+`resources/*.json` 的 `name` 是 Go 风格资源名，`table` 是该模块前缀的表，`title` 是页面和菜单标题，`updatedAt` 指向非空时间更新列。`fields` 每项用 `column` 选择数据库列，`label` 指定显示名称，其余为可选规则。字段存储类型由数据库读取。
+
+| 字段选项 | 作用 | 对应 Go 选项 |
+| --- | --- | --- |
+| `required` | 字符串必填，校验非空白内容 | `schema.Required()` |
+| `searchable` | 参与关键词搜索（字符串） | `schema.Searchable()` |
+| `sortable` | 列表可按该列排序 | `schema.SortableOpt()` |
+| `maxLength` | 字符串最大长度 | `schema.MaxLen(n)` |
+| `createOnly` | 只在新增时填写，之后不能修改：字段在新增请求中，不在修改请求中，编辑表单不显示该字段。适合业务编号等创建后固定的键 | `schema.CreateOnly()` |
+| `readOnly` | 列表和详情返回，接口从不接受写入：字段不在新增和修改请求中，表单不显示。适合触发器、计数器等由数据库或应用代码维护的列 | `schema.ReadOnly()` |
+
+`readOnly` 不能与 `createOnly`、`required`、`maxLength` 同时使用（它们只约束写入的值）。新增时不会写入 `readOnly` 列，所以该列须可为空或有数据库默认值，否则 `generate` 报错。把已有字段改为 `createOnly` 或 `readOnly` 会从请求中去掉该字段，仍发送它的旧客户端不会报错，值被忽略。
 
 ## 后端服务与前端页面
 

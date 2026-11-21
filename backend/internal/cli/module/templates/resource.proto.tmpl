@@ -41,7 +41,7 @@ message Create{{.Name}}Request {
 {{range .Reserved}}{{if not .Managed}}  reserved {{.Create}};
   reserved {{printf "%q" .Name}};
 {{end}}{{end}}
-{{range .Fields}}{{if not .Managed}}  {{if .Nullable}}{{if ne .ProtoType "google.protobuf.Timestamp"}}optional {{end}}{{end}}{{.ProtoType}} {{.Column}} = {{.CreateNumber}};
+{{range .Fields}}{{if .InCreate}}  {{if .Nullable}}{{if ne .ProtoType "google.protobuf.Timestamp"}}optional {{end}}{{end}}{{.ProtoType}} {{.Column}} = {{.CreateNumber}};
 {{end}}{{end}}}
 message Create{{.Name}}Response { {{.Name}} item = 1; }
 message Update{{.Name}}Request {
@@ -49,7 +49,7 @@ message Update{{.Name}}Request {
   reserved {{printf "%q" .Name}};
 {{end}}{{end}}
   int64 id = 1;
-{{range .Fields}}{{if not .Managed}}  {{if ne .ProtoType "google.protobuf.Timestamp"}}optional {{end}}{{.ProtoType}} {{.Column}} = {{.EntityNumber}};
+{{range .Fields}}{{if .InUpdate}}  {{if ne .ProtoType "google.protobuf.Timestamp"}}optional {{end}}{{.ProtoType}} {{.Column}} = {{.EntityNumber}};
 {{end}}{{end}}}
 message Update{{.Name}}Response { {{.Name}} item = 1; }
 message Delete{{.Name}}Request { int64 id = 1; }

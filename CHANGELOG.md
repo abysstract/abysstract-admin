@@ -10,6 +10,7 @@
 ### Added
 
 - `host.apiBaseUrl` 接受以 `/` 开头的同源路径（如 `/` 或 `/api`），按 `window.location` 解析，同一份前端构建可以部署在任何域名下。自带后台的生产构建未设置 `VITE_API_BASE` 时使用 `/`（原来启动报错）。反向代理需要转发的路径见[同源部署](docs/deployment.md#同源部署反向代理)。
+- JSON 资源字段新增 `createOnly`（只在新增时填写）和 `readOnly`（只返回，不接受写入），分别对应 `schema.CreateOnly()` 和 `schema.ReadOnly()`。见[模块指南](docs/module-guide.md)。
 
 ### Fixed
 

@@ -41,11 +41,18 @@ type crudField struct {
 	Searchable bool   `json:"searchable,omitempty"`
 	Sortable   bool   `json:"sortable,omitempty"`
 	MaxLength  int    `json:"maxLength,omitempty"`
+	// CreateOnly fields are accepted on create and never change afterwards
+	// (absent from the update request).
+	CreateOnly bool `json:"createOnly,omitempty"`
+	// ReadOnly fields are listed and returned but never accepted from the
+	// API; the database or application code maintains them.
+	ReadOnly bool `json:"readOnly,omitempty"`
 }
 type crudFieldView struct {
 	Column, GoName, ProtoType  string
 	Nullable                   bool
 	Managed                    bool
+	InCreate, InUpdate         bool
 	EntityNumber, CreateNumber int
 	Options                    []string
 }
@@ -143,6 +150,9 @@ func validateCRUD(module string, spec crudSpec) error {
 	for _, f := range spec.Fields {
 		if !columnName.MatchString(f.Column) || seen[f.Column] || f.Label == "" || f.MaxLength < 0 {
 			return fmt.Errorf("invalid or duplicate field %q: use a snake_case column, label and nonnegative maxLength; id and updatedAt are server-managed", f.Column)
+		}
+		if f.ReadOnly && (f.CreateOnly || f.Required || f.MaxLength > 0) {
+			return fmt.Errorf("field %q: readOnly excludes createOnly, required and maxLength, which only apply to written values", f.Column)
 		}
 		seen[f.Column] = true
 	}
@@ -288,7 +298,9 @@ func validateCRUDModel(spec crudSpec, driver string, meta crudModel) error {
 	primaryCount := 0
 	selected := map[string]bool{"id": true, spec.UpdatedAt: true}
 	for _, f := range spec.Fields {
-		selected[f.Column] = true
+		// A readOnly field is never written, so creating a row needs a
+		// database value for it just like an unexposed column.
+		selected[f.Column] = !f.ReadOnly
 	}
 	for _, c := range meta.Columns {
 		if pk, _ := c.PrimaryKey(); pk {
@@ -302,7 +314,7 @@ func validateCRUDModel(spec crudSpec, driver string, meta crudModel) error {
 		nullable, _ := c.Nullable()
 		_, hasDefault := c.DefaultValue()
 		if !selected[c.Name()] && !nullable && !hasDefault {
-			return fmt.Errorf("column %s requires a value: expose it in resource declaration or define its database default", c.Name())
+			return fmt.Errorf("column %s requires a value: expose it as a writable field in resource declaration or define its database default", c.Name())
 		}
 	}
 	if primaryCount != 1 {
@@ -341,6 +353,7 @@ func inspectCRUDField(f crudField, m crudModelField, i int) (crudFieldView, erro
 		return crudFieldView{}, fmt.Errorf("column %s: required, searchable and maxLength require string storage", f.Column)
 	}
 	v := crudFieldView{Column: f.Column, GoName: m.Name, ProtoType: pt, Nullable: strings.HasPrefix(m.Type, "*"), EntityNumber: i + 2, CreateNumber: i + 1, Options: []string{"schema.Label(" + strconv.Quote(f.Label) + ")"}}
+	v.InCreate, v.InUpdate = !f.ReadOnly, !f.ReadOnly && !f.CreateOnly
 	if f.Required {
 		v.Options = append(v.Options, "schema.Required()")
 	}
@@ -352,6 +365,12 @@ func inspectCRUDField(f crudField, m crudModelField, i int) (crudFieldView, erro
 	}
 	if f.MaxLength > 0 {
 		v.Options = append(v.Options, fmt.Sprintf("schema.MaxLen(%d)", f.MaxLength))
+	}
+	if f.CreateOnly {
+		v.Options = append(v.Options, "schema.CreateOnly()")
+	}
+	if f.ReadOnly {
+		v.Options = append(v.Options, "schema.ReadOnly()")
 	}
 	return v, nil
 }
