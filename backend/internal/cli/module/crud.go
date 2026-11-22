@@ -156,17 +156,32 @@ func validateCRUD(module string, spec crudSpec) error {
 	if len(spec.Fields) == 0 {
 		return fmt.Errorf("resource declaration requires fields")
 	}
-	if o := spec.StandardOperations; o != nil {
-		set := 0
-		for _, flag := range []*bool{o.Create, o.Update, o.Delete} {
-			if flag != nil && !*flag {
-				set++
-			}
-		}
-		if set != 0 && set != 3 {
-			return fmt.Errorf("standardOperations: turn create, update and delete off together; turning off only some standard writes is not supported")
+	if err := validateStandardOperations(spec.StandardOperations); err != nil {
+		return err
+	}
+	if err := validateCustomOperations(module, spec); err != nil {
+		return err
+	}
+	return validateCRUDFields(spec)
+}
+
+func validateStandardOperations(o *crudStandardOperations) error {
+	if o == nil {
+		return nil
+	}
+	set := 0
+	for _, flag := range []*bool{o.Create, o.Update, o.Delete} {
+		if flag != nil && !*flag {
+			set++
 		}
 	}
+	if set != 0 && set != 3 {
+		return fmt.Errorf("standardOperations: turn create, update and delete off together; turning off only some standard writes is not supported")
+	}
+	return nil
+}
+
+func validateCustomOperations(module string, spec crudSpec) error {
 	methods := map[string]bool{"List" + inflection.Plural(spec.Name): true, "Get" + spec.Name: true, "Create" + spec.Name: true, "Update" + spec.Name: true, "Delete" + spec.Name: true, "BatchDelete" + inflection.Plural(spec.Name): true}
 	actions := map[string]bool{"list": true, "add": true, "edit": true, "remove": true}
 	for _, op := range spec.Operations {
@@ -178,6 +193,10 @@ func validateCRUD(module string, spec crudSpec) error {
 		}
 		methods[op.Method], actions[op.Action] = true, true
 	}
+	return nil
+}
+
+func validateCRUDFields(spec crudSpec) error {
 	seen := map[string]bool{"id": true, spec.UpdatedAt: true}
 	for _, f := range spec.Fields {
 		if !columnName.MatchString(f.Column) || seen[f.Column] || f.Label == "" || f.MaxLength < 0 {
