@@ -19,17 +19,19 @@ var {{.Name}}Resource = &schema.Resource{
   Descriptor: api.File_company_{{.Module}}_v1_{{.File}}_proto.Services().ByName("{{.Name}}Service"),
   Handler: (*apiconnect.{{.Name}}ServiceHandler)(nil),
  },
- Operations: {{if .Operations}}append({{end}}schema.StandardOperations(schema.StandardOperationsConfig{
+ Operations: {{if .Operations}}append({{end}}{{if .ReadOnly}}schema.OmitOperations({{end}}schema.StandardOperations(schema.StandardOperationsConfig{
   List: schema.StandardOperation{
    Method: "List{{.Plural}}", Request: (*api.List{{.Plural}}Request)(nil), Response: (*api.List{{.Plural}}Response)(nil),
    Binding: schema.OperationBinding{List: schema.ListBinding{Page: "Page", Keyword: "Keyword", Sort: "Orders", DefaultOrders: []schema.ListDefaultOrder{{"{"}}{Field: "ID"}{{"}"}}}},
   },
   Get: schema.StandardOperation{Method: "Get{{.Name}}", Request: (*api.Get{{.Name}}Request)(nil), Response: (*api.Get{{.Name}}Response)(nil)},
+{{- if not .ReadOnly}}
   Create: schema.StandardOperation{Method: "Create{{.Name}}", Request: (*api.Create{{.Name}}Request)(nil), Response: (*api.Create{{.Name}}Response)(nil)},
   Update: schema.StandardOperation{Method: "Update{{.Name}}", Request: (*api.Update{{.Name}}Request)(nil), Response: (*api.Update{{.Name}}Response)(nil), Binding: schema.OperationBinding{Identifier:"Id"}},
   Delete: schema.StandardOperation{Method: "Delete{{.Name}}", Request: (*api.Delete{{.Name}}Request)(nil), Response: (*api.Delete{{.Name}}Response)(nil)},
   BatchDelete: schema.StandardOperation{Method: "BatchDelete{{.Plural}}", Request: (*api.BatchDelete{{.Plural}}Request)(nil), Response: (*api.BatchDelete{{.Plural}}Response)(nil)},
- }){{if .Operations}},
+{{- end}}
+ }){{if .ReadOnly}}, schema.OperationCreate, schema.OperationUpdate, schema.OperationDelete, schema.OperationBatchDelete){{end}}{{if .Operations}},
 {{range .Operations}} schema.Operation{Kind:schema.OperationCustom, Method:{{printf "%q" .Method}}, Request:(*api.{{.Request}})(nil),Response:(*api.{{.Response}})(nil), Implementation:schema.OperationOverride, Action:{{printf "%q" .Action}},ScopePolicy:schema.ScopePolicyExempt},
 {{end}} ){{end}},
  Key: schema.KeyConfig{ModelField: "ID"},

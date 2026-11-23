@@ -40,7 +40,8 @@ function AuthedApp() {
     );
   }
 
-  const first = compiled.pages[0].path;
+  // The index route opens the first page that has a sidebar entry.
+  const first = (compiled.pages.find((page) => !page.hidden) ?? compiled.pages[0]).path;
   const conflictByPath = new Map(compiled.conflicts.map((item) => [item.path, item]));
 
   return (

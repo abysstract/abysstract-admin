@@ -1,9 +1,16 @@
 import type { ReactNode } from "react";
 import type { Menu } from "@abysstract/admin-proto/abysstract/admin/v1/menu_pb";
 import type { ModuleRegistry } from "./module/registry";
-import { normalizeMenuPath } from "./module/routes";
+import { isHiddenMenu, normalizeMenuPath } from "./module/routes";
 
-export type LayoutRoute = { path: string; name: string; icon?: ReactNode; routes?: LayoutRoute[] };
+export type LayoutRoute = {
+  path: string;
+  name: string;
+  icon?: ReactNode;
+  routes?: LayoutRoute[];
+  /** Hidden menus keep their route (breadcrumb, title) without a sidebar entry. */
+  hideInMenu?: boolean;
+};
 
 export const unknownMenuIcon = <span data-icon="unknown" />;
 
@@ -20,6 +27,7 @@ export function buildLayoutRoutes(
       name: menu.menuName,
       icon: menu.icon ? (registry.icon(menu.icon) ?? unknownMenuIcon) : undefined,
     };
+    if (isHiddenMenu(menu)) node.hideInMenu = true;
     if (menu.children?.length) {
       node.routes = buildLayoutRoutes(menu.children, registry, full);
     }

@@ -298,9 +298,9 @@ func TestAuthorizationJoins(t *testing.T) {
  INSERT INTO sys_menu(id,menu_name,menu_type,visible,status,perms,parent_id) VALUES
  (8104,'button','F',0,1,'p1:button',0),(8105,'hidden','C',0,1,'p1:hidden',0),
  (8106,'disabled','C',1,2,'p1:disabled',0),(8107,'invalid roles','C',1,1,'p1:invalid',0),
- (8108,'orphan','C',1,1,'p1:orphan',8105);
+ (8108,'orphan','C',1,1,'p1:orphan',8105),(8109,'routed hidden','C',2,1,'p1:routed',8101);
  INSERT INTO sys_role_menu VALUES(8101,8102),(8102,8102),(8101,8103),(8102,8103),
- (8101,8104),(8101,8105),(8101,8106),(8101,8108),(8103,8107),(8104,8107);`)
+ (8101,8104),(8101,8105),(8101,8106),(8101,8108),(8103,8107),(8104,8107),(8101,8109);`)
 	keys, err := r.RoleKeysOf(ctx, 8101)
 	if err != nil {
 		t.Fatal(err)
@@ -314,7 +314,7 @@ func TestAuthorizationJoins(t *testing.T) {
 		t.Fatal(err)
 	}
 	sort.Strings(perms)
-	if !reflect.DeepEqual(perms, []string{"p1:button", "p1:hidden", "p1:orphan", "p1:shared"}) {
+	if !reflect.DeepEqual(perms, []string{"p1:button", "p1:hidden", "p1:orphan", "p1:routed", "p1:shared"}) {
 		t.Fatalf("perms=%v", perms)
 	}
 	menus, err := r.MenusOf(ctx, 8101)
@@ -325,7 +325,8 @@ func TestAuthorizationJoins(t *testing.T) {
 	for _, m := range menus {
 		ids = append(ids, m.ID)
 	}
-	if !reflect.DeepEqual(ids, []int64{8103, 8101, 8102}) {
+	// 8109 is hidden from the sidebar (visible=2) but keeps its route.
+	if !reflect.DeepEqual(ids, []int64{8103, 8101, 8109, 8102}) {
 		t.Fatalf("menu ids=%v", ids)
 	}
 	execFixtureSQL(t, r.db, `INSERT INTO sys_user_role VALUES(8101,1)`)
@@ -338,7 +339,7 @@ func TestAuthorizationJoins(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, m := range menus {
-		if m.MenuType == "F" || m.Visible != 1 || m.Status != 1 || m.ID == 8108 {
+		if m.MenuType == "F" || (m.Visible != 1 && m.Visible != 2) || m.Status != 1 || m.ID == 8108 {
 			t.Fatalf("admin invalid menu=%+v", m)
 		}
 	}

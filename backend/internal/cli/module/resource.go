@@ -112,9 +112,15 @@ func inspectInitialResource(ctx context.Context, module, modelOutput string, spe
 	}
 	meta, inspectErr := readCRUDModel(db, cfg.DBDriver, spec.Table, modelOutput)
 	if inspectErr == nil {
+		comments := map[string]string{}
+		for _, c := range meta.Columns {
+			if comment, ok := c.Comment(); ok {
+				comments[c.Name()] = comment
+			}
+		}
 		for _, f := range meta.Fields {
 			if f.ColumnName != "id" && f.ColumnName != spec.UpdatedAt {
-				spec.Fields = append(spec.Fields, crudField{Column: f.ColumnName, Label: f.ColumnName})
+				spec.Fields = append(spec.Fields, crudField{Column: f.ColumnName, Label: initialLabel(f.ColumnName, comments[f.ColumnName])})
 			}
 		}
 		inspectErr = validateCRUD(module, spec)
@@ -126,4 +132,17 @@ func inspectInitialResource(ctx context.Context, module, modelOutput string, spe
 		return spec, err
 	}
 	return spec, nil
+}
+
+// initialLabel returns the first clause of a column comment ("卡片编号，全局唯一"
+// becomes "卡片编号"), or the column name when the column has no comment.
+func initialLabel(column, comment string) string {
+	label, _, _ := strings.Cut(strings.TrimSpace(comment), "\n")
+	if i := strings.IndexAny(label, ",;:，；：。、"); i >= 0 {
+		label = label[:i]
+	}
+	if label = strings.TrimSpace(label); label != "" {
+		return label
+	}
+	return column
 }

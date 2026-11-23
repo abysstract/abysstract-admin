@@ -24,7 +24,25 @@ type crudSpec struct {
 	UpdatedAt  string          `json:"updatedAt"`
 	Fields     []crudField     `json:"fields"`
 	Operations []crudOperation `json:"operations,omitempty"`
+	// StandardOperations turns standard writes off. Omitted flags stay on.
+	StandardOperations *crudStandardOperations `json:"standardOperations,omitempty"`
 }
+
+// crudStandardOperations switches the standard write RPCs. Delete covers
+// both Delete and BatchDelete. List and Get are always generated.
+type crudStandardOperations struct {
+	Create *bool `json:"create,omitempty"`
+	Update *bool `json:"update,omitempty"`
+	Delete *bool `json:"delete,omitempty"`
+}
+
+// readOnly reports whether the standard writes are turned off. Turning off
+// only some of them is rejected by validateCRUD.
+func (s crudSpec) readOnly() bool {
+	o := s.StandardOperations
+	return o != nil && o.Create != nil && !*o.Create && o.Update != nil && !*o.Update && o.Delete != nil && !*o.Delete
+}
+
 type crudOperation struct {
 	Method   string `json:"method"`
 	Request  string `json:"request"`
@@ -41,11 +59,18 @@ type crudField struct {
 	Searchable bool   `json:"searchable,omitempty"`
 	Sortable   bool   `json:"sortable,omitempty"`
 	MaxLength  int    `json:"maxLength,omitempty"`
+	// CreateOnly fields are accepted on create and never change afterwards
+	// (absent from the update request).
+	CreateOnly bool `json:"createOnly,omitempty"`
+	// ReadOnly fields are listed and returned but never accepted from the
+	// API; the database or application code maintains them.
+	ReadOnly bool `json:"readOnly,omitempty"`
 }
 type crudFieldView struct {
 	Column, GoName, ProtoType  string
 	Nullable                   bool
 	Managed                    bool
+	InCreate, InUpdate         bool
 	EntityNumber, CreateNumber int
 	Options                    []string
 }
@@ -53,12 +78,15 @@ type crudView struct {
 	moduleView
 	File, TSFile, Var, Name, Plural, Model, Title, AuditGo, AuditJSON string
 	Timestamp                                                         bool
-	Resources                                                         []crudView
-	Reserved                                                          []retiredField
-	Operations                                                        []crudOperation
-	CustomImports                                                     []string
-	CustomProtoMappings                                               []protoMapping
-	Fields                                                            []crudFieldView
+	// ReadOnly omits the standard write RPCs, their permissions and the
+	// page's create/edit/delete actions.
+	ReadOnly            bool
+	Resources           []crudView
+	Reserved            []retiredField
+	Operations          []crudOperation
+	CustomImports       []string
+	CustomProtoMappings []protoMapping
+	Fields              []crudFieldView
 }
 
 // moduleView holds the module paths from its declaration. Generated Go code
@@ -128,6 +156,32 @@ func validateCRUD(module string, spec crudSpec) error {
 	if len(spec.Fields) == 0 {
 		return fmt.Errorf("resource declaration requires fields")
 	}
+	if err := validateStandardOperations(spec.StandardOperations); err != nil {
+		return err
+	}
+	if err := validateCustomOperations(module, spec); err != nil {
+		return err
+	}
+	return validateCRUDFields(spec)
+}
+
+func validateStandardOperations(o *crudStandardOperations) error {
+	if o == nil {
+		return nil
+	}
+	set := 0
+	for _, flag := range []*bool{o.Create, o.Update, o.Delete} {
+		if flag != nil && !*flag {
+			set++
+		}
+	}
+	if set != 0 && set != 3 {
+		return fmt.Errorf("standardOperations: turn create, update and delete off together; turning off only some standard writes is not supported")
+	}
+	return nil
+}
+
+func validateCustomOperations(module string, spec crudSpec) error {
 	methods := map[string]bool{"List" + inflection.Plural(spec.Name): true, "Get" + spec.Name: true, "Create" + spec.Name: true, "Update" + spec.Name: true, "Delete" + spec.Name: true, "BatchDelete" + inflection.Plural(spec.Name): true}
 	actions := map[string]bool{"list": true, "add": true, "edit": true, "remove": true}
 	for _, op := range spec.Operations {
@@ -139,10 +193,17 @@ func validateCRUD(module string, spec crudSpec) error {
 		}
 		methods[op.Method], actions[op.Action] = true, true
 	}
+	return nil
+}
+
+func validateCRUDFields(spec crudSpec) error {
 	seen := map[string]bool{"id": true, spec.UpdatedAt: true}
 	for _, f := range spec.Fields {
 		if !columnName.MatchString(f.Column) || seen[f.Column] || f.Label == "" || f.MaxLength < 0 {
 			return fmt.Errorf("invalid or duplicate field %q: use a snake_case column, label and nonnegative maxLength; id and updatedAt are server-managed", f.Column)
+		}
+		if f.ReadOnly && (f.CreateOnly || f.Required || f.MaxLength > 0) {
+			return fmt.Errorf("field %q: readOnly excludes createOnly, required and maxLength, which only apply to written values", f.Column)
 		}
 		seen[f.Column] = true
 	}
@@ -187,6 +248,7 @@ func inspectCRUD(db *gorm.DB, driver string, module moduleView, modelOutput stri
 func inspectCRUDModel(module string, spec crudSpec, driver string, meta crudModel) (crudView, error) {
 	view := crudView{moduleView: moduleView{Module: module}, Name: spec.Name, Plural: inflection.Plural(spec.Name), Title: spec.Title}
 	view.Operations = spec.Operations
+	view.ReadOnly = spec.readOnly()
 	imports := map[string]bool{}
 	for _, op := range spec.Operations {
 		if !imports[op.Proto] {
@@ -275,7 +337,11 @@ func renderCRUD(view crudView) (map[string][]byte, []moduleseed.Menu, error) {
 	menus := []moduleseed.Menu{
 		{Key: page, Parent: root, Name: view.Title + "列表", Path: view.File, Type: "C", Component: "biz/" + view.Module + "/" + view.File, Permission: "biz:" + view.Module + ":" + view.File + ":list"},
 	}
-	for i, action := range []struct{ key, title string }{{"list", "查询"}, {"add", "新增"}, {"edit", "修改"}, {"remove", "删除"}} {
+	actions := []struct{ key, title string }{{"list", "查询"}, {"add", "新增"}, {"edit", "修改"}, {"remove", "删除"}}
+	if view.ReadOnly {
+		actions = actions[:1]
+	}
+	for i, action := range actions {
 		menus = append(menus, moduleseed.Menu{Key: prefix + "." + action.key + ".button", Parent: page, Name: view.Title + action.title, Type: "F", Permission: "biz:" + view.Module + ":" + view.File + ":" + action.key, Order: i + 1})
 	}
 	for _, op := range view.Operations {
@@ -288,7 +354,9 @@ func validateCRUDModel(spec crudSpec, driver string, meta crudModel) error {
 	primaryCount := 0
 	selected := map[string]bool{"id": true, spec.UpdatedAt: true}
 	for _, f := range spec.Fields {
-		selected[f.Column] = true
+		// A readOnly field is never written, so creating a row needs a
+		// database value for it just like an unexposed column.
+		selected[f.Column] = !f.ReadOnly
 	}
 	for _, c := range meta.Columns {
 		if pk, _ := c.PrimaryKey(); pk {
@@ -302,7 +370,7 @@ func validateCRUDModel(spec crudSpec, driver string, meta crudModel) error {
 		nullable, _ := c.Nullable()
 		_, hasDefault := c.DefaultValue()
 		if !selected[c.Name()] && !nullable && !hasDefault {
-			return fmt.Errorf("column %s requires a value: expose it in resource declaration or define its database default", c.Name())
+			return fmt.Errorf("column %s requires a value: expose it as a writable field in resource declaration or define its database default", c.Name())
 		}
 	}
 	if primaryCount != 1 {
@@ -341,6 +409,7 @@ func inspectCRUDField(f crudField, m crudModelField, i int) (crudFieldView, erro
 		return crudFieldView{}, fmt.Errorf("column %s: required, searchable and maxLength require string storage", f.Column)
 	}
 	v := crudFieldView{Column: f.Column, GoName: m.Name, ProtoType: pt, Nullable: strings.HasPrefix(m.Type, "*"), EntityNumber: i + 2, CreateNumber: i + 1, Options: []string{"schema.Label(" + strconv.Quote(f.Label) + ")"}}
+	v.InCreate, v.InUpdate = !f.ReadOnly, !f.ReadOnly && !f.CreateOnly
 	if f.Required {
 		v.Options = append(v.Options, "schema.Required()")
 	}
@@ -352,6 +421,12 @@ func inspectCRUDField(f crudField, m crudModelField, i int) (crudFieldView, erro
 	}
 	if f.MaxLength > 0 {
 		v.Options = append(v.Options, fmt.Sprintf("schema.MaxLen(%d)", f.MaxLength))
+	}
+	if f.CreateOnly {
+		v.Options = append(v.Options, "schema.CreateOnly()")
+	}
+	if f.ReadOnly {
+		v.Options = append(v.Options, "schema.ReadOnly()")
 	}
 	return v, nil
 }

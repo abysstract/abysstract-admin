@@ -40,7 +40,7 @@
 
 ## 持续开发与文件归属
 
-每个资源在 `resources/<name>.json` 声明业务规则。首次执行 `go run ./cmd/admin module resource notes notes_note --title 笔记` 创建 `resources/note.json`，已有模块增加表也使用此入口。`--name` 指定 Go 风格资源名，默认从表名去掉模块前缀后转换；文件名由资源名转为 snake_case。`--title` 默认使用资源名，`--updated-at` 默认使用 `update_time`。`--dry-run` 展示路径和 JSON，命令只读取数据库。
+每个资源在 `resources/<name>.json` 声明业务规则。首次执行 `go run ./cmd/admin module resource notes notes_note --title 笔记` 创建 `resources/note.json`，已有模块增加表也使用此入口。`--name` 指定 Go 风格资源名，默认从表名去掉模块前缀后转换；文件名由资源名转为 snake_case。`--title` 默认使用资源名，`--updated-at` 默认使用 `update_time`。`--dry-run` 展示路径和 JSON，命令只读取数据库。字段的初始 `label` 取列注释的第一个分句（到第一个逗号、分号、冒号或句号为止），没有注释时使用列名；SQLite 没有列注释。
 
 工具沿用模型生成器的忽略字段和覆盖规则，为普通字段填写列名和同名标签，主键和更新时间由服务管理。数据库类型和可空性由后续生成时读取；`required`、搜索、排序和长度等业务规则由开发者调整。`NOT NULL` 与字符串非空白校验含义不同，工具保留开发者对 `required` 的选择。JSON 创建后由开发者维护，`module generate` 读取它。
 
@@ -108,7 +108,37 @@
 | `resource.package` / `config` / `resources` | 模块 `definition` 包 / `GeneratorConfig` / `Resources` |
 | `seed` | `backend/internal/modules/notes/seed.json` |
 
-`resources/*.json` 的 `name` 是 Go 风格资源名，`table` 是该模块前缀的表，`title` 是页面和菜单标题，`updatedAt` 指向非空时间更新列。`fields` 每项用 `column` 选择数据库列，`label` 指定显示名称；可选规则为 `required`、`searchable`、`sortable`、`maxLength`。字段存储类型由数据库读取。
+`resources/*.json` 的 `name` 是 Go 风格资源名，`table` 是该模块前缀的表，`title` 是页面和菜单标题，`updatedAt` 指向非空时间更新列。`fields` 每项用 `column` 选择数据库列，`label` 指定显示名称，其余为可选规则。字段存储类型由数据库读取。
+
+| 字段选项 | 作用 | 对应 Go 选项 |
+| --- | --- | --- |
+| `required` | 字符串必填，校验非空白内容 | `schema.Required()` |
+| `searchable` | 参与关键词搜索（字符串） | `schema.Searchable()` |
+| `sortable` | 列表可按该列排序 | `schema.SortableOpt()` |
+| `maxLength` | 字符串最大长度 | `schema.MaxLen(n)` |
+| `createOnly` | 只在新增时填写，之后不能修改：字段在新增请求中，不在修改请求中，编辑表单不显示该字段。适合业务编号等创建后固定的键 | `schema.CreateOnly()` |
+| `readOnly` | 列表和详情返回，接口从不接受写入：字段不在新增和修改请求中，表单不显示。适合触发器、计数器等由数据库或应用代码维护的列 | `schema.ReadOnly()` |
+
+`readOnly` 不能与 `createOnly`、`required`、`maxLength` 同时使用（它们只约束写入的值）。新增时不会写入 `readOnly` 列，所以该列须可为空或有数据库默认值，否则 `generate` 报错。把已有字段改为 `createOnly` 或 `readOnly` 会从请求中去掉该字段，仍发送它的旧客户端不会报错，值被忽略。
+
+### 关闭标准写操作
+
+写入走应用自己的服务（导入、审批、外部同步）或数据只供查看时，在资源 JSON 中关闭标准写操作：
+
+```json
+{
+  "name": "Entry",
+  "table": "notes_entry",
+  "title": "记录",
+  "updatedAt": "update_time",
+  "standardOperations": { "create": false, "update": false, "delete": false },
+  "fields": [{ "column": "message", "label": "内容" }]
+}
+```
+
+`generate` 只生成 `List` 和 `Get` 两个标准 RPC：`Create`、`Update`、`Delete`、`BatchDelete` 不出现在 Proto 服务中，也不注册对应的权限和“新增 / 修改 / 删除”按钮菜单。Proto 中保留 `Create<Resource>Request` 和 `Update<Resource>Request` 两个消息，它们是 Resource 声明的字段约定，重新开启时沿用。新生成的列表页使用 `ResourceTable` 的只读模式（`readOnly`），没有新增按钮和编辑、删除行操作；需要写入时在页面加自定义按钮，调用 `operations` 中声明的专用方法（`operations.custom.<方法名>`）。
+
+`delete` 同时控制单条删除和批量删除。目前只能三项一起关闭，只关闭其中一部分时 `generate` 报错。页面文件只在首次生成时创建：给已有资源关闭写操作后，页面仍引用已删除的新增、编辑类型，需要改成只读模式（参照新生成的页面），或删除页面文件后重新执行 `generate`。已分配的 `add`、`edit`、`remove` 权限在 `module update` 同步菜单后移除。
 
 ## 后端服务与前端页面
 
@@ -133,7 +163,19 @@
 }
 ```
 
-父菜单排在子菜单前，`key` 是稳定的归属标识。页面 `component` 对应前端模块配置的页面 key，`permission` 对应后端动作权限。示例角色的 `dataScope: 1` 表示全部数据范围，取值见[权限说明](permission.md#数据范围)。普通角色通过系统角色管理授权。
+父菜单排在子菜单前，`key` 是稳定的归属标识。只经链接进入的页面（例如有独立地址的详情页）在菜单上加 `"hidden": true`：仍创建路由并检查权限，但不显示在侧边栏，数据库中记为 `visible = 2`。`hidden` 用于目录（`M`）和页面（`C`），隐藏目录下的页面一并隐藏。路径可以带路由参数，页面用 react-router 的 `useParams` 读取：
+
+```json
+{"key": "notes.note.detail", "parent": "notes.root", "name": "笔记详情", "path": "note/:id", "component": "biz/notes/note-detail", "type": "C", "permission": "biz:notes:note:list", "hidden": true}
+```
+
+指向这类页面的入口用真正的链接，中键或 Ctrl/⌘ 点击会在新的浏览器标签页打开：页面中用 `<Link to={`/notes/note/${id}`}>`，`ResourceTable` 的行操作用自定义操作的 `href`：
+
+```tsx
+rowActions={[{ action: "custom", name: "view", title: "查看", permission: "biz:notes:note:list", merge: "append", href: ({ entity }) => `/notes/note/${entity.id}` }]}
+```
+
+页面 `component` 对应前端模块配置的页面 key，`permission` 对应后端动作权限。示例角色的 `dataScope: 1` 表示全部数据范围，取值见[权限说明](permission.md#数据范围)。普通角色通过系统角色管理授权。
 
 首次安装和编辑 Seed 后都执行 `update`，命令根据安装状态创建相应迁移。归属记录存放在 `sys_module_binding`。快照保存到 `backend/migrations/modules/`，各方言 Go 迁移内嵌声明并调用公共 `moduleseed`；删除业务源码后这些历史文件继续保留。
 

@@ -376,6 +376,8 @@ root.render(
 bindAdminAppPageLifecycle({ application, root });
 ```
 
+`apiBaseUrl` 可以是绝对地址，也可以是以 `/` 开头的同源路径（如 `/api`），后者按页面地址解析，需要反向代理转发 API 请求，见[同源部署](deployment.md#同源部署反向代理)。
+
 启动前端：
 
 ```bash

@@ -3,7 +3,11 @@ import { PageContainer } from "@ant-design/pro-components";
 import { useAccess, useAdminRuntime } from "@abysstract/admin-core";
 import { ResourceTable } from "@abysstract/admin-core/resource";
 import type { {{.Name}} } from "{{.ProtoFromPages}}/company/{{.Module}}/v1/{{.File}}_pb";
+{{- if .ReadOnly}}
+import { create{{.Name}}Operations, type {{.Name}}Filters } from "../gen/resource/{{.TSFile}}.operations.gen";
+{{- else}}
 import { create{{.Name}}Operations, type {{.Name}}Filters, type {{.Name}}CreateValues, type {{.Name}}UpdateValues } from "../gen/resource/{{.TSFile}}.operations.gen";
+{{- end}}
 import { create{{.Name}}Raw } from "../gen/resource/{{.TSFile}}.raw.gen";
 import { {{.Var}}Schema } from "../gen/resource/{{.TSFile}}.schema.gen";
 
@@ -13,6 +17,15 @@ export default function {{.Name}}List() {
  const { has } = useAccess();
  return (
   <PageContainer title={ {{printf "%q" .Title}} }>
+{{- if .ReadOnly}}
+   <ResourceTable<typeof {{.Var}}Schema, {{.Name}}, bigint, {{.Name}}Filters>
+    readOnly
+    schema={ {{.Var}}Schema }
+    operations={operations}
+    access={ {{"{"}} can: (permission) => has(permission) {{"}"}} }
+    columns={ {{"{"}} id: { hidden: true }, {{.AuditJSON}}: { hidden: true } {{"}"}} }
+   />
+{{- else}}
    <ResourceTable<typeof {{.Var}}Schema, {{.Name}}, bigint, {{.Name}}Filters, {{.Name}}CreateValues, {{.Name}}UpdateValues>
     schema={ {{.Var}}Schema }
     operations={operations}
@@ -24,6 +37,7 @@ export default function {{.Name}}List() {
      editConfig: { title: {{printf "%q" (print "编辑" .Title)}} },
     {{"}"}} }
    />
+{{- end}}
   </PageContainer>
  );
 }

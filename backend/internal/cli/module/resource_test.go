@@ -149,3 +149,19 @@ func TestResourceCommand(t *testing.T) {
 		}
 	}
 }
+
+func TestInitialLabel(t *testing.T) {
+	for _, tc := range []struct{ column, comment, want string }{
+		{"card_code", "卡片编号，全局唯一", "卡片编号"},
+		{"status", "状态：1 启用 2 停用", "状态"},
+		{"price_cents", "  金额（分）  ", "金额（分）"},
+		{"title", "Title; shown in lists", "Title"},
+		{"remark", "备注\n内部使用", "备注"},
+		{"owner", "", "owner"},
+		{"owner", " ，", "owner"},
+	} {
+		if got := initialLabel(tc.column, tc.comment); got != tc.want {
+			t.Errorf("initialLabel(%q, %q) = %q, want %q", tc.column, tc.comment, got, tc.want)
+		}
+	}
+}

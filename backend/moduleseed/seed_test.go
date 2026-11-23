@@ -134,3 +134,43 @@ func TestRemoveRejectsExternalChildren(t *testing.T) {
 		t.Fatalf("failed removal changed bindings: %d %v", count, err)
 	}
 }
+
+func TestHiddenMenus(t *testing.T) {
+	db := seedDB(t)
+	s := spec()
+	s.Menus = append(s.Menus, moduleseed.Menu{Key: "orders.detail", Parent: "orders.root", Name: "Detail", Type: "C", Path: "detail/:id", Component: "orders/detail", Permission: "biz:orders:list", Hidden: true})
+	if err := db.Transaction(func(tx *gorm.DB) error { return moduleseed.Install(tx, s) }); err != nil {
+		t.Fatal(err)
+	}
+	visibility := func(component string) int16 {
+		t.Helper()
+		var v int16
+		if err := db.Table("sys_menu").Where("component = ?", component).Select("visible").Scan(&v).Error; err != nil {
+			t.Fatal(err)
+		}
+		return v
+	}
+	if got := visibility("orders/detail"); got != moduleseed.MenuHidden {
+		t.Fatalf("hidden menu visible=%d", got)
+	}
+	if got := visibility("orders/index"); got != moduleseed.MenuVisible {
+		t.Fatalf("ordinary menu visible=%d", got)
+	}
+
+	next := spec()
+	next.Menus = append(next.Menus, s.Menus[2])
+	next.Menus[1].Hidden = true
+	next.Menus[2].Hidden = false
+	if err := db.Transaction(func(tx *gorm.DB) error { return moduleseed.Upgrade(tx, s, next) }); err != nil {
+		t.Fatal(err)
+	}
+	if visibility("orders/index") != moduleseed.MenuHidden || visibility("orders/detail") != moduleseed.MenuVisible {
+		t.Fatal("upgrade did not apply visibility changes")
+	}
+
+	bad := spec()
+	bad.Menus = append(bad.Menus, moduleseed.Menu{Key: "orders.add", Parent: "orders.list", Name: "Add", Type: "F", Permission: "biz:orders:add", Hidden: true})
+	if err := bad.Validate(); err == nil || !strings.Contains(err.Error(), "hidden applies") {
+		t.Fatalf("hidden button accepted: %v", err)
+	}
+}

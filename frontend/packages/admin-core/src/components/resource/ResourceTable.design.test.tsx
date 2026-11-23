@@ -203,3 +203,78 @@ describe("ResourceTable design defaults", () => {
     expect(screen.getByRole("button", { name: "查询" })).toBeInTheDocument();
   });
 });
+
+describe("ResourceTable structured filters in the URL", () => {
+  function renderFiltered(ops: Operations) {
+    return render(
+      <ResourceTable<
+        typeof dictDataSchema,
+        DictData,
+        bigint,
+        Filters,
+        CreateDictDataRequest,
+        UpdateValues
+      >
+        schema={dictDataSchema}
+        operations={ops}
+        access={{ can: () => true }}
+        filterControls={({ filters, setFilter }) => (
+          <span>
+            <span data-testid="current-type">{filters.dictType ?? "(all)"}</span>
+            <button type="button" onClick={() => setFilter("dictType", "sys_status")}>
+              只看状态
+            </button>
+            <button type="button" onClick={() => setFilter("dictType", undefined)}>
+              全部类型
+            </button>
+          </span>
+        )}
+      />,
+    );
+  }
+
+  it("writes filter changes to the URL and restarts from page 1", async () => {
+    window.history.replaceState(null, "", "/?page=2");
+    const ops = operations();
+    renderFiltered(ops);
+    await screen.findByText("启用");
+    expect(ops.list).toHaveBeenLastCalledWith({ pageNum: 2, pageSize: 20 });
+
+    fireEvent.click(screen.getByRole("button", { name: "只看状态" }));
+    await waitFor(() =>
+      expect(ops.list).toHaveBeenLastCalledWith({
+        pageNum: 1,
+        pageSize: 20,
+        filters: { dictType: "sys_status" },
+      }),
+    );
+    expect(window.location.search).toBe("?dictType=sys_status");
+    expect(screen.getByTestId("current-type")).toHaveTextContent("sys_status");
+
+    fireEvent.click(screen.getByRole("button", { name: "全部类型" }));
+    await waitFor(() =>
+      expect(ops.list).toHaveBeenLastCalledWith({ pageNum: 1, pageSize: 20, filters: {} }),
+    );
+    expect(window.location.search).toBe("");
+  });
+
+  it("restores filters from the URL, e.g. after refresh or in a new tab", async () => {
+    window.history.replaceState(null, "", "/?dictType=sys_status&page=3");
+    const ops = operations([]);
+    renderFiltered(ops);
+    await waitFor(() =>
+      expect(ops.list).toHaveBeenCalledWith({
+        pageNum: 3,
+        pageSize: 20,
+        filters: { dictType: "sys_status" },
+      }),
+    );
+    expect(screen.getByTestId("current-type")).toHaveTextContent("sys_status");
+    // Filters other than the defaults count as "filtered": the empty state offers to clear them.
+    fireEvent.click(await screen.findByRole("button", { name: "清除筛选" }));
+    await waitFor(() =>
+      expect(ops.list).toHaveBeenLastCalledWith({ pageNum: 1, pageSize: 20, keyword: "" }),
+    );
+    expect(window.location.search).toBe("");
+  });
+});

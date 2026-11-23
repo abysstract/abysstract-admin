@@ -19,3 +19,4 @@ export type {
   AdminLoginCaptchaValue,
   AuthStorage,
 } from "./runtime/types";
+export { MENU_HIDDEN, isHiddenMenu } from "./module/routes";

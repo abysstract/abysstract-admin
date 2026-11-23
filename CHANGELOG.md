@@ -7,6 +7,30 @@
 
 ## [Unreleased]
 
+### Added
+
+- `host.apiBaseUrl` 接受以 `/` 开头的同源路径（如 `/` 或 `/api`），按 `window.location` 解析，同一份前端构建可以部署在任何域名下。自带后台的生产构建未设置 `VITE_API_BASE` 时使用 `/`（原来启动报错）。反向代理需要转发的路径见[同源部署](docs/deployment.md#同源部署反向代理)。
+- JSON 资源字段新增 `createOnly`（只在新增时填写）和 `readOnly`（只返回，不接受写入），分别对应 `schema.CreateOnly()` 和 `schema.ReadOnly()`。见[模块指南](docs/module-guide.md)。
+- 资源 JSON 新增 `"standardOperations": {"create": false, "update": false, "delete": false}`：关闭标准写操作后只生成 List 和 Get，不生成写 RPC、权限和按钮菜单，新生成的列表页使用 `ResourceTable` 只读模式。目前三项须一起关闭。见[关闭标准写操作](docs/module-guide.md#关闭标准写操作)。
+- 模块 seed 菜单新增 `"hidden": true`：页面有路由和权限检查，但不进侧边栏（`sys_menu.visible = 2`），用于有独立地址、只经链接进入的详情页；`module update` 升级时同步该值。登录后的菜单接口返回这类菜单，前端为其注册路由并在侧边栏中隐藏；首页跳转跳过隐藏页面。admin-core 导出 `MENU_HIDDEN` 与 `isHiddenMenu`。见[Seed 声明](docs/module-guide.md#seed-声明)。
+- `ResourceTable` 自定义行操作新增 `href`：渲染为真正的链接，普通点击在应用内跳转，中键、Ctrl/⌘ 点击在新的浏览器标签页打开。
+- `ResourceTable` 的结构化筛选：新增 `filterControls`（搜索栏中的筛选控件，收到 `filters`、`setFilter`、`setFilters`），筛选由表格持有，改动后从第一页重新查询。`syncUrl` 开启（默认）时筛选与关键词、页码、排序一起写进地址栏，参数名用筛选名本身（如 `?deptId=3`，与 `q`/`page`/`size`/`sort` 同名的写成 `f.<名称>`），只写与默认值不同的值，读取时忽略无法解析的值；刷新、后退、分享和在新标签页打开都会恢复筛选。有筛选时空状态也显示「清除筛选」，它同时把筛选恢复为页面的初始值。见[结构化筛选](docs/admin-core-usage.md#结构化筛选)。
+- `schema.OmitOperations`：从 `StandardOperations` 中去掉指定的标准操作。只含 List（及 Get）的 `Generated` Resource 由 `resourcegen` 生成只读 Controller 和 `ResourceReadOperations`，`Partial` 的只读 Controller 也可以包含 Get。
+
+### Changed
+
+- **破坏性（少见）**：登录后的菜单接口除 `visible = 1` 外也返回 `visible = 2` 的目录和页面（新的“隐藏菜单”：有路由，不进侧边栏）。已有数据中把 `visible` 手工设为 `2` 表示“完全隐藏”的菜单，升级后会注册路由（仍检查权限、仍不显示在侧边栏）；要完全停用这类菜单，把状态改为停用。
+- `module resource` 用列注释的第一个分句作为字段的初始 `label`（如 `COMMENT '卡片编号，全局唯一'` 得到“卡片编号”），没有注释时仍用列名。只影响新创建的资源 JSON。
+
+### Fixed
+
+- `module generate`：手写的 `.proto` 以注释开头时，protoc-gen-go / protoc-gen-es 会把注释复制到生成文件中“Code generated”标记的上方，第二次生成因此报 `unmanaged destination`。现在在文件头部（第一行代码之前的注释）中任何位置找到标记都视为生成文件。
+
+### Documentation
+
+- [配置说明](docs/configuration.md#迁移版本的顺序)：`admin-migrations sync` 与预先命名的业务迁移之间的版本顺序规则。
+- [配置说明](docs/configuration.md#应用自己的配置)：`adminconfig.Load()` 之后用 `os.Getenv` 读取放在 `.env` 中的应用配置，以及读取的时机和命名建议。
+
 ## [0.7.1] - 2026-11-17
 
 Go 模块与 `@abysstract/admin-core`、`@abysstract/admin-proto` 同步发布 0.7.1。重做登录验证码的界面，内置滑块不再依赖 go-captcha；补充说明 0.7.0 中一项未标明的破坏性变化。没有数据库迁移，Proto 没有变化。

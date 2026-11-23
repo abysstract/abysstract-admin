@@ -65,6 +65,15 @@ schema.F("Remark", schema.MaxLen(500)),
 | `EnumMap(...)` | 声明 Proto 枚举名与模型整数值的映射 |
 | `RelationTo(...)` | 声明关联资源及选项的值、标签字段 |
 
+只读资源用 `schema.OmitOperations` 去掉标准写操作，生成器随之生成只读的 Controller（只依赖 `resource.ReadRepository`）、只含 List 与 Get 的权限，以及供 `ResourceTable` 只读模式使用的 `ResourceReadOperations`。Proto 服务中同样只声明 List 和 Get：
+
+```go
+Operations: schema.OmitOperations(schema.StandardOperations(schema.StandardOperationsConfig{
+	List: listOperation,
+	Get:  getOperation,
+}), schema.OperationCreate, schema.OperationUpdate, schema.OperationDelete, schema.OperationBatchDelete),
+```
+
 关联选项的标签使用目标资源的字符串字段。生成的关联加载器通过目标资源的 operations 查询，沿用目标接口的权限与数据范围。
 
 标准 List 的筛选字段需要 Proto presence：省略表示保持无筛选条件，显式 `0`、`false` 或空字符串表示按该值筛选。排序和筛选使用声明的字段白名单；默认排序应保持稳定，无排序条件时按资源主键升序。

@@ -19,7 +19,27 @@ type Menu struct {
 	Permission string `json:"permission,omitempty"`
 	Icon       string `json:"icon,omitempty"`
 	Order      int    `json:"order,omitempty"`
+	// Hidden keeps the page route and its permission check but leaves the
+	// entry out of the sidebar, for pages reached only by links (detail
+	// pages). It applies to M and C menus.
+	Hidden bool `json:"hidden,omitempty"`
 }
+
+// Values of sys_menu.visible.
+const (
+	// MenuVisible shows the menu in the sidebar.
+	MenuVisible int16 = 1
+	// MenuHidden keeps the route and permission check without a sidebar entry.
+	MenuHidden int16 = 2
+)
+
+func (m Menu) visible() int16 {
+	if m.Hidden {
+		return MenuHidden
+	}
+	return MenuVisible
+}
+
 type Role struct {
 	Key       string   `json:"key"`
 	Name      string   `json:"name"`
@@ -84,6 +104,9 @@ func (s Spec) Validate() error {
 		if m.Type != "M" && m.Type != "C" && m.Type != "F" {
 			return fmt.Errorf("seed %s: invalid menu type %q", s.Module, m.Type)
 		}
+		if m.Hidden && m.Type == "F" {
+			return fmt.Errorf("seed %s: hidden applies to M and C menus, not button %q", s.Module, m.Key)
+		}
 		if m.Parent != "" && !keys[m.Parent] {
 			return fmt.Errorf("seed %s: parent %s must precede %s", s.Module, m.Parent, m.Key)
 		}
@@ -119,7 +142,7 @@ func Install(tx *gorm.DB, spec Spec) error {
 			menuIDs[m.Key] = b.SystemID
 			continue
 		}
-		row := menuRow{MenuName: m.Name, ParentID: menuIDs[m.Parent], OrderNum: m.Order, Path: m.Path, Component: m.Component, MenuType: m.Type, Perms: m.Permission, Icon: m.Icon, Visible: 1, Status: 1}
+		row := menuRow{MenuName: m.Name, ParentID: menuIDs[m.Parent], OrderNum: m.Order, Path: m.Path, Component: m.Component, MenuType: m.Type, Perms: m.Permission, Icon: m.Icon, Visible: m.visible(), Status: 1}
 		if err := tx.Table("sys_menu").Create(&row).Error; err != nil {
 			return err
 		}

@@ -157,6 +157,13 @@ export type ResourceCustomRowActionOverride<
    */
   readonly render?: (context: ResourceRowActionContext<TEntity, TKey>) => ReactNode;
   readonly onClick?: (context: ResourceRowActionContext<TEntity, TKey>) => void | Promise<void>;
+  /**
+   * 打开另一个页面的操作（例如有独立地址的详情页）返回目标地址，例如
+   * `({ entity }) => \`/cards/detail/${entity.code}\``。渲染为真正的链接：
+   * 普通点击在应用内跳转，中键、Ctrl/⌘ 点击和右键“在新标签页中打开”打开新的浏览器标签页。
+   * 设置后忽略 onClick。
+   */
+  readonly href?: (context: ResourceRowActionContext<TEntity, TKey>) => string;
   /** 危险操作（如删除）：红色文字，排在同组最后。 */
   readonly danger?: boolean;
 };

@@ -71,6 +71,50 @@ ADMIN_DB_DRIVER=postgres go run github.com/abysstract/abysstract-admin/backend/c
 
 迁移文件保存在应用的 `migrations/<driver>/` 目录。新增业务表和生成代码的步骤见[开发说明](development.md)。
 
+### 迁移版本的顺序
+
+goose 按文件名开头的版本号（`YYYYMMDDHHMMSS`，UTC）排序执行迁移。`admin-migrations sync` 导入系统迁移时，用**导入时的当前时间**命名新文件，并且保证排在本地已有的最新版本之后：
+
+- 新应用先执行 `sync`，再编写业务迁移。这样系统表先于业务表创建，业务迁移可以引用 `sys_*` 表。
+- 业务迁移的版本号不能晚于当前时间。`sync` 发现本地最新版本在未来时拒绝执行（`local migration version ... is in the future`），因为新导入的系统迁移会排到它之前，已经执行过该迁移的数据库会把新文件当作缺失的旧迁移，`migrate` 报错。
+- 把已有应用（或另一个仓库）中预先命名的迁移搬进来时，先执行 `sync`，再把这些迁移改名为晚于系统迁移、且不晚于当前时间的版本。已经在某个数据库上执行过的迁移不要改名，否则会被当作新迁移再执行一次。
+- 升级框架后再次 `sync`，新的系统迁移排在所有本地迁移之后，与业务迁移的先后以文件名为准，提交前审阅一次。
+
+## 应用自己的配置
+
+`adminconfig.Load()` 只解析框架的 `ADMIN_*` 变量，但它会先把当前目录和上一级目录的 `.env` 载入进程环境（已存在的环境变量不覆盖）。所以应用自己的配置可以和框架配置放在同一个 `.env` 里，在 `Load()` 之后用 `os.Getenv` 读取：
+
+```dotenv
+# 框架配置
+ADMIN_DB_DRIVER=postgres
+# 应用配置：用应用自己的前缀，不要用 ADMIN_
+SHOP_SYNC_INTERVAL_SECONDS=60
+```
+
+```go
+func NewModule() (module.Definition, error) {
+	def, err := generatedModule()
+	if err != nil {
+		return module.Definition{}, err
+	}
+	create := def.Create
+	def.Create = func(ctx context.Context, rt module.Runtime) (module.Instance, error) {
+		interval, err := strconv.Atoi(cmp.Or(os.Getenv("SHOP_SYNC_INTERVAL_SECONDS"), "60"))
+		if err != nil {
+			return module.Instance{}, fmt.Errorf("SHOP_SYNC_INTERVAL_SECONDS: %w", err)
+		}
+		_ = interval // 交给模块的后台任务
+		return create(ctx, rt)
+	}
+	return def, nil
+}
+```
+
+- 自带的 `cmd/server` 先调用 `adminconfig.Load()`，再取模块列表（调用各模块的 `NewModule`）并启动，`Create` 在启动过程中执行，所以模块构造函数和 `Create` 里都能读到 `.env` 中的值。自己写的命令同样要先调用 `Load()`。
+- 应用变量用自己的前缀（如 `SHOP_`），不要用 `ADMIN_`，以免与框架以后新增的变量冲突。
+- 在 `Create` 里读取并校验，格式错误时返回错误，启动随之失败；不要在包初始化（`init` 或包级变量）时读取，那时 `.env` 还没有载入。
+- 生产环境通常直接设置进程环境变量，不放 `.env`；读取方式相同。
+
 ## 服务配置
 
 | 变量 | 说明 | 默认值 |

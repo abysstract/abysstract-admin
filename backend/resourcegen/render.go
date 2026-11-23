@@ -85,17 +85,25 @@ func hasFullGeneratedSix(p *schema.Plan) bool {
 	return true
 }
 
-// hasGeneratedReadController reports the supported low-risk partial shape:
-// generated standard List plus zero or more typed CUSTOM workflows.
+// hasGeneratedReadController reports the supported read-only shapes: a
+// generated standard List, optionally a generated Get, plus (Partial only)
+// zero or more typed CUSTOM workflows. A Generated Resource takes this shape
+// when its standard writes were omitted (schema.OmitOperations).
 func hasGeneratedReadController(p *schema.Plan) bool {
-	if p == nil || p.Res.Mode != schema.Partial {
+	if p == nil || (p.Res.Mode != schema.Partial && p.Res.Mode != schema.Generated) {
 		return false
 	}
 	if p.Operation(schema.OperationList) == nil {
 		return false
 	}
 	for _, operation := range p.Operations {
-		if operation.Kind != schema.OperationList && operation.Kind != schema.OperationCustom {
+		switch operation.Kind {
+		case schema.OperationList, schema.OperationGet:
+		case schema.OperationCustom:
+			if p.Res.Mode != schema.Partial {
+				return false
+			}
+		default:
 			return false
 		}
 	}
