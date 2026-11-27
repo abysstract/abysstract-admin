@@ -43,6 +43,19 @@ message LoginResponse {
   string refresh_token = 3; // 刷新令牌（仅启用刷新令牌时返回；否则为空）
 }
 
+// 使用 Google 登录。id_token 是 Google Identity Services 返回的 ID token（credential）。
+// 只有邮箱已匹配到后台用户的 Google 账号能登录；未启用 Google 登录时返回 FailedPrecondition。
+message LoginWithGoogleRequest {
+  string id_token = 1;
+}
+
+message GetLoginOptionsRequest {}
+
+// 登录页可用的登录方式。
+message GetLoginOptionsResponse {
+  string google_client_id = 1; // 非空表示启用了 Google 登录；前端用它初始化 Google 按钮
+}
+
 message LogoutRequest {}
 message LogoutResponse {}
 
@@ -74,9 +87,11 @@ message GetUserInfoResponse {
   bool pwd_reset_required = 5; // true 表示首次登录/被重置后需改密，前端应弹出改密对话框
 }
 
-// 认证服务（Login / GetCaptcha / RefreshToken 无需鉴权，其余需要 Bearer token）
+// 认证服务（Login / LoginWithGoogle / GetLoginOptions / GetCaptcha / RefreshToken 无需鉴权，其余需要 Bearer token）
 service AuthService {
   rpc Login(LoginRequest) returns (LoginResponse);
+  rpc LoginWithGoogle(LoginWithGoogleRequest) returns (LoginResponse);
+  rpc GetLoginOptions(GetLoginOptionsRequest) returns (GetLoginOptionsResponse);
   rpc GetCaptcha(GetCaptchaRequest) returns (GetCaptchaResponse);
   rpc Logout(LogoutRequest) returns (LogoutResponse);
   rpc GetUserInfo(GetUserInfoRequest) returns (GetUserInfoResponse);

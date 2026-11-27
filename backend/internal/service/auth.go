@@ -32,6 +32,7 @@ type AuthService struct {
 	refreshExpiresIn time.Duration
 	proxies          accesslog.ProxyPolicy
 	guard            *LoginGuard
+	google           GoogleVerifier
 	now              func() time.Time
 	// hiddenMenuPerms 中的菜单不出现在 GetUserInfo 的菜单树中（如未配置可查询 sink 时的请求日志）。
 	hiddenMenuPerms map[string]bool
@@ -134,7 +135,14 @@ func (s *AuthService) Login(
 	if s.loginSec != nil {
 		_ = s.loginSec.Reset(ctx, username)
 	}
+	return s.startSession(ctx, u, ip, now, "登录成功")
+}
 
+// startSession 为已通过身份验证且启用的用户签发 JWT 与可选 refresh_token，并写成功登录日志。
+// 密码登录与 Google 登录共用，登录后的会话行为保持一致。
+func (s *AuthService) startSession(
+	ctx context.Context, u *model.SysUser, ip string, now time.Time, msg string,
+) (*adminv1.LoginResponse, error) {
 	token, expiresIn, err := s.jwt.Generate(u.ID, u.Username, int64(u.TokenVersion))
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err.Error()).WithCause(err)
@@ -145,7 +153,7 @@ func (s *AuthService) Login(
 	}
 
 	accesslog.SetPrincipal(ctx, interceptor.UserPrincipal(u.ID, u.Username))
-	_ = s.repo.AddLoginLog(ctx, &model.SysLoginLog{Username: username, Status: 1, IP: ip, Msg: "登录成功"})
+	_ = s.repo.AddLoginLog(ctx, &model.SysLoginLog{Username: u.Username, Status: 1, IP: ip, Msg: msg})
 	return resp, nil
 }
 

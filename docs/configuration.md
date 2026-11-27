@@ -197,3 +197,29 @@ app, err := adminapp.New(adminapp.Options{Config: cfg, Modules: modules, Captcha
 ```
 
 后端出题的验证码，答案经 `GetCaptcha` 加密后放在挑战 ID 里交给前端，服务端不保存；每个挑战只能用一次，有效期 2 分钟，已使用的 ID 记在 `sys_captcha_used`。
+
+## Google 登录
+
+登录页在密码表单下方增加“使用 Google 账号登录”，与账号密码并存。只有**已经存在的后台用户**能用 Google 登录，不会自动建号。
+
+配置（都在后端；前端不需要配置，登录页向服务端询问是否启用）：
+
+| 变量 | 说明 |
+| --- | --- |
+| `ADMIN_GOOGLE_CLIENT_ID` | Google OAuth 客户端 ID。留空不启用。它是公开值（会发给浏览器），没有需要保密的 secret |
+| `ADMIN_GOOGLE_ALLOWED_DOMAINS` | 可选，逗号分隔的域名白名单。Google Workspace 账号按它的企业域名（`hd`）匹配，普通 Gmail 只匹配 `gmail.com`。公司邮箱不是 Workspace 账号（没有 `hd`）时，即使邮箱后缀在名单里也会被拒绝。留空不限制域名 |
+
+### 获取客户端 ID
+
+在 [Google Cloud Console](https://console.cloud.google.com/) 的“API 和服务 → 凭据”里创建“OAuth 客户端 ID”，应用类型选“Web 应用”，在“已获授权的 JavaScript 来源”里填后台前端的地址（如 `https://admin.example.com`，本地开发再加 `http://localhost:5173`；不需要填重定向 URI）。创建后得到形如 `123-abc.apps.googleusercontent.com` 的客户端 ID。没有云项目权限时，让有权限的同事创建后把客户端 ID 发给你即可，不需要 secret，也不需要开通任何计费服务。
+
+OAuth 同意屏幕选“内部”时，只有同一个 Workspace 的账号能登录（需要 Workspace 管理员设置）；选“外部”时靠上面的域名白名单和用户邮箱匹配限制。
+
+### 谁能登录
+
+1. 第一次用 Google 登录时，按 Google 返回的**已验证邮箱**（忽略大小写）匹配 `sys_user.email`。恰好匹配到一个未删除的用户，才把这个 Google 账号绑定到该用户；匹配不到，或同一邮箱对应多个用户，都拒绝登录，提示联系管理员。
+2. 绑定保存在 `sys_user_identity`，记录 Google 的账号 ID（`sub`）。之后只认账号 ID：用户改了邮箱不影响登录，别人注册同一个邮箱也进不来。
+3. 一个用户只能绑定一个 Google 账号。要换账号，删除该用户在 `sys_user_identity` 里 `provider = 'google'` 的那一行，下次登录时重新绑定。
+4. 已停用或已删除的用户不能登录。Google 登录与密码登录签发同样的令牌、写同样的登录日志（备注带“Google”），登录后的会话、权限与菜单完全一致。
+
+不依赖 Google 的是 `/login` 的账号密码方式，Google 不可达时仍可用它登录。Google 登录不计入密码的失败次数和验证码。

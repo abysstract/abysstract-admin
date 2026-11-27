@@ -10,6 +10,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/abysstract/abysstract-admin/backend/gen/abysstract/admin/v1/adminv1connect"
+	"github.com/abysstract/abysstract-admin/backend/internal/googleid"
 	"github.com/abysstract/abysstract-admin/backend/internal/jwt"
 	"github.com/abysstract/abysstract-admin/backend/internal/repo"
 	"github.com/abysstract/abysstract-admin/backend/internal/service"
@@ -118,6 +119,13 @@ func newSystemHandlers(rt module.Runtime) (*systemHandlers, error) {
 		IPCaptchaAfter: cfg.LoginIPCaptchaAfterOrDefault(),
 		IPMaxFailures:  cfg.LoginIPMaxFailuresOrDefault(),
 	})
+	if cfg.GoogleClientID != "" {
+		google, err := googleid.New(googleid.Config{ClientID: cfg.GoogleClientID, Domains: cfg.GoogleAllowedDomains})
+		if err != nil {
+			return nil, err
+		}
+		authSvc.UseGoogleLogin(google)
+	}
 	if !service.AccessLogReadable(rt.AccessLog) {
 		// Without a Reader the request log page cannot show anything.
 		authSvc.HideMenus(service.AccessLogListPerm)

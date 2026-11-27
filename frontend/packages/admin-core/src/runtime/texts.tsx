@@ -76,6 +76,12 @@ export interface AdminTexts {
     readonly captchaLoadFailed: string;
     /** 服务端启用了需要宿主组件的验证码，但 AdminHost.login.captcha 没有配置。 */
     readonly captchaUnsupported: string;
+    /** 密码登录与 Google 登录之间的分隔文字。 */
+    readonly or: string;
+    /** Google 登录没成功且服务端没给出原因（如 ID token 无效）。 */
+    readonly googleFailed: string;
+    /** Google 登录脚本加载失败（网络无法访问 Google）。 */
+    readonly googleLoadFailed: string;
   };
 }
 
@@ -139,6 +145,9 @@ export const defaultAdminTexts: AdminTexts = {
     captchaRefresh: "换一张",
     captchaLoadFailed: "无法加载验证图片",
     captchaUnsupported: "当前无法显示安全验证，请联系管理员",
+    or: "或",
+    googleFailed: "Google 登录失败，请重试",
+    googleLoadFailed: "无法加载 Google 登录，请检查网络后刷新页面",
   },
 };
 

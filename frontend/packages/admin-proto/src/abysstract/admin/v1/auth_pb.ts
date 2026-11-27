@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file abysstract/admin/v1/auth.proto.
  */
 export const file_abysstract_admin_v1_auth: GenFile = /*@__PURE__*/
-  fileDesc("Ch5hYnlzc3RyYWN0L2FkbWluL3YxL2F1dGgucHJvdG8SE2FieXNzdHJhY3QuYWRtaW4udjEiVwoMTG9naW5SZXF1ZXN0EhAKCHVzZXJuYW1lGAEgASgJEhAKCHBhc3N3b3JkGAIgASgJEhIKCmNhcHRjaGFfaWQYAyABKAkSDwoHY2FwdGNoYRgEIAEoCSJkCg5Mb2dpbkNoYWxsZW5nZRIYChBjYXB0Y2hhX3JlcXVpcmVkGAEgASgIEjgKDWNhcHRjaGFfZXJyb3IYAiABKA4yIS5hYnlzc3RyYWN0LmFkbWluLnYxLkNhcHRjaGFFcnJvciITChFHZXRDYXB0Y2hhUmVxdWVzdCJTChJHZXRDYXB0Y2hhUmVzcG9uc2USDAoEa2luZBgBIAEoCRIPCgdwYXlsb2FkGAIgASgJEgoKAmlkGAMgASgJEhIKCmV4cGlyZXNfaW4YBCABKAMiSQoNTG9naW5SZXNwb25zZRINCgV0b2tlbhgBIAEoCRISCgpleHBpcmVzX2luGAIgASgDEhUKDXJlZnJlc2hfdG9rZW4YAyABKAkiDwoNTG9nb3V0UmVxdWVzdCIQCg5Mb2dvdXRSZXNwb25zZSJDChVDaGFuZ2VQYXNzd29yZFJlcXVlc3QSFAoMb2xkX3Bhc3N3b3JkGAEgASgJEhQKDG5ld19wYXNzd29yZBgCIAEoCSIYChZDaGFuZ2VQYXNzd29yZFJlc3BvbnNlIiwKE1JlZnJlc2hUb2tlblJlcXVlc3QSFQoNcmVmcmVzaF90b2tlbhgBIAEoCSJQChRSZWZyZXNoVG9rZW5SZXNwb25zZRINCgV0b2tlbhgBIAEoCRISCgpleHBpcmVzX2luGAIgASgDEhUKDXJlZnJlc2hfdG9rZW4YAyABKAkiFAoSR2V0VXNlckluZm9SZXF1ZXN0IqgBChNHZXRVc2VySW5mb1Jlc3BvbnNlEicKBHVzZXIYASABKAsyGS5hYnlzc3RyYWN0LmFkbWluLnYxLlVzZXISDQoFcm9sZXMYAiADKAkSEwoLcGVybWlzc2lvbnMYAyADKAkSKAoFbWVudXMYBCADKAsyGS5hYnlzc3RyYWN0LmFkbWluLnYxLk1lbnUSGgoScHdkX3Jlc2V0X3JlcXVpcmVkGAUgASgIKmMKDENhcHRjaGFFcnJvchIdChlDQVBUQ0hBX0VSUk9SX1VOU1BFQ0lGSUVEEAASGQoVQ0FQVENIQV9FUlJPUl9NSVNTSU5HEAESGQoVQ0FQVENIQV9FUlJPUl9JTlZBTElEEAIywQQKC0F1dGhTZXJ2aWNlEk4KBUxvZ2luEiEuYWJ5c3N0cmFjdC5hZG1pbi52MS5Mb2dpblJlcXVlc3QaIi5hYnlzc3RyYWN0LmFkbWluLnYxLkxvZ2luUmVzcG9uc2USXQoKR2V0Q2FwdGNoYRImLmFieXNzdHJhY3QuYWRtaW4udjEuR2V0Q2FwdGNoYVJlcXVlc3QaJy5hYnlzc3RyYWN0LmFkbWluLnYxLkdldENhcHRjaGFSZXNwb25zZRJRCgZMb2dvdXQSIi5hYnlzc3RyYWN0LmFkbWluLnYxLkxvZ291dFJlcXVlc3QaIy5hYnlzc3RyYWN0LmFkbWluLnYxLkxvZ291dFJlc3BvbnNlEmAKC0dldFVzZXJJbmZvEicuYWJ5c3N0cmFjdC5hZG1pbi52MS5HZXRVc2VySW5mb1JlcXVlc3QaKC5hYnlzc3RyYWN0LmFkbWluLnYxLkdldFVzZXJJbmZvUmVzcG9uc2USaQoOQ2hhbmdlUGFzc3dvcmQSKi5hYnlzc3RyYWN0LmFkbWluLnYxLkNoYW5nZVBhc3N3b3JkUmVxdWVzdBorLmFieXNzdHJhY3QuYWRtaW4udjEuQ2hhbmdlUGFzc3dvcmRSZXNwb25zZRJjCgxSZWZyZXNoVG9rZW4SKC5hYnlzc3RyYWN0LmFkbWluLnYxLlJlZnJlc2hUb2tlblJlcXVlc3QaKS5hYnlzc3RyYWN0LmFkbWluLnYxLlJlZnJlc2hUb2tlblJlc3BvbnNlQuIBChdjb20uYWJ5c3N0cmFjdC5hZG1pbi52MUIJQXV0aFByb3RvUAFaTmdpdGh1Yi5jb20vYWJ5c3N0cmFjdC9hYnlzc3RyYWN0LWFkbWluL2JhY2tlbmQvZ2VuL2FieXNzdHJhY3QvYWRtaW4vdjE7YWRtaW52MaICA0FBWKoCE0FieXNzdHJhY3QuQWRtaW4uVjHKAhNBYnlzc3RyYWN0XEFkbWluXFYx4gIfQWJ5c3N0cmFjdFxBZG1pblxWMVxHUEJNZXRhZGF0YeoCFUFieXNzdHJhY3Q6OkFkbWluOjpWMWIGcHJvdG8z", [file_abysstract_admin_v1_menu, file_abysstract_admin_v1_user]);
+  fileDesc("Ch5hYnlzc3RyYWN0L2FkbWluL3YxL2F1dGgucHJvdG8SE2FieXNzdHJhY3QuYWRtaW4udjEiVwoMTG9naW5SZXF1ZXN0EhAKCHVzZXJuYW1lGAEgASgJEhAKCHBhc3N3b3JkGAIgASgJEhIKCmNhcHRjaGFfaWQYAyABKAkSDwoHY2FwdGNoYRgEIAEoCSJkCg5Mb2dpbkNoYWxsZW5nZRIYChBjYXB0Y2hhX3JlcXVpcmVkGAEgASgIEjgKDWNhcHRjaGFfZXJyb3IYAiABKA4yIS5hYnlzc3RyYWN0LmFkbWluLnYxLkNhcHRjaGFFcnJvciITChFHZXRDYXB0Y2hhUmVxdWVzdCJTChJHZXRDYXB0Y2hhUmVzcG9uc2USDAoEa2luZBgBIAEoCRIPCgdwYXlsb2FkGAIgASgJEgoKAmlkGAMgASgJEhIKCmV4cGlyZXNfaW4YBCABKAMiSQoNTG9naW5SZXNwb25zZRINCgV0b2tlbhgBIAEoCRISCgpleHBpcmVzX2luGAIgASgDEhUKDXJlZnJlc2hfdG9rZW4YAyABKAkiKgoWTG9naW5XaXRoR29vZ2xlUmVxdWVzdBIQCghpZF90b2tlbhgBIAEoCSIYChZHZXRMb2dpbk9wdGlvbnNSZXF1ZXN0IjMKF0dldExvZ2luT3B0aW9uc1Jlc3BvbnNlEhgKEGdvb2dsZV9jbGllbnRfaWQYASABKAkiDwoNTG9nb3V0UmVxdWVzdCIQCg5Mb2dvdXRSZXNwb25zZSJDChVDaGFuZ2VQYXNzd29yZFJlcXVlc3QSFAoMb2xkX3Bhc3N3b3JkGAEgASgJEhQKDG5ld19wYXNzd29yZBgCIAEoCSIYChZDaGFuZ2VQYXNzd29yZFJlc3BvbnNlIiwKE1JlZnJlc2hUb2tlblJlcXVlc3QSFQoNcmVmcmVzaF90b2tlbhgBIAEoCSJQChRSZWZyZXNoVG9rZW5SZXNwb25zZRINCgV0b2tlbhgBIAEoCRISCgpleHBpcmVzX2luGAIgASgDEhUKDXJlZnJlc2hfdG9rZW4YAyABKAkiFAoSR2V0VXNlckluZm9SZXF1ZXN0IqgBChNHZXRVc2VySW5mb1Jlc3BvbnNlEicKBHVzZXIYASABKAsyGS5hYnlzc3RyYWN0LmFkbWluLnYxLlVzZXISDQoFcm9sZXMYAiADKAkSEwoLcGVybWlzc2lvbnMYAyADKAkSKAoFbWVudXMYBCADKAsyGS5hYnlzc3RyYWN0LmFkbWluLnYxLk1lbnUSGgoScHdkX3Jlc2V0X3JlcXVpcmVkGAUgASgIKmMKDENhcHRjaGFFcnJvchIdChlDQVBUQ0hBX0VSUk9SX1VOU1BFQ0lGSUVEEAASGQoVQ0FQVENIQV9FUlJPUl9NSVNTSU5HEAESGQoVQ0FQVENIQV9FUlJPUl9JTlZBTElEEAIykwYKC0F1dGhTZXJ2aWNlEk4KBUxvZ2luEiEuYWJ5c3N0cmFjdC5hZG1pbi52MS5Mb2dpblJlcXVlc3QaIi5hYnlzc3RyYWN0LmFkbWluLnYxLkxvZ2luUmVzcG9uc2USYgoPTG9naW5XaXRoR29vZ2xlEisuYWJ5c3N0cmFjdC5hZG1pbi52MS5Mb2dpbldpdGhHb29nbGVSZXF1ZXN0GiIuYWJ5c3N0cmFjdC5hZG1pbi52MS5Mb2dpblJlc3BvbnNlEmwKD0dldExvZ2luT3B0aW9ucxIrLmFieXNzdHJhY3QuYWRtaW4udjEuR2V0TG9naW5PcHRpb25zUmVxdWVzdBosLmFieXNzdHJhY3QuYWRtaW4udjEuR2V0TG9naW5PcHRpb25zUmVzcG9uc2USXQoKR2V0Q2FwdGNoYRImLmFieXNzdHJhY3QuYWRtaW4udjEuR2V0Q2FwdGNoYVJlcXVlc3QaJy5hYnlzc3RyYWN0LmFkbWluLnYxLkdldENhcHRjaGFSZXNwb25zZRJRCgZMb2dvdXQSIi5hYnlzc3RyYWN0LmFkbWluLnYxLkxvZ291dFJlcXVlc3QaIy5hYnlzc3RyYWN0LmFkbWluLnYxLkxvZ291dFJlc3BvbnNlEmAKC0dldFVzZXJJbmZvEicuYWJ5c3N0cmFjdC5hZG1pbi52MS5HZXRVc2VySW5mb1JlcXVlc3QaKC5hYnlzc3RyYWN0LmFkbWluLnYxLkdldFVzZXJJbmZvUmVzcG9uc2USaQoOQ2hhbmdlUGFzc3dvcmQSKi5hYnlzc3RyYWN0LmFkbWluLnYxLkNoYW5nZVBhc3N3b3JkUmVxdWVzdBorLmFieXNzdHJhY3QuYWRtaW4udjEuQ2hhbmdlUGFzc3dvcmRSZXNwb25zZRJjCgxSZWZyZXNoVG9rZW4SKC5hYnlzc3RyYWN0LmFkbWluLnYxLlJlZnJlc2hUb2tlblJlcXVlc3QaKS5hYnlzc3RyYWN0LmFkbWluLnYxLlJlZnJlc2hUb2tlblJlc3BvbnNlQuIBChdjb20uYWJ5c3N0cmFjdC5hZG1pbi52MUIJQXV0aFByb3RvUAFaTmdpdGh1Yi5jb20vYWJ5c3N0cmFjdC9hYnlzc3RyYWN0LWFkbWluL2JhY2tlbmQvZ2VuL2FieXNzdHJhY3QvYWRtaW4vdjE7YWRtaW52MaICA0FBWKoCE0FieXNzdHJhY3QuQWRtaW4uVjHKAhNBYnlzc3RyYWN0XEFkbWluXFYx4gIfQWJ5c3N0cmFjdFxBZG1pblxWMVxHUEJNZXRhZGF0YeoCFUFieXNzdHJhY3Q6OkFkbWluOjpWMWIGcHJvdG8z", [file_abysstract_admin_v1_menu, file_abysstract_admin_v1_user]);
 
 /**
  * @generated from message abysstract.admin.v1.LoginRequest
@@ -170,6 +170,60 @@ export const LoginResponseSchema: GenMessage<LoginResponse> = /*@__PURE__*/
   messageDesc(file_abysstract_admin_v1_auth, 4);
 
 /**
+ * 使用 Google 登录。id_token 是 Google Identity Services 返回的 ID token（credential）。
+ * 只有邮箱已匹配到后台用户的 Google 账号能登录；未启用 Google 登录时返回 FailedPrecondition。
+ *
+ * @generated from message abysstract.admin.v1.LoginWithGoogleRequest
+ */
+export type LoginWithGoogleRequest = Message<"abysstract.admin.v1.LoginWithGoogleRequest"> & {
+  /**
+   * @generated from field: string id_token = 1;
+   */
+  idToken: string;
+};
+
+/**
+ * Describes the message abysstract.admin.v1.LoginWithGoogleRequest.
+ * Use `create(LoginWithGoogleRequestSchema)` to create a new message.
+ */
+export const LoginWithGoogleRequestSchema: GenMessage<LoginWithGoogleRequest> = /*@__PURE__*/
+  messageDesc(file_abysstract_admin_v1_auth, 5);
+
+/**
+ * @generated from message abysstract.admin.v1.GetLoginOptionsRequest
+ */
+export type GetLoginOptionsRequest = Message<"abysstract.admin.v1.GetLoginOptionsRequest"> & {
+};
+
+/**
+ * Describes the message abysstract.admin.v1.GetLoginOptionsRequest.
+ * Use `create(GetLoginOptionsRequestSchema)` to create a new message.
+ */
+export const GetLoginOptionsRequestSchema: GenMessage<GetLoginOptionsRequest> = /*@__PURE__*/
+  messageDesc(file_abysstract_admin_v1_auth, 6);
+
+/**
+ * 登录页可用的登录方式。
+ *
+ * @generated from message abysstract.admin.v1.GetLoginOptionsResponse
+ */
+export type GetLoginOptionsResponse = Message<"abysstract.admin.v1.GetLoginOptionsResponse"> & {
+  /**
+   * 非空表示启用了 Google 登录；前端用它初始化 Google 按钮
+   *
+   * @generated from field: string google_client_id = 1;
+   */
+  googleClientId: string;
+};
+
+/**
+ * Describes the message abysstract.admin.v1.GetLoginOptionsResponse.
+ * Use `create(GetLoginOptionsResponseSchema)` to create a new message.
+ */
+export const GetLoginOptionsResponseSchema: GenMessage<GetLoginOptionsResponse> = /*@__PURE__*/
+  messageDesc(file_abysstract_admin_v1_auth, 7);
+
+/**
  * @generated from message abysstract.admin.v1.LogoutRequest
  */
 export type LogoutRequest = Message<"abysstract.admin.v1.LogoutRequest"> & {
@@ -180,7 +234,7 @@ export type LogoutRequest = Message<"abysstract.admin.v1.LogoutRequest"> & {
  * Use `create(LogoutRequestSchema)` to create a new message.
  */
 export const LogoutRequestSchema: GenMessage<LogoutRequest> = /*@__PURE__*/
-  messageDesc(file_abysstract_admin_v1_auth, 5);
+  messageDesc(file_abysstract_admin_v1_auth, 8);
 
 /**
  * @generated from message abysstract.admin.v1.LogoutResponse
@@ -193,7 +247,7 @@ export type LogoutResponse = Message<"abysstract.admin.v1.LogoutResponse"> & {
  * Use `create(LogoutResponseSchema)` to create a new message.
  */
 export const LogoutResponseSchema: GenMessage<LogoutResponse> = /*@__PURE__*/
-  messageDesc(file_abysstract_admin_v1_auth, 6);
+  messageDesc(file_abysstract_admin_v1_auth, 9);
 
 /**
  * 改密请求：旧密码 + 新密码。服务端校验旧密码 + 复杂度策略，成功后递增 token_version。
@@ -217,7 +271,7 @@ export type ChangePasswordRequest = Message<"abysstract.admin.v1.ChangePasswordR
  * Use `create(ChangePasswordRequestSchema)` to create a new message.
  */
 export const ChangePasswordRequestSchema: GenMessage<ChangePasswordRequest> = /*@__PURE__*/
-  messageDesc(file_abysstract_admin_v1_auth, 7);
+  messageDesc(file_abysstract_admin_v1_auth, 10);
 
 /**
  * @generated from message abysstract.admin.v1.ChangePasswordResponse
@@ -230,7 +284,7 @@ export type ChangePasswordResponse = Message<"abysstract.admin.v1.ChangePassword
  * Use `create(ChangePasswordResponseSchema)` to create a new message.
  */
 export const ChangePasswordResponseSchema: GenMessage<ChangePasswordResponse> = /*@__PURE__*/
-  messageDesc(file_abysstract_admin_v1_auth, 8);
+  messageDesc(file_abysstract_admin_v1_auth, 11);
 
 /**
  * 刷新令牌：用未过期且未吊销的 refresh_token 换取新的访问令牌。
@@ -250,7 +304,7 @@ export type RefreshTokenRequest = Message<"abysstract.admin.v1.RefreshTokenReque
  * Use `create(RefreshTokenRequestSchema)` to create a new message.
  */
 export const RefreshTokenRequestSchema: GenMessage<RefreshTokenRequest> = /*@__PURE__*/
-  messageDesc(file_abysstract_admin_v1_auth, 9);
+  messageDesc(file_abysstract_admin_v1_auth, 12);
 
 /**
  * @generated from message abysstract.admin.v1.RefreshTokenResponse
@@ -283,7 +337,7 @@ export type RefreshTokenResponse = Message<"abysstract.admin.v1.RefreshTokenResp
  * Use `create(RefreshTokenResponseSchema)` to create a new message.
  */
 export const RefreshTokenResponseSchema: GenMessage<RefreshTokenResponse> = /*@__PURE__*/
-  messageDesc(file_abysstract_admin_v1_auth, 10);
+  messageDesc(file_abysstract_admin_v1_auth, 13);
 
 /**
  * @generated from message abysstract.admin.v1.GetUserInfoRequest
@@ -296,7 +350,7 @@ export type GetUserInfoRequest = Message<"abysstract.admin.v1.GetUserInfoRequest
  * Use `create(GetUserInfoRequestSchema)` to create a new message.
  */
 export const GetUserInfoRequestSchema: GenMessage<GetUserInfoRequest> = /*@__PURE__*/
-  messageDesc(file_abysstract_admin_v1_auth, 11);
+  messageDesc(file_abysstract_admin_v1_auth, 14);
 
 /**
  * @generated from message abysstract.admin.v1.GetUserInfoResponse
@@ -341,7 +395,7 @@ export type GetUserInfoResponse = Message<"abysstract.admin.v1.GetUserInfoRespon
  * Use `create(GetUserInfoResponseSchema)` to create a new message.
  */
 export const GetUserInfoResponseSchema: GenMessage<GetUserInfoResponse> = /*@__PURE__*/
-  messageDesc(file_abysstract_admin_v1_auth, 12);
+  messageDesc(file_abysstract_admin_v1_auth, 15);
 
 /**
  * @generated from enum abysstract.admin.v1.CaptchaError
@@ -374,7 +428,7 @@ export const CaptchaErrorSchema: GenEnum<CaptchaError> = /*@__PURE__*/
   enumDesc(file_abysstract_admin_v1_auth, 0);
 
 /**
- * 认证服务（Login / GetCaptcha / RefreshToken 无需鉴权，其余需要 Bearer token）
+ * 认证服务（Login / LoginWithGoogle / GetLoginOptions / GetCaptcha / RefreshToken 无需鉴权，其余需要 Bearer token）
  *
  * @generated from service abysstract.admin.v1.AuthService
  */
@@ -386,6 +440,22 @@ export const AuthService: GenService<{
     methodKind: "unary";
     input: typeof LoginRequestSchema;
     output: typeof LoginResponseSchema;
+  },
+  /**
+   * @generated from rpc abysstract.admin.v1.AuthService.LoginWithGoogle
+   */
+  loginWithGoogle: {
+    methodKind: "unary";
+    input: typeof LoginWithGoogleRequestSchema;
+    output: typeof LoginResponseSchema;
+  },
+  /**
+   * @generated from rpc abysstract.admin.v1.AuthService.GetLoginOptions
+   */
+  getLoginOptions: {
+    methodKind: "unary";
+    input: typeof GetLoginOptionsRequestSchema;
+    output: typeof GetLoginOptionsResponseSchema;
   },
   /**
    * @generated from rpc abysstract.admin.v1.AuthService.GetCaptcha

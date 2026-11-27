@@ -3,6 +3,7 @@ import { Navigate, useNavigate } from "react-router-dom";
 import {
   Button,
   Card,
+  Divider,
   Flex,
   Form,
   Grid,
@@ -19,6 +20,7 @@ import {
   LoginChallengeSchema,
 } from "@abysstract/admin-proto/abysstract/admin/v1/auth_pb";
 import { BuiltinLoginCaptcha } from "../components/LoginCaptcha";
+import { GoogleSignIn } from "../components/GoogleSignIn";
 import type { AdminLoginCaptchaChallenge, AdminLoginCaptchaValue } from "../runtime/types";
 import { useAdminHost, useAdminRuntimeState, useSessionSnapshot } from "../runtime/context";
 import { formatErrorMessage, useAppMessage } from "../runtime/message";
@@ -101,6 +103,23 @@ export default function Login() {
     };
   }, []);
 
+  // 服务端是否启用了 Google 登录。取不到就当没启用，不影响密码登录。
+  const [googleClientId, setGoogleClientId] = useState<string>();
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const options = await runtime.clients.auth.getLoginOptions({});
+        if (!cancelled) setGoogleClientId(options.googleClientId || undefined);
+      } catch {
+        // 保持不显示 Google 按钮。
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [runtime]);
+
   if (session.token) {
     return <Navigate to="/" replace />;
   }
@@ -165,6 +184,47 @@ export default function Login() {
       if (attempt === attemptRef.current) setLoading(false);
     }
   };
+
+  const onGoogleCredential = async (idToken: string) => {
+    const attempt = ++attemptRef.current;
+    setLoading(true);
+    try {
+      const res = await runtime.clients.auth.loginWithGoogle({ idToken });
+      if (attempt !== attemptRef.current || runtime.session.isDisposed()) return;
+      runtime.session.applyToken(res.token);
+      navigate("/", { replace: true });
+    } catch (e) {
+      if (attempt !== attemptRef.current || runtime.session.isDisposed()) return;
+      if (
+        e instanceof ConnectError &&
+        (e.code === Code.PermissionDenied ||
+          e.code === Code.Unavailable ||
+          e.code === Code.Unauthenticated)
+      ) {
+        // 未关联后台用户、账号停用、Google 不可达：服务端文案面向用户，原样显示。
+        message.error(e.rawMessage || t.googleFailed);
+      } else {
+        message.error(formatErrorMessage(e, t.googleFailed));
+      }
+    } finally {
+      if (attempt === attemptRef.current) setLoading(false);
+    }
+  };
+
+  // 密码表单下方的“或 / Google 按钮”。验证面板打开时表单被隐藏，这一块也一起隐藏。
+  const googleSection =
+    googleClientId && !captchaOpen ? (
+      <div style={{ marginTop: token.marginLG }}>
+        <Divider plain style={{ margin: `0 0 ${token.margin}px` }}>
+          <Typography.Text type="secondary">{t.or}</Typography.Text>
+        </Divider>
+        <GoogleSignIn
+          clientId={googleClientId}
+          onCredential={(idToken) => void onGoogleCredential(idToken)}
+          loadFailedText={t.googleLoadFailed}
+        />
+      </div>
+    ) : null;
 
   const brand = (level: 3 | 4): ReactNode => (
     <div>
@@ -295,6 +355,7 @@ export default function Login() {
             <div style={{ marginBottom: token.marginLG }}>{brand(4)}</div>
             {captchaPanel(5)}
             {loginForm}
+            {googleSection}
           </Card>
         </Flex>
         {footer && <div style={{ paddingTop: token.marginLG }}>{footer}</div>}
@@ -332,6 +393,7 @@ export default function Login() {
           )}
           {captchaPanel(4)}
           {loginForm}
+          {googleSection}
         </div>
       </Flex>
     </Flex>

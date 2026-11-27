@@ -15,10 +15,20 @@ vi.unmock("antd");
 
 const login = vi.hoisted(() => vi.fn());
 const getCaptcha = vi.hoisted(() => vi.fn());
+const getLoginOptions = vi.hoisted(() => vi.fn());
+const loginWithGoogle = vi.hoisted(() => vi.fn());
 
 vi.mock("../system/clients", () => ({
   createSystemClients: () => ({
-    auth: { login, getCaptcha, logout: vi.fn(), getUserInfo: vi.fn(), changePassword: vi.fn() },
+    auth: {
+      login,
+      getCaptcha,
+      getLoginOptions,
+      loginWithGoogle,
+      logout: vi.fn(),
+      getUserInfo: vi.fn(),
+      changePassword: vi.fn(),
+    },
     dict: {},
     config: {},
     notice: {},
@@ -62,7 +72,29 @@ async function submit(username: string, password: string) {
 afterEach(() => {
   login.mockReset();
   getCaptcha.mockReset();
+  getLoginOptions.mockReset();
+  loginWithGoogle.mockReset();
+  delete window.google;
 });
+
+// 替身 Google Identity Services：脚本已就绪，renderButton 只留下标记，credential 由测试手动触发。
+function stubGoogle() {
+  let callback: (r: { credential?: string }) => void = () => {};
+  const renderButton = vi.fn((el: HTMLElement) => {
+    el.setAttribute("data-rendered", "1");
+  });
+  window.google = {
+    accounts: {
+      id: {
+        initialize: vi.fn((config: { callback: typeof callback }) => {
+          callback = config.callback;
+        }),
+        renderButton,
+      },
+    },
+  };
+  return { credential: (token: string) => callback({ credential: token }), renderButton };
+}
 
 function challengeError(
   message: string,
@@ -323,5 +355,67 @@ describe("Login 页面", () => {
     expect(screen.getByRole("button", { name: "进入" })).toBeInTheDocument();
     expect(screen.getByLabelText("账号")).toBeInTheDocument();
     app.dispose();
+  });
+
+  describe("Google 登录", () => {
+    it("服务端没启用时不显示 Google 按钮", async () => {
+      getLoginOptions.mockResolvedValue({ googleClientId: "" });
+      const app = renderLogin();
+      await waitFor(() => expect(getLoginOptions).toHaveBeenCalled());
+      expect(screen.queryByTestId("google-signin")).not.toBeInTheDocument();
+      expect(screen.queryByText("或")).not.toBeInTheDocument();
+      app.dispose();
+    });
+
+    it("取不到登录方式时仍可用密码登录", async () => {
+      getLoginOptions.mockRejectedValue(new ConnectError("boom", Code.Unavailable));
+      const app = renderLogin();
+      await waitFor(() => expect(getLoginOptions).toHaveBeenCalled());
+      expect(screen.getByRole("button", { name: "登录" })).toBeInTheDocument();
+      expect(screen.queryByTestId("google-signin")).not.toBeInTheDocument();
+      app.dispose();
+    });
+
+    it("启用后在密码表单下方渲染 Google 按钮", async () => {
+      const gis = stubGoogle();
+      getLoginOptions.mockResolvedValue({ googleClientId: "client-1" });
+      const app = renderLogin();
+      const holder = await screen.findByTestId("google-signin");
+      await waitFor(() => expect(holder).toHaveAttribute("data-rendered", "1"));
+      expect(gis.renderButton).toHaveBeenCalled();
+      expect(screen.getByText("或")).toBeInTheDocument();
+      app.dispose();
+    });
+
+    it("拿到 ID token 后调用 LoginWithGoogle 并进入后台", async () => {
+      const gis = stubGoogle();
+      getLoginOptions.mockResolvedValue({ googleClientId: "client-1" });
+      loginWithGoogle.mockResolvedValue({ token: "jwt" });
+      const app = renderLogin();
+      await waitFor(() => expect(window.google?.accounts?.id?.initialize).toHaveBeenCalled());
+      gis.credential("google-id-token");
+      await waitFor(() =>
+        expect(loginWithGoogle).toHaveBeenCalledWith({ idToken: "google-id-token" }),
+      );
+      await waitFor(() => expect(screen.queryByLabelText("用户名")).not.toBeInTheDocument());
+      app.dispose();
+    });
+
+    it("账号未关联后台用户时显示服务端给出的原因", async () => {
+      const gis = stubGoogle();
+      getLoginOptions.mockResolvedValue({ googleClientId: "client-1" });
+      loginWithGoogle.mockRejectedValue(
+        new ConnectError("该 Google 账号未关联后台用户，请联系管理员", Code.PermissionDenied),
+      );
+      const app = renderLogin();
+      await waitFor(() => expect(window.google?.accounts?.id?.initialize).toHaveBeenCalled());
+      gis.credential("google-id-token");
+      expect(
+        await screen.findByText("该 Google 账号未关联后台用户，请联系管理员"),
+      ).toBeInTheDocument();
+      // 失败后仍停留在登录页，可以改用密码。
+      expect(screen.getByLabelText("用户名")).toBeInTheDocument();
+      app.dispose();
+    });
   });
 });

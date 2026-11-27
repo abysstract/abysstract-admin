@@ -108,6 +108,10 @@ type Config struct {
 	CaptchaSecret        string // 第三方验证服务的服务端密钥
 	CaptchaSiteKey       string // 第三方验证服务的站点密钥，经 GetCaptcha 返回给前端
 
+	// Google 登录（见 google.go 与 docs/configuration.md#google-登录）
+	GoogleClientID       string   // OAuth 客户端 ID（ADMIN_GOOGLE_CLIENT_ID）；空值不启用 Google 登录
+	GoogleAllowedDomains []string // 限定可登录的域名（ADMIN_GOOGLE_ALLOWED_DOMAINS）；空值不限制域名
+
 	// 上传限制（需求 9.1–9.4）
 	UploadMaxBytes int64  // 通用上传大小上限
 	AvatarMaxBytes int64  // 头像上传大小上限
@@ -195,6 +199,7 @@ func Load() *Config {
 	c.LoginMaxFailures = c.getInt("ADMIN_LOGIN_MAX_FAILURES", 0)
 	c.LoginLockoutSeconds = c.getInt("ADMIN_LOGIN_LOCKOUT_SECONDS", defaultLoginLockoutSeconds)
 	c.loadLoginGuard()
+	c.loadGoogle()
 	c.UploadMaxBytes = c.getInt64("ADMIN_UPLOAD_MAX_BYTES", defaultUploadMaxBytes)
 	c.AvatarMaxBytes = c.getInt64("ADMIN_AVATAR_MAX_BYTES", defaultAvatarMaxBytes)
 	c.StorageUploadTTL = c.getDuration("ADMIN_STORAGE_UPLOAD_TTL_SECONDS", defaultStorageUploadTTL)
@@ -338,6 +343,7 @@ func (c *Config) validateRange() error {
 		problems = append(problems, "ADMIN_LOGIN_LOCKOUT_SECONDS 必须 ≥ 1")
 	}
 	problems = append(problems, c.loginGuardProblems()...)
+	problems = append(problems, c.googleProblems()...)
 	if c.UploadMaxBytes <= 0 {
 		problems = append(problems, "ADMIN_UPLOAD_MAX_BYTES 必须 > 0")
 	}
@@ -552,6 +558,9 @@ func (c Config) Clone() Config {
 	if c.TrustedProxies != nil {
 		out.TrustedProxies = append([]netip.Prefix(nil), c.TrustedProxies...)
 	}
+	if c.GoogleAllowedDomains != nil {
+		out.GoogleAllowedDomains = append([]string(nil), c.GoogleAllowedDomains...)
+	}
 	if c.parseErrs != nil {
 		out.parseErrs = append([]string(nil), c.parseErrs...)
 	}
@@ -626,6 +635,8 @@ func (c Config) LogValue() slog.Value {
 		slog.Int("login_ip_window_seconds", c.LoginIPWindowSeconds),
 		slog.String("captcha_provider", c.CaptchaProvider),
 		slog.Bool("captcha_secret_set", c.CaptchaSecret != ""),
+		slog.Bool("google_login_enabled", c.GoogleClientID != ""),
+		slog.Int("google_allowed_domain_count", len(c.GoogleAllowedDomains)),
 		slog.Int64("upload_max_bytes", c.UploadMaxBytes),
 		slog.Int64("avatar_max_bytes", c.AvatarMaxBytes),
 		slog.String("upload_dir", c.UploadDir),

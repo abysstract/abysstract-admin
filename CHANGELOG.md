@@ -7,6 +7,12 @@
 
 ## [Unreleased]
 
+### Added
+
+- Google 登录：登录页在密码表单下方增加“使用 Google 账号登录”，与账号密码并存。设置 `ADMIN_GOOGLE_CLIENT_ID` 启用，可用 `ADMIN_GOOGLE_ALLOWED_DOMAINS` 限定域名。只有邮箱已在后台用户中的 Google 账号能登录，首次登录时按已验证邮箱匹配用户并把 Google 账号 ID 绑定到 `sys_user_identity`，之后只认账号 ID；不会自动建号。服务端校验 Google 的 ID token，不需要 client secret。见[Google 登录](docs/configuration.md#google-登录)。
+- `AuthService` 新增公开方法 `LoginWithGoogle` 与 `GetLoginOptions`（登录页据此判断是否显示 Google 按钮）。`texts.login` 新增 `or`、`googleFailed`、`googleLoadFailed`。
+- 数据库迁移：新增 `sys_user_identity`（四种数据库均有）。新增迁移 `20261118090000_google_login`，升级后执行 `admin-migrations sync` 和 `migrate`（见[执行迁移](docs/configuration.md#执行迁移)）。不启用 Google 登录也需要执行，该表是空的。
+
 ## [0.7.1] - 2026-11-17
 
 Go 模块与 `@abysstract/admin-core`、`@abysstract/admin-proto` 同步发布 0.7.1。重做登录验证码的界面，内置滑块不再依赖 go-captcha；补充说明 0.7.0 中一项未标明的破坏性变化。没有数据库迁移，Proto 没有变化。

@@ -15,6 +15,8 @@ import (
 // independently from the production registration declarations.
 var expectedPublicProcedures = []string{
 	adminv1connect.AuthServiceLoginProcedure,
+	adminv1connect.AuthServiceLoginWithGoogleProcedure,
+	adminv1connect.AuthServiceGetLoginOptionsProcedure,
 	adminv1connect.AuthServiceGetCaptchaProcedure,
 	adminv1connect.AuthServiceRefreshTokenProcedure,
 }
